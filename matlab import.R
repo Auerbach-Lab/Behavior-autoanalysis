@@ -16,38 +16,31 @@ current_file = current_file_bg
 # in stim there may be an already decoded table
 run_data_encoded = current_file$result
 
-stim = current_file[["stim"]]
-# make elements callable by name because somehow names are coming in as row.names
-# This is because its importing as a matrix
-names(stim) = row.names(stim)
+stim = current_file$stim[,,1]
 
-file_settings = stim$para
-names(file_settings) = row.names(file_settings)
+file_settings = stim$para[,,1]
 
 # Get file name -----------------------------------------------------------
 
 file_name =
-  stim[["name"]] %>%
-  as.character() %>%
+  stim$name[1] %>%
   # remove excess info (i.e. .mat and then file location)
   stringr::str_remove(pattern = ".mat @ .*$", string = .)
 
 file_location =
-  stim[["name"]] %>%
-  as.character() %>%
-  # remove excess info (i.e. .mat and then file location)
+  stim$name[1] %>%
+  # remove excess info (i.e. the name of the .mat file)
   stringr::str_remove(pattern = "^.*?.mat @ ", string = .)
 
 
 # Background noise --------------------------------------------------------
 
-background_dB = file_settings$BG.sound.inten
+background_dB = file_settings$BG.sound.inten[1]
 
-backround_file = file_settings$BG.sound["filepath",,]$filepath["filename",,]
+backround_file = file_settings$BG.sound["filepath",,]$filepath["filename",,]$filename[1]
 
 background_type =
   backround_file %>%
-  as.character() %>%
   stringr::str_remove(pattern = "^BG_", string = .) %>%
   stringr::str_remove(pattern = ".mat", string = .)
 
@@ -78,10 +71,10 @@ nose_light = file_settings$nose.light[[1]] %>% as.logical()
 # against the actual data
 
 results_total_trials = current_file$final.result[,,1]$go.trial.num[1] + current_file$final.result[,,1]$no.go.trial.num[1]
-results_hits = total_trials_results = current_file$final.result[,,1]$hit.num[1]
-results_misses = total_trials_results = current_file$final.result[,,1]$miss.num[1]
-results_CR = total_trials_results = current_file$final.result[,,1]$CR.num[1]
-results_FA = total_trials_results = current_file$final.result[,,1]$FA.num[1]
+results_hits = current_file$final.result[,,1]$hit.num[1]
+results_misses = current_file$final.result[,,1]$miss.num[1]
+results_CR = current_file$final.result[,,1]$CR.num[1]
+results_FA = current_file$final.result[,,1]$FA.num[1]
 
 
 
