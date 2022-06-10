@@ -35,20 +35,28 @@ file_location =
 
 # Background noise --------------------------------------------------------
 
-background_dB = file_settings$BG.sound.inten[1]
+# does not work with is.NULL
+if (is.na(file_settings$BG.sound[[1]][1]) == TRUE) {
+  background_dB = "None"
+  background_file = "None"
+} else {
+  background_dB = file_settings$BG.sound.inten[1]
 
-backround_file = file_settings$BG.sound["filepath",,]$filepath["filename",,]$filename[1]
+  background_file = file_settings$BG.sound["filepath",,]$filepath["filename",,]$filename[1]
 
-background_type =
-  backround_file %>%
-  stringr::str_remove(pattern = "^BG_", string = .) %>%
-  stringr::str_remove(pattern = ".mat", string = .)
+  background_type =
+    background_file %>%
+    stringr::str_remove(pattern = "^BG_", string = .) %>%
+    stringr::str_remove(pattern = ".mat", string = .)
 
-background_type =
-  case_when(background_type == "PKN" ~ "Pink",
-            background_type == "WN" ~ "White",
-            background_type == "BBN" ~ "Broadband",
-            TRUE ~ background_type) # This is a catch for a new type.
+  background_type =
+    case_when(background_type == "PKN" ~ "Pink",
+              background_type == "WN" ~ "White",
+              background_type == "BBN" ~ "Broadband",
+              TRUE ~ background_type) # This is a catch for a new type.
+
+}
+
 
 # Extra file settings -----------------------------------------------------
 
@@ -66,8 +74,8 @@ trigger_senesitivity = file_settings$detect.time.win[[1]]
 nose_light = file_settings$nose.light[[1]] %>% as.logical()
 
 
-# Matlab Summary ---------------------------------------------------------- This
-# is the historic summary that we write down. This should be sanity checked
+# Matlab Summary ----------------------------------------------------------
+# This is the historic summary that we write down. This should be sanity checked
 # against the actual data
 
 results_total_trials = current_file$final.result[,,1]$go.trial.num[1] + current_file$final.result[,,1]$no.go.trial.num[1]
