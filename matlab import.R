@@ -4,22 +4,31 @@ current_file = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/TTS
 
 # File Breakdown ----------------------------------------------------------
 
-# Table of reaction times with # of stim
-# TODO:
-# - decode stim to frequency (kHz), loudness (dB), Duration (ms)
-# -
-current_file$result
+# Table of reaction times with # of stim TODO: - decode stim to frequency (kHz),
+# loudness (dB), Duration (ms) This may not be best place to pull from; looking
+# in stim there may be an already decoded table
+run_data_encoded = current_file$result
 
-# File 'header' data
-header = current_file[["stim"]]
+stim = current_file[["stim"]]
 # make elements callable by name because somehow names are coming in as row.names
-names(header) = row.names(header)
+names(stim) = row.names(stim)
 
 # Get file name -----------------------------------------------------------
 
-# works
-actual_file_name = current_file[["stim"]][[1]]
+file_name =
+  stim[["name"]] %>%
+  as.character() %>%
+  # remove excess info (i.e. .mat and then file location)
+  stringr::str_remove(pattern = ".mat @ .*$", string = .)
 
-# Should work and is less hard coded but doesn't
-# this is because the
-current_file[["stim"]][["name"]]
+file_location =
+  stim[["name"]] %>%
+  as.character() %>%
+  # remove excess info (i.e. .mat and then file location)
+  stringr::str_remove(pattern = "^.*?.mat @ ", string = .)
+
+file_location_for_r = gsub("\\\\", "/", file_location)
+
+
+# Background noise --------------------------------------------------------
+
