@@ -26,6 +26,21 @@ library(ggplot2); library(forcats);
 # Exporting data
 
 
+# Global Variables --------------------------------------------------------
+
+# The folder where the project subfolders are:
+MainFolder = 'C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)'
+
+# Minimum number of blocks of trials to keep (vs. discard day) not counting the
+# 1st block which will be dropped
+min_blocks = 5
+
+TH_cutoff = 1.5
+
+# Working directory -------------------------------------------------------
+setwd(MainFolder)
+
+
 # Import Run Data ---------------------------------------------------------
 
 
