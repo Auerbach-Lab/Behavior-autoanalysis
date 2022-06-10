@@ -41,3 +41,18 @@ file_location =
 
 # Background noise --------------------------------------------------------
 
+background_dB = file_settings$BG.sound.inten
+
+backround_file = file_settings$BG.sound["filepath",,]$filepath["filename",,]
+
+background_type =
+  backround_file %>%
+  as.character() %>%
+  stringr::str_remove(pattern = "^BG_", string = .) %>%
+  stringr::str_remove(pattern = ".mat", string = .)
+
+background_type =
+  case_when(background_type == "PKN" ~ "Pink",
+            background_type == "WN" ~ "White",
+            background_type == "BBN" ~ "Broadband",
+            TRUE ~ background_type) # This is a catch for a new type.
