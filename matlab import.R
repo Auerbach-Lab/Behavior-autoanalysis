@@ -94,12 +94,14 @@ results_FA = current_file$final.result[,,1]$FA.num[1]
 
 stim_master_list = read_csv("~/GitHub/Behavior-autoanalysis/source_list.csv", col_names = FALSE, show_col_types = FALSE)
 names(stim_master_list) = append(unlist(stim$stim.tag.list), "Number", after = 0)
-stim_master_list = mutate(stim_master_list, id = row_number())
+# Add identifying number for decoding)
+stim_master_list = mutate(stim_master_list, "Stim_ID" = row_number())
 
 
-run_data_encoded = current_file$result
+run_data_encoded = data.frame(current_file$result[,1:6]) # The matlab file has 2 extra columns for some unknown reason
+names(run_data_encoded) = list("Time_since_file_start", "Stim_ID", "Tial_type", "Attempts_to_complete", "Response", "Reaction")
 
-unlist(stim$stim.tag.list) -> names(test)
+merge(x = run_data_encoded, y = stim_master_list, by = "CustomerId", all.x = TRUE)
 
 
 # File sanity checks ------------------------------------------------------
