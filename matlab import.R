@@ -1,6 +1,13 @@
 
 # Loading current file ----------------------------------------------------
-current_file = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/TTS/data/20220609/Green1_4-32kHz_30-90dB_50ms_8s_1s_TR100ms_20220609-101834_BOX#001.mat")
+# No Background
+current_file_nobg = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/TTS/data/20220609/Green1_4-32kHz_30-90dB_50ms_8s_1s_TR100ms_20220609-101834_BOX#001.mat")
+# Background sound
+current_file_bg = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/TTS/data/20220609/Green2_4-32kHz_30-90dB_50ms_16s_1s_TR100ms_BG_PNK_30dB_20220609-101835_BOX#002.mat")
+
+
+current_file = current_file_bg
+
 
 # File Breakdown ----------------------------------------------------------
 
@@ -11,7 +18,11 @@ run_data_encoded = current_file$result
 
 stim = current_file[["stim"]]
 # make elements callable by name because somehow names are coming in as row.names
+# This is because its importing as a matrix
 names(stim) = row.names(stim)
+
+file_settings = stim$para
+names(file_settings) = row.names(file_settings)
 
 # Get file name -----------------------------------------------------------
 
