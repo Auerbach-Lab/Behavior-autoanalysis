@@ -24,7 +24,6 @@ library(psych); library(psycho);
 library(ggplot2); library(forcats);
 
 # Exporting data
-library(writexl);
 
 
 # Import Run Data ---------------------------------------------------------
