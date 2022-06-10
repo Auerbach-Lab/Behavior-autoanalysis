@@ -71,3 +71,17 @@ trigger_senesitivity = file_settings$detect.time.win[[1]]
 
 # Nose light operational?
 nose_light = file_settings$nose.light[[1]] %>% as.logical()
+
+
+# Matlab Summary ---------------------------------------------------------- This
+# is the historic summary that we write down. This should be sanity checked
+# against the actual data
+
+results_total_trials = current_file$final.result[,,1]$go.trial.num[1] + current_file$final.result[,,1]$no.go.trial.num[1]
+results_hits = total_trials_results = current_file$final.result[,,1]$hit.num[1]
+results_misses = total_trials_results = current_file$final.result[,,1]$miss.num[1]
+results_CR = total_trials_results = current_file$final.result[,,1]$CR.num[1]
+results_FA = total_trials_results = current_file$final.result[,,1]$FA.num[1]
+
+
+
