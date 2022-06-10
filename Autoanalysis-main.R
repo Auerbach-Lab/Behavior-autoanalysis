@@ -35,6 +35,7 @@ MainFolder = 'C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)'
 # 1st block which will be dropped
 min_blocks = 5
 
+# Sensitivity cutoff for determining hearing thresholds
 TH_cutoff = 1.5
 
 # Working directory -------------------------------------------------------
