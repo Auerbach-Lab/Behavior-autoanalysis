@@ -10,12 +10,6 @@ current_file = current_file_bg
 
 
 # File Breakdown ----------------------------------------------------------
-
-# Table of reaction times with # of stim TODO: - decode stim to frequency (kHz),
-# loudness (dB), Duration (ms) This may not be best place to pull from; looking
-# in stim there may be an already decoded table
-run_data_encoded = current_file$result
-
 stim = current_file$stim[,,1]
 
 file_settings = stim$para[,,1]
@@ -84,5 +78,30 @@ results_misses = current_file$final.result[,,1]$miss.num[1]
 results_CR = current_file$final.result[,,1]$CR.num[1]
 results_FA = current_file$final.result[,,1]$FA.num[1]
 
+
+# Decode result table -----------------------------------------------------
+
+# Table of reaction times with # of stim
+# TODO: decode stim to frequency (kHz), loudness (dB), Duration (ms)
+# This may not be best place to pull from; looking in stim there may be an already decoded table
+
+# isn't coming in as a table (for these test files it should be 9 wide by 29 long)
+# may need to contact https://github.com/HenrikBengtsson/R.matlab about it as the issue is likely importing
+# runs down the columns (check item 29, stim$source.list[[29]] == 1,28 in matlab)
+# This is because in matlab it is type cell (an array)
+
+# stim_master_list = stim$source.list
+
+stim_master_list = read_csv("~/GitHub/Behavior-autoanalysis/source_list.csv", col_names = FALSE, show_col_types = FALSE)
+names(stim_master_list) = append(unlist(stim$stim.tag.list), "Number", after = 0)
+stim_master_list = mutate(stim_master_list, id = row_number())
+
+
+run_data_encoded = current_file$result
+
+unlist(stim$stim.tag.list) -> names(test)
+
+
+# File sanity checks ------------------------------------------------------
 
 
