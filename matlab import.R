@@ -56,3 +56,18 @@ background_type =
             background_type == "WN" ~ "White",
             background_type == "BBN" ~ "Broadband",
             TRUE ~ background_type) # This is a catch for a new type.
+
+# Extra file settings -----------------------------------------------------
+
+# Maximum number of back to back no go trials (0 or blank is infinite)
+no_go_max_touching = file_settings$no.go.trial.max.num[[1]]
+
+
+# DTW setting in the behavior program or TR in file names
+# DTW = detect time window & TR = Trigger
+# In either case, this is not to be confused with the response window
+#   i.e. how long the rat has post trial start to respond
+trigger_senesitivity = file_settings$detect.time.win[[1]]
+
+# Nose light operational?
+nose_light = file_settings$nose.light[[1]] %>% as.logical()
