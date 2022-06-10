@@ -27,8 +27,6 @@ file_location =
   # remove excess info (i.e. .mat and then file location)
   stringr::str_remove(pattern = "^.*?.mat @ ", string = .)
 
-file_location_for_r = gsub("\\\\", "/", file_location)
-
 
 # Background noise --------------------------------------------------------
 
