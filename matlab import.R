@@ -63,6 +63,8 @@ no_go_max_touching = file_settings$no.go.trial.max.num[[1]]
 # DTW = detect time window & TR = Trigger
 # In either case, this is not to be confused with the response window
 #   i.e. how long the rat has post trial start to respond
+# This is how long the nose must remain out to be counted as 'withdraw' or
+# response. Response time is for the withdraw.
 trigger_senesitivity = file_settings$detect.time.win[[1]]
 
 # Nose light operational?
@@ -91,7 +93,7 @@ results_FA = current_file$final.result[,,1]$FA.num[1]
 # runs down the columns (check item 29, stim$source.list[[29]] == 1,28 in matlab)
 # This is because in matlab it is type cell (an array)
 
-# stim_master_list = stim$source.list
+stim_master_list = stim$source.list
 
 stim_master_list = read_csv("~/GitHub/Behavior-autoanalysis/source_list.csv", col_names = FALSE, show_col_types = FALSE)
 names(stim_master_list) = append(unlist(stim$stim.tag.list), "Number", after = 0)
