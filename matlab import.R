@@ -6,7 +6,7 @@ current_file_nobg = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior
 current_file_bg = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/TTS/data/20220609/Green2_4-32kHz_30-90dB_50ms_16s_1s_TR100ms_BG_PNK_30dB_20220609-101835_BOX#002.mat")
 
 
-current_file = current_file_bg
+current_file = current_file_nobg
 
 
 # File Breakdown ----------------------------------------------------------
@@ -33,6 +33,7 @@ file_location =
 if (is.na(file_settings$BG.sound[[1]][1]) == TRUE) {
   background_dB = "None"
   background_file = "None"
+  background_type = "None"
 } else {
   background_dB = file_settings$BG.sound.inten[1]
 
@@ -62,6 +63,8 @@ no_go_max_touching = file_settings$no.go.trial.max.num[[1]]
 # DTW = detect time window & TR = Trigger
 # In either case, this is not to be confused with the response window
 #   i.e. how long the rat has post trial start to respond
+# This is how long the nose must remain out to be counted as 'withdraw' or
+# response. Response time is for the withdraw.
 trigger_senesitivity = file_settings$detect.time.win[[1]]
 
 # Nose light operational?
