@@ -129,11 +129,11 @@ run_data = dplyr::left_join(x = run_data_encoded, y = stim_master_list, by = "St
 # Ensure that the matlab summary and the calculated summary match
 
 # Calculate the summary statistics
-total_trials = run_data %>% dplyr::count()
-hits_calc = run_data %>% dplyr::filter(Response == "hit") %>% dplyr::count()
-misses_calc = run_data %>% dplyr::filter(Response == "Miss") %>% dplyr::count()
-CRs_calc = run_data %>% dplyr::filter(Response == "CR") %>% dplyr::count()
-FAs_calc = run_data %>% dplyr::filter(Response == "FA") %>% dplyr::count()
+total_trials = run_data %>% dplyr::count() %>% as.numeric()
+hits_calc = run_data %>% dplyr::filter(Response == "Hit") %>% dplyr::count() %>% as.numeric()
+misses_calc = run_data %>% dplyr::filter(Response == "Miss") %>% dplyr::count() %>% as.numeric()
+CRs_calc = run_data %>% dplyr::filter(Response == "CR") %>% dplyr::count() %>% as.numeric()
+FAs_calc = run_data %>% dplyr::filter(Response == "FA") %>% dplyr::count() %>% as.numeric()
 
 # Check calculated stats against Matlab summary stats
 if (total_trials != results_total_trials) stop("Trial count miss-match")
