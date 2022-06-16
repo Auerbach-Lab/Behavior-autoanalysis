@@ -113,7 +113,7 @@ if (all(run_data_encoded[7:8] != "0")) {
   run_data_encoded = run_data_encoded[1:6]
   }
 
-names(run_data_encoded) = list("Time_since_file_start", "Stim_ID", "Tial_type", "Attempts_to_complete", "Response", "Reaction")
+names(run_data_encoded) = list("Time_since_file_start (s)", "Stim_ID", "Tial_type", "Attempts_to_complete", "Response", "Reaction (ms)")
 
 run_data_encoded = run_data_encoded %>%
                    dplyr::mutate(Response = dplyr::case_when(Response == 1 ~ "Hit",
@@ -122,7 +122,7 @@ run_data_encoded = run_data_encoded %>%
                                                              Response == 4 ~ "CR",
                                                              TRUE ~ "ERROR"))
 
-merge(x = run_data_encoded, y = stim_master_list, by = "CustomerId", all.x = TRUE)
+run_data = dplyr::left_join(x = run_data_encoded, y = stim_master_list, by = "Stim_ID", all.x = TRUE)
 
 
 # File sanity checks ------------------------------------------------------
