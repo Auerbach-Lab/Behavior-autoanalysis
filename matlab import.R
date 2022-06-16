@@ -101,7 +101,15 @@ names(stim_master_list) = append(unlist(stim$stim.tag.list), "Number", after = 0
 stim_master_list = dplyr::mutate(stim_master_list, "Stim_ID" = row_number())
 
 
-run_data_encoded = data.frame(current_file$result[,1:6]) # The matlab file has 2 extra columns for some unknown reason
+run_data_encoded = data.frame(current_file$result)
+
+# The matlab file has 2 extra columns for some unknown reason
+if (all(run_data_encoded[7:8] != "0")) {
+  stop("What are these columns storing?")
+  } else {
+  run_data_encoded = run_data_encoded[1:6]
+  }
+
 names(run_data_encoded) = list("Time_since_file_start", "Stim_ID", "Tial_type", "Attempts_to_complete", "Response", "Reaction")
 
 merge(x = run_data_encoded, y = stim_master_list, by = "CustomerId", all.x = TRUE)
