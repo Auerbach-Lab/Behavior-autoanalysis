@@ -44,9 +44,15 @@ setwd(MainFolder)
 
 # Import Run Data ---------------------------------------------------------
 # takes actually run data file and yields:
-# file_name,
+#   file_name, stim_type, and other details on file (no_go_max_touching, nose_light, trigger_sensitivity)
+#   background_type & background_dB
+#   total_trials, hits_calc, misses_calc, CRs_calc, FAs_calc
+#   run_data (decoded with frequency, intensity, attempt #, rxn time + others)
 source("~/GitHub/Behavior-autoanalysis/matlab import.R")
 
+
+# File Check --------------------------------------------------------------
+# Checks actual file details against the expected/called for file.
 
 # Summary Calculation -----------------------------------------------------
 
