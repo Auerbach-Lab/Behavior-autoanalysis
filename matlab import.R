@@ -100,6 +100,9 @@ names(stim_master_list) = append(unlist(stim$stim.tag.list), "Number", after = 0
 # Add identifying number for decoding)
 stim_master_list = dplyr::mutate(stim_master_list, "Stim_ID" = row_number())
 
+# Get stim variable automatically
+stim_block_size = sum(stim_master_list["Number"])
+stim_type = unique(stim_master_list["Stim Source"]) %>% as.character()
 
 run_data_encoded = data.frame(current_file$result)
 
