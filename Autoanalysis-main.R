@@ -43,5 +43,12 @@ setwd(MainFolder)
 
 
 # Import Run Data ---------------------------------------------------------
+# takes actually run data file and yields:
+# file_name,
+source("~/GitHub/Behavior-autoanalysis/matlab import.R")
+
+
+# Summary Calculation -----------------------------------------------------
+
 
 
