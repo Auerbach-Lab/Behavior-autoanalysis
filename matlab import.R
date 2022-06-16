@@ -6,7 +6,7 @@ current_file_nobg = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior
 current_file_bg = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/TTS/data/20220609/Green2_4-32kHz_30-90dB_50ms_16s_1s_TR100ms_BG_PNK_30dB_20220609-101835_BOX#002.mat")
 
 
-current_file = current_file_nobg
+current_file = current_file_bg
 
 
 # File Breakdown ----------------------------------------------------------
@@ -98,7 +98,7 @@ results_FA = current_file$final.result[,,1]$FA.num[1]
 stim_master_list = read_csv("~/GitHub/Behavior-autoanalysis/source_list.csv", col_names = FALSE, show_col_types = FALSE)
 names(stim_master_list) = append(unlist(stim$stim.tag.list), "Number", after = 0)
 # Add identifying number for decoding)
-stim_master_list = mutate(stim_master_list, "Stim_ID" = row_number())
+stim_master_list = dplyr::mutate(stim_master_list, "Stim_ID" = row_number())
 
 
 run_data_encoded = data.frame(current_file$result[,1:6]) # The matlab file has 2 extra columns for some unknown reason
