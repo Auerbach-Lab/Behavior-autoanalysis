@@ -38,3 +38,11 @@ file_intensity_range_steps = file_frequency_ranges %>%
 file_duration = unique(stim_master_list["Dur (ms)"])
 
 file_response_window = unique(stim_master_list["Nose Out TL (s)"]) %>% as.numeric()
+
+# Check File name vs. file ------------------------------------------------
+
+
+# Expected vs. file -------------------------------------------------------
+
+
+
