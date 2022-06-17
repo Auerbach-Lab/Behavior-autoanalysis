@@ -11,6 +11,9 @@ file_name_frequency = gsub(pattern = "(^.*?)_.*$", replacement = "\\1", file_nam
 # Get 1st block of text with dB. Note for octave files there are 2 of the blocks.
 file_name_intensity = gsub(pattern = "^.*_(.*dB)_.*$", replacement = "\\1", file_name)
 
+# Get 1st block of text with ms. Note for some files with reduced response or sensitivity windows, there are 2-3 blocks.
+file_name_duration = gsub(pattern = "^.*?_(.*?ms)_.*$", replacement = "\\1", file_name) # The ? makes it 'lazy' so only the 1st block is pulled
+
 
 # Actual Stim -------------------------------------------------------------
 
