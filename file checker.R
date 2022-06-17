@@ -5,13 +5,16 @@
 
 # Break down file name ----------------------------------------------------
 
-file_name_frequency = gsub(pattern = "(^.*?)_.*$", replacement = "\\1", file_name) # Get 1st block of text which should be the go frequency (single or range)
+# Get 1st block of text which should be the go frequency (single or range)
+file_name_frequency = gsub(pattern = "(^.*?)_.*$", replacement = "\\1", file_name)
 
-file_name_intensity = gsub(pattern = "^.*_(.*dB)_.*$", replacement = "\\1", file_name) # Get 1st block of text which should be the go frequency (single or range)
+# Get 1st block of text which should be the go frequency (single or range)
+file_name_intensity = gsub(pattern = "^.*_(.*dB)_.*$", replacement = "\\1", file_name)
 
 
 # Actual Stim -------------------------------------------------------------
 
+# List of go sound frequencies
 file_frequencies = unique(stim_master_list["Freq (kHz)"])
 
 file_frequency_ranges = stim_master_list %>%
