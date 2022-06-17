@@ -8,7 +8,7 @@
 # Get 1st block of text which should be the go frequency (single or range)
 file_name_frequency = gsub(pattern = "(^.*?)_.*$", replacement = "\\1", file_name)
 
-# Get 1st block of text which should be the go frequency (single or range)
+# Get 1st block of text with dB. Note for octave files there are 2 of the blocks.
 file_name_intensity = gsub(pattern = "^.*_(.*dB)_.*$", replacement = "\\1", file_name)
 
 
@@ -31,4 +31,7 @@ file_intensity_range_steps = file_frequency_ranges %>%
   dplyr::slice(-1) %>% # Drop 1st row of each subtable
   .[!duplicated(.), ] # reduce to unique rows. Should be 1 row per frequency unless something is screwed up
 
-file_duration = unique(stim_master_list["Nose Out TL (s)"])
+# List of length of go sound - can be up to 3 values (50, 100, & 300) in our current file system
+file_duration = unique(stim_master_list["Dur (ms)"])
+
+file_response_window = unique(stim_master_list["Nose Out TL (s)"]) %>% as.numeric()
