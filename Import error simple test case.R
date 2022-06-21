@@ -23,6 +23,43 @@ library(R.matlab)
 # Load file ---------------------------------------------------------------
 file = readMat("~/GitHub/Behavior-autoanalysis/Only_2by2table.mat")
 
+# > file
+# $source.list
+# $source.list[[1]]
+# $source.list[[1]][[1]]
+# [,1]
+# [1,] "tone"
+#
+#
+# $source.list[[2]]
+# $source.list[[2]][[1]]
+# [,1]
+# [1,] "tone"
+#
+#
+# $source.list[[3]]
+# $source.list[[3]][[1]]
+# [,1]
+# [1,]   30
+#
+#
+# $source.list[[4]]
+# $source.list[[4]][[1]]
+# [,1]
+# [1,]   40
+#
+#
+#
+# attr(,"header")
+# attr(,"header")$description
+# [1] "MATLAB 5.0 MAT-file, Platform: PCWIN64, Created on: Sat Jun 11 13:15:37 2022                                        "
+#
+# attr(,"header")$version
+# [1] "5"
+#
+# attr(,"header")$endian
+# [1] "little"
+
 class(file$source.list)
 # > class(file$source.list)
 # [1] "list"
