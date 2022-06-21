@@ -24,4 +24,37 @@ library(R.matlab)
 file = readMat("~/GitHub/Behavior-autoanalysis/Only_2by2table.mat")
 
 class(file$source.list)
+# > class(file$source.list)
+# [1] "list"
+
+print(file$source.list)
+# > print(file$source.list)
+# [[1]]
+# [[1]][[1]]
+# [,1]
+# [1,] "tone"
+#
+#
+# [[2]]
+# [[2]][[1]]
+# [,1]
+# [1,] "tone"
+#
+#
+# [[3]]
+# [[3]][[1]]
+# [,1]
+# [1,]   30
+#
+#
+# [[4]]
+# [[4]][[1]]
+# [,1]
+# [1,]   40
+
+
+
+
 View(file$source.list)
+
+
