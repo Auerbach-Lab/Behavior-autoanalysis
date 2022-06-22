@@ -96,12 +96,12 @@ results_FA = current_file$final.result[,,1]$FA.num[1]
 # stim_master_list = stim$source.list
 
 stim_master_list = read_csv("~/GitHub/Behavior-autoanalysis/source_list.csv", col_names = FALSE, show_col_types = FALSE)
-names(stim_master_list) = append(unlist(stim$stim.tag.list), "Number", after = 0)
+names(stim_master_list) = append(unlist(stim$stim.tag.list), "Repeat_number", after = 0)
 # Add identifying number for decoding)
 stim_master_list = dplyr::mutate(stim_master_list, "Stim_ID" = row_number())
 
 # Get stim variable automatically
-stim_block_size = sum(stim_master_list["Number"])
+stim_block_size = sum(stim_master_list["Repeat_number"])
 stim_type = unique(stim_master_list["Stim Source"]) %>% as.character()
 
 run_data_encoded = data.frame(current_file$result)
@@ -113,7 +113,7 @@ if (all(run_data_encoded[7:8] != "0")) {
   run_data_encoded = run_data_encoded[1:6]
   }
 
-names(run_data_encoded) = list("Time_since_file_start (s)", "Stim_ID", "Tial_type", "Attempts_to_complete", "Response", "Reaction (ms)")
+names(run_data_encoded) = list("Time_since_file_start_(s)", "Stim_ID", "Tial_type", "Attempts_to_complete", "Response", "Reaction_(ms)")
 
 run_data_encoded = run_data_encoded %>%
                    dplyr::mutate(Response = dplyr::case_when(Response == 1 ~ "Hit",
