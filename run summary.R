@@ -1,4 +1,9 @@
 
+# Omitted Trials ----------------------------------------------------------
+# These are typically demos or could trials that are ruled invalid by an observer.
+
+
+
 # Basic Stats -------------------------------------------------------------
 
 
