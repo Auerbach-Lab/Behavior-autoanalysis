@@ -122,7 +122,9 @@ run_data_encoded = run_data_encoded %>%
                                                              Response == 4 ~ "CR",
                                                              TRUE ~ "ERROR"))
 
-run_data = dplyr::left_join(x = run_data_encoded, y = stim_master_list, by = "Stim_ID", all.x = TRUE)
+run_data = dplyr::left_join(x = run_data_encoded,
+                            y = select(stim_master_list, -Repeat_number),
+                            by = "Stim_ID", all.x = TRUE)
 
 
 # File sanity checks ------------------------------------------------------
