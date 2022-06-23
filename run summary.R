@@ -12,7 +12,8 @@ omit_list = strsplit(omit_list,",")
 # filter lines out of data
 run_data_kept = run_data %>% dplyr::filter(!row_number() %in% omit_list[[1]])
 
-## Sanity Check ##
+# Sanity check omitted trials ---------------------------------------------
+# Make sure the the number of omitted lines matches how many lines were removed from table
 
 # get number of trials omitted
 omit_count = length(omit_list[[1]]) %>% as.numeric()
