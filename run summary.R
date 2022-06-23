@@ -21,7 +21,7 @@ Trial_expected = total_trials - omit_count
 # Calculate # of kept trials
 Trials_kept = dplyr::count(run_data_kept) %>% as.numeric()
 # check
-if (Trials_kept != Trial_expected) stop("Error Omitting Trials")
+if (Trials_kept != Trial_expected) stop("Omitting Trials - expected kept count does not match")
 
 # Basic Stats -------------------------------------------------------------
 
