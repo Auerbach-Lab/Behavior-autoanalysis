@@ -26,6 +26,14 @@ if (Trials_kept != Trial_expected) stop("Omitting Trials - expected kept count d
 
 # Basic Stats -------------------------------------------------------------
 
+# Calculate the summary statistics
+hits_kept = run_data_kept %>% dplyr::filter(Response == "Hit") %>% dplyr::count() %>% as.numeric()
+misses_kept = run_data_kept %>% dplyr::filter(Response == "Miss") %>% dplyr::count() %>% as.numeric()
+CRs_kept = run_data_kept %>% dplyr::filter(Response == "CR") %>% dplyr::count() %>% as.numeric()
+FAs_kept = run_data_kept %>% dplyr::filter(Response == "FA") %>% dplyr::count() %>% as.numeric()
 
-hit_percent = hits_calc / total_trials
-FA_percent = hits_calc / total_trials
+# Get percentages for summary sheet
+hit_percent = hits_kept / Trials_kept
+if (hit_percent <= .75) warning("Low hit rate, <75%")
+FA_percent = FAs_kept / Trials_kept
+if (FA_percent >= .3) warning("High false alarm (FA) rate, >30%")
