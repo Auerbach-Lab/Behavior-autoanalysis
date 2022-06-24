@@ -1,9 +1,9 @@
 
 # Loading current file ----------------------------------------------------
-# No Background
-current_file_nobg = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/TTS/data/20220609/Green1_4-32kHz_30-90dB_50ms_8s_1s_TR100ms_20220609-101834_BOX#001.mat")
-# Background sound
-current_file_bg = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/TTS/data/20220609/Green2_4-32kHz_30-90dB_50ms_16s_1s_TR100ms_BG_PNK_30dB_20220609-101835_BOX#002.mat")
+# # No Background
+# current_file_nobg = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/TTS/data/20220609/Green1_4-32kHz_30-90dB_50ms_8s_1s_TR100ms_20220609-101834_BOX#001.mat")
+# # Background sound
+# current_file_bg = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/TTS/data/20220609/Green2_4-32kHz_30-90dB_50ms_16s_1s_TR100ms_BG_PNK_30dB_20220609-101835_BOX#002.mat")
 
 
 current_file = current_file_bg
@@ -71,7 +71,7 @@ trigger_senesitivity = file_settings$detect.time.win[[1]]
 nose_light = file_settings$nose.light[[1]] %>% as.logical()
 
 
-# Matlab Summary ----------------------------------------------------------
+# MATLAB Summary ----------------------------------------------------------
 # This is the historic summary that we write down. This should be sanity checked
 # against the actual data
 
@@ -89,9 +89,9 @@ results_FA = current_file$final.result[,,1]$FA.num[1]
 # This may not be best place to pull from; looking in stim there may be an already decoded table
 
 # isn't coming in as a table (for these test files it should be 9 wide by 29 long)
-# may need to contact https://github.com/HenrikBengtsson/R.matlab about it as the issue is likely importing
-# runs down the columns (check item 29, stim$source.list[[29]] == 1,28 in matlab)
-# This is because in matlab it is type cell (an array)
+# may need to contact https://github.com/HenrikBengtsson/R.MATLAB about it as the issue is likely importing
+# runs down the columns (check item 29, stim$source.list[[29]] == 1,28 in MATLAB)
+# This is because in MATLAB it is type cell (an array)
 
 # stim_master_list = stim$source.list
 
@@ -106,7 +106,7 @@ stim_type = unique(stim_master_list["Stim Source"]) %>% as.character()
 
 run_data_encoded = data.frame(current_file$result)
 
-# The matlab file has 2 extra columns for some unknown reason
+# The MATLAB file has 2 extra columns for some unknown reason
 if (all(run_data_encoded[7:8] != "0")) {
   stop("What are these columns storing?")
   } else {
@@ -128,7 +128,7 @@ run_data = dplyr::left_join(x = run_data_encoded,
 
 
 # File sanity checks ------------------------------------------------------
-# Ensure that the matlab summary and the calculated summary match
+# Ensure that the MATLAB summary and the calculated summary match
 
 # Calculate the summary statistics
 total_trials = run_data %>% dplyr::count() %>% as.numeric()
@@ -137,9 +137,18 @@ misses_calc = run_data %>% dplyr::filter(Response == "Miss") %>% dplyr::count() 
 CRs_calc = run_data %>% dplyr::filter(Response == "CR") %>% dplyr::count() %>% as.numeric()
 FAs_calc = run_data %>% dplyr::filter(Response == "FA") %>% dplyr::count() %>% as.numeric()
 
-# Check calculated stats against Matlab summary stats
+# Check calculated stats against MATLAB summary stats
 if (total_trials != results_total_trials) stop("Trial count miss-match")
 if (hits_calc != results_hits) stop("Hit count miss-match")
 if (misses_calc != results_misses) stop("Misses count miss-match")
 if (CRs_calc != results_CR) stop("Correct Reject (CR) count miss-match")
 if (FAs_calc != results_FA) stop("False Alarm (FA) count miss-match")
+
+# Variable cleanup --------------------------------------------------------
+# Remove temp variables from the environment as they shouldn't be needed again
+
+# cleanup MATLAB summery
+rm(list = c("results_total_trials", "results_hits", "results_misses", "results_CR", "results_FA"))
+
+# cleanup extraneous copies of the current file
+rm(list = c("current_file", 'file_settings', 'run_data_encoded', 'stim'))
