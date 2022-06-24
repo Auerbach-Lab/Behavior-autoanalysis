@@ -38,13 +38,14 @@ min_blocks = 5
 # Sensitivity cutoff for determining hearing thresholds
 TH_cutoff = 1.5
 
+
 # Working directory -------------------------------------------------------
 setwd(MainFolder)
 
 
 # Initiate Error log list -------------------------------------------------
+Warnings = list()
 
-Errors = list(NULL)
 
 # Import Run Data ---------------------------------------------------------
 # takes actually run data file and yields:
@@ -55,15 +56,22 @@ Errors = list(NULL)
 source("~/GitHub/Behavior-autoanalysis/matlab import.R")
 
 
+# Determine analysis type -------------------------------------------------
+# File and range to determine the expected analysis. This should be verified against the master experiment.
+source("~/GitHub/Behavior-autoanalysis/analysis typer.R")
+
+
 # File Check --------------------------------------------------------------
 # Checks actual file details against the expected/called for file.
+source("~/GitHub/Behavior-autoanalysis/file checker.R")
+
 
 # Summary Calculation -----------------------------------------------------
 
 
 # Error Log Handling ------------------------------------------------------
 
-if (all(Errors = NULL)) {Errors = "None"}
+if (length(Warnings) == 0) {Warnings = "None"}
 
 
 
