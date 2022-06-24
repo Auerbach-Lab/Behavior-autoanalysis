@@ -83,17 +83,14 @@ results_FA = current_file$final.result[,,1]$FA.num[1]
 
 
 # Decode result table -----------------------------------------------------
-
 # Table of reaction times with # of stim
-# TODO: decode stim to frequency (kHz), loudness (dB), Duration (ms)
-# This may not be best place to pull from; looking in stim there may be an already decoded table
-
-# isn't coming in as a table (for these test files it should be 9 wide by 29 long)
-# may need to contact https://github.com/HenrikBengtsson/R.MATLAB about it as the issue is likely importing
-# runs down the columns (check item 29, stim$source.list[[29]] == 1,28 in MATLAB)
-# This is because in MATLAB it is type cell (an array)
 
 # stim_master_list = stim$source.list
+
+# stim$source.list isn't coming in as a table (for these test files it should be 9 wide by 29 long)
+# runs down the columns (check item 29, stim$source.list[[29]] == 1,28 in MATLAB)
+# This is because in MATLAB it is type cell (an array)
+# Brian has made a fix that can be run manually and submitted a pull request for R.matlab
 
 stim_master_list = read_csv("~/GitHub/Behavior-autoanalysis/source_list.csv", col_names = FALSE, show_col_types = FALSE)
 names(stim_master_list) = append(unlist(stim$stim.tag.list), "Repeat_number", after = 0)
