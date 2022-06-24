@@ -18,11 +18,11 @@ run_data_kept = run_data %>% dplyr::filter(!row_number() %in% omit_list[[1]])
 # get number of trials omitted
 omit_count = length(omit_list[[1]]) %>% as.numeric()
 # calculate expected trials
-Trial_expected = total_trials - omit_count
+Trials_expected = total_trials - omit_count
 # Calculate # of kept trials
 Trials_kept = dplyr::count(run_data_kept) %>% as.numeric()
 # check
-if (Trials_kept != Trial_expected) stop("Omitting Trials - expected kept count does not match")
+if (Trials_kept != Trials_expected) stop("Omitting Trials - expected kept count does not match")
 
 # Basic Stats -------------------------------------------------------------
 
@@ -31,6 +31,9 @@ hits_kept = run_data_kept %>% dplyr::filter(Response == "Hit") %>% dplyr::count(
 misses_kept = run_data_kept %>% dplyr::filter(Response == "Miss") %>% dplyr::count() %>% as.numeric()
 CRs_kept = run_data_kept %>% dplyr::filter(Response == "CR") %>% dplyr::count() %>% as.numeric()
 FAs_kept = run_data_kept %>% dplyr::filter(Response == "FA") %>% dplyr::count() %>% as.numeric()
+
+# cleanup non-omitted summary stats
+rm(list = c("CRs_calc", "FAs_calc", "misses_calc", "hits_calc", "Trials_expected"))
 
 # Get percentages for summary sheet
 hit_percent = hits_kept / Trials_kept
