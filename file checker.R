@@ -30,7 +30,20 @@ file_response_window = unique(stim_master_list["Nose Out TL (s)"]) %>% as.numeri
 
 # Build 'real' file name --------------------------------------------------
 
+# For tonal files (octaves, or mainly 4-32kHz)
+if (stim_type == "tone") {
 
+}
+
+# For broadband files (training or otherwise)
+if (stim_type == "BBN") {
+
+}
+
+# For Oddball files (training or otherwise)
+if (stim_type == "train") {
+
+}
 
 # Check File name vs. file ------------------------------------------------
 
