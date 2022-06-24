@@ -97,7 +97,7 @@ names(stim_master_list) = append(unlist(stim$stim.tag.list), "Repeat_number", af
 # Add identifying number for decoding)
 stim_master_list = dplyr::mutate(stim_master_list, "Stim_ID" = row_number())
 
-# Get stim variable automatically
+# Get stim variables automatically
 stim_block_size = sum(stim_master_list["Repeat_number"])
 stim_type = unique(stim_master_list["Stim Source"]) %>% as.character()
 
