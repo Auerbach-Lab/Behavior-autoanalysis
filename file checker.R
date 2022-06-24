@@ -11,7 +11,7 @@ file_frequencies = unique(stim_master_list["Freq (kHz)"])
 file_frequency_ranges = stim_master_list %>%
   dplyr::filter(`Inten (dB)` != -100) %>% # Remove No-Go from range
   dplyr::group_by(`Freq (kHz)`) %>%
-  dplyr::summarise(range = unique(`Inten (dB)`)) # Get each unique dB
+  dplyr::summarise(range = unique(`Inten (dB)`), .groups = 'drop') # Get each unique dB
 
 file_intensity_range_steps = file_frequency_ranges %>%
   dplyr::group_by(`Freq (kHz)`) %>%
@@ -19,7 +19,7 @@ file_intensity_range_steps = file_frequency_ranges %>%
                    max = max(range),
                    steps = range - lag(range, default = first(range)),
                    .groups = 'keep') %>% # still grouped following this step, which is needed to remove the 1st row of each table that has a 0 step
-  dplyr::slice(-1) %>% # Drop 1st row of each subtable
+  dplyr::slice(-1) %>% # Drop 1st row of each sub-table
   .[!duplicated(.), ] # reduce to unique rows. Should be 1 row per frequency unless something is screwed up
 
 # List of length of go sound - can be up to 3 values (50, 100, & 300) in our current file system
