@@ -42,6 +42,10 @@ TH_cutoff = 1.5
 setwd(MainFolder)
 
 
+# Initiate Error log list -------------------------------------------------
+
+Errors = list(NULL)
+
 # Import Run Data ---------------------------------------------------------
 # takes actually run data file and yields:
 #   file_name, stim_type, and other details on file (no_go_max_touching, nose_light, trigger_sensitivity)
@@ -55,6 +59,11 @@ source("~/GitHub/Behavior-autoanalysis/matlab import.R")
 # Checks actual file details against the expected/called for file.
 
 # Summary Calculation -----------------------------------------------------
+
+
+# Error Log Handling ------------------------------------------------------
+
+if (all(Errors = NULL)) {Errors = "None"}
 
 
 
