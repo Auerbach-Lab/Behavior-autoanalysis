@@ -39,19 +39,24 @@ response_window = unique(stim_master_list["Nose Out TL (s)"]) %>% as.numeric()
 
 # Build 'real' file name --------------------------------------------------
 
-# For tonal files (octaves, or mainly 4-32kHz)
-if (stim_type == "tone") {
-
+# For standard tonal files
+if (analysis_type == "tone range") {
+  NULL
 }
 
-# For broadband files (training or otherwise)
-if (stim_type == "BBN") {
-
+# For standard broadband files
+if (analysis_type == "BBN") {
+  NULL
 }
 
-# For Oddball files (training or otherwise)
-if (stim_type == "train") {
+# For standard broadband files
+if (analysis_type == "BBN training") {
+  NULL
+}
 
+# For Oddball files
+if (analysis_type == "Oddball") {
+  NULL
 }
 
 # Check File name vs. file ------------------------------------------------
@@ -59,5 +64,10 @@ if (stim_type == "train") {
 
 # Expected vs. file -------------------------------------------------------
 
+
+# Variable cleanup --------------------------------------------------------
+# Remove temp variables from the environment as they shouldn't be needed again
+
+rm(list = c("stim_master_list"))
 
 

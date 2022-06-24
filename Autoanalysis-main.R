@@ -56,13 +56,9 @@ Warnings = list()
 source("~/GitHub/Behavior-autoanalysis/matlab import.R")
 
 
-# Determine analysis type -------------------------------------------------
-# File and range to determine the expected analysis. This should be verified against the master experiment.
-source("~/GitHub/Behavior-autoanalysis/analysis typer.R")
-
-
 # File Check --------------------------------------------------------------
 # Checks actual file details against the expected/called for file.
+# File and range to determine the expected analysis. This should be verified against the master experiment.
 source("~/GitHub/Behavior-autoanalysis/file checker.R")
 
 
