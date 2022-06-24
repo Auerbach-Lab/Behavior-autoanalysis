@@ -34,7 +34,7 @@ FAs_kept = run_data_kept %>% dplyr::filter(Response == "FA") %>% dplyr::count() 
 
 # Get percentages for summary sheet
 hit_percent = hits_kept / Trials_kept
-if (hit_percent <= .75) warning(paste0("Low hit rate: ", round(hit_percent * 100, digits = 1), "%"))
+if (hit_percent <= .75) warning(paste0("Low hit rate: ", round(hit_percent * 100, digits = 1), "%")) &
 FA_percent = FAs_kept / Trials_kept
 if (FA_percent >= .3) warning(paste0("High false alarm (FA) rate: ", round(FA_percent * 100, digits = 1), "%"))
 

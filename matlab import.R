@@ -144,7 +144,7 @@ if (FAs_calc != results_FA) stop("False Alarm (FA) count miss-match")
 # Variable cleanup --------------------------------------------------------
 # Remove temp variables from the environment as they shouldn't be needed again
 
-# cleanup MATLAB summery
+# cleanup MATLAB summary
 rm(list = c("results_total_trials", "results_hits", "results_misses", "results_CR", "results_FA"))
 
 # cleanup extraneous copies of the current file
