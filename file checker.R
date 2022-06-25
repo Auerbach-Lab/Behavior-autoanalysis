@@ -45,21 +45,24 @@ if (length(unique(file_summary$steps)) != 1) {
   Warnings = append(Warnings, paste0("Action Required: Missmatched step size in file ", file_name))
 }
 
-
 # Analysis Type ----------------------------------------------------------
 # Automatically attempt to determine analysis type. This should be checked against
 # master/power user data table.
 
 # For tonal files (octaves, or mainly 4-32kHz)
 if (stim_type == "tone") {
-  # Determine if octave file (in that case one of the normal intensity (dB) should be 0 or non-rewarded)
-  # Note that for each type 1 and type 0 the min & max should be equal (i.e. one intensity) but not necessarily between type 1 & 0
-  if (any(file_summary$Type == 0)) {analysis_type = "octave"}
   # Determine if it has custom ranges (i.e. not all frequencies have the same range)
   if ((length(unique(file_summary$min)) != 1 | length(unique(file_summary$max)) != 1)) {analysis_type = "custom tone"}
-  # Determine if all frequencies have the same range
-  if ((length(unique(file_summary$min)) == 1 & length(unique(file_summary$max)) == 1)) {analysis_type = "standard tone"}
-  else (stop("Unknown tonal file type."))
+  else (
+    # Determine if octave file (in that case one of the normal intensity (dB) should be 0 or non-rewarded)
+    # Note that for each type 1 and type 0 the min & max should be equal (i.e. one intensity) but not necessarily between type 1 & 0
+    if (any(file_summary$Type == 0)) {analysis_type = "octave"}
+    else (
+      # Determine if all frequencies have the same range
+      if ((length(unique(file_summary$min)) == 1 & length(unique(file_summary$max)) == 1)) {analysis_type = "standard tone"}
+      else (stop("Unknown tonal file type."))
+    )
+  )
 }
 
 # For broadband files (training or otherwise)
