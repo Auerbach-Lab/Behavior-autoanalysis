@@ -73,7 +73,7 @@ if (stim_type == "BBN") {
 }
 
 # For Oddball files (training or otherwise)
-# TODO: This needs checking. I am betting on the if logical flow.
+# TODO: This needs rewriting into a proper if else as "oddball with catch trials" also errors at the stop.
 if (stim_type == "train") {
   # Determine if catch trials
   if (any(file_summary$Type == 0)) {analysis_type = "Oddball with catch trials"}
