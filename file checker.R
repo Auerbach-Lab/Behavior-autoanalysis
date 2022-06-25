@@ -34,6 +34,8 @@ duration = unique(stim_master_list["Dur (ms)"])
 # Get response window
 response_window = unique(stim_master_list["Nose Out TL (s)"]) %>% as.numeric()
 
+# Get Lock Out time
+Lockout = unique(stim_master_list$`Time Out (s)`)[unique(stim_master_list$`Time Out (s)`) > 0]
 
 # Check dB step size ------------------------------------------------------
 
@@ -56,6 +58,7 @@ if (stim_type == "tone") {
   else (
     # Determine if octave file (in that case one of the normal intensity (dB) should be 0 or non-rewarded)
     # Note that for each type 1 and type 0 the min & max should be equal (i.e. one intensity) but not necessarily between type 1 & 0
+    # TODO: differentiate training from testing days as the analysis and file names are different.
     if (any(file_summary$Type == 0)) {analysis_type = "octave"}
     else (
       # Determine if all frequencies have the same range
@@ -98,6 +101,16 @@ if (!(exists("analysis_type"))) {stop("\nUnknown file type. Can not proceed with
 
 # Build 'real' file name --------------------------------------------------
 
+if (analysis_type == "octave") {
+  paste0(file_summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)`, "kHz_",
+         file_summary %>% dplyr::filter(Type == 1) %>% .$min, "dB_",
+         duration, "ms_",
+         Lockout, "s"
+         # May be variable trial count and NG that need checking.
+         # Doesn't account for discrimination days when there is a range.
+         # Probably need more sub-types
+         )
+}
 
 # Check File name vs. file ------------------------------------------------
 
