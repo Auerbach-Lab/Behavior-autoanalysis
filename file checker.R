@@ -51,22 +51,27 @@ if (length(unique(file_summary$steps)) != 1) {
 # Automatically attempt to determine analysis type. This should be checked against
 # master/power user data table.
 
+# Tone categorization/properties tests
+# ------------------------------------
+# Determine if it has custom ranges (i.e. not all frequencies have the same range)
+has_different_dB_ranges_for_frequencies = length(unique(file_summary$min)) != 1 | length(unique(file_summary$max)) != 1
+# Determine if octave file (in that case one of the normal intensity (dB) should be 0 or non-rewarded)
+# Note that for each type 1 and type 0 the min & max should be equal (i.e. one intensity) but not necessarily between type 1 & 0
+has_audible_NoGo = any(file_summary$Type == 0)
+# Test octave files have multiple types of No Go trials in the audible range
+has_more_than_one_NoGo = length(unique(dplyr::filter(file_summary, Type == 0)$Type)) > 1
+
+
 # For tonal files (octaves, or mainly 4-32kHz)
 if (stim_type == "tone") {
-  # Determine if it has custom ranges (i.e. not all frequencies have the same range)
-  if ((length(unique(file_summary$min)) != 1 | length(unique(file_summary$max)) != 1)) {analysis_type = "custom tone"}
-  else (
-    # Determine if octave file (in that case one of the normal intensity (dB) should be 0 or non-rewarded)
-    # Note that for each type 1 and type 0 the min & max should be equal (i.e. one intensity) but not necessarily between type 1 & 0
-    # TODO: differentiate training from testing days as the analysis and file names are different.
-    if (any(file_summary$Type == 0)) {analysis_type = "octave"}
-    else (
-      # Determine if all frequencies have the same range
-      if ((length(unique(file_summary$min)) == 1 & length(unique(file_summary$max)) == 1)) {analysis_type = "standard tone"}
-      else (stop("Unknown tonal file type."))
-    )
-  )
+  if (has_different_dB_ranges_for_frequencies) {analysis_type = "custom tone"}
+  else if (has_audible_NoGo & has_more_than_one_NoGo) {analysis_type = "octave"}
+  else if (has_audible_NoGo & !has_more_than_one_NoGo) {analysis_type = "octave training"}
+  else if (!has_different_dB_ranges_for_frequencies) {analysis_type = "standard tone"}
+  else (stop("Unknown tonal file type."))
 }
+
+rm(list = c("has_different_dB_ranges_for_frequencies", "has_audible_NoGo", "has_more_than_one_NoGo"))
 
 # For broadband files (training or otherwise)
 if (stim_type == "BBN") {
