@@ -21,7 +21,7 @@ file_name =
   # remove excess info (i.e. .mat and then file location)
   stringr::str_remove(pattern = ".mat @ .*$", string = .)
 
-BG_file_location =
+file_location =
   stim$name[1] %>%
   # remove excess info (i.e. the name of the .mat file)
   stringr::str_remove(pattern = "^.*?.mat @ ", string = .)
@@ -52,6 +52,7 @@ if (is.na(file_settings$BG.sound[[1]][1]) == TRUE) {
 
 }
 
+rm(background_file)
 
 # Extra file settings -----------------------------------------------------
 
