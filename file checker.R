@@ -51,8 +51,7 @@ if (length(unique(file_summary$steps)) != 1) {
 # Automatically attempt to determine analysis type. This should be checked against
 # master/power user data table.
 
-# Tone categorization/properties tests
-# ------------------------------------
+# Tone file properties tests ---------------------------------------------
 # Determine if it has custom ranges (i.e. not all frequencies have the same range)
 has_different_dB_ranges_for_frequencies = length(unique(file_summary$min)) != 1 | length(unique(file_summary$max)) != 1
 # Determine if octave file (in that case one of the normal intensity (dB) should be 0 or non-rewarded)
@@ -73,38 +72,54 @@ if (stim_type == "tone") {
 
 rm(list = c("has_different_dB_ranges_for_frequencies", "has_audible_NoGo", "has_more_than_one_NoGo"))
 
+
+
+# BBN file properties tests -----------------------------------------------
+
+has_one_dB = file_summary$min == file_summary$max
+
 # For broadband files (training or otherwise)
 if (stim_type == "BBN") {
   # Determine if training
-  if (file_summary$min == file_summary$max) {analysis_type = "BBN Training"}
+  if (has_one_dB) {analysis_type = "BBN Training"}
   else (analysis_type = "BBN")
 }
 
+rm(list = c("has_one_dB"))
+
+
+# Oddball file properties tests -------------------------------------------
+
+# Determine if catch trials
+has_catch_trials = any(file_summary$Type == 0)
+# Determine if even odds
+has_uneven_trial_odds = file_frequency_ranges %>%
+                          dplyr::filter(Type != 0) %>% # Remove catch trials
+                          dplyr::select(Repeat_number) %>%
+                          unique() %>%
+                          length() != 1
+
 # For Oddball files (training or otherwise)
-# TODO: This needs rewriting into a proper if else as "oddball with catch trials" also errors at the stop.
 if (stim_type == "train") {
-  # Determine if catch trials
-  if (any(file_summary$Type == 0)) {analysis_type = "Oddball with catch trials"}
-  # Determine if even odds
-  if (file_frequency_ranges %>%
-      dplyr::filter(Type != 0) %>% # Remove catch trials
-      dplyr::select(Repeat_number) %>%
-      unique() %>%
-      length() != 1) {analysis_type = "Oddball uneven trial odds"}
-  # Check for odds and catch trials
-  if (any(file_summary$Type == 0) & # Has catch trials
-      # Has uneven trial odds
-      file_frequency_ranges %>%
-      dplyr::filter(Type != 0) %>% # Remove catch trials
-      dplyr::select(Repeat_number) %>%
-      unique() %>%
-      length() != 1) {analysis_type = "Oddball with uneven trial & catch trials"}
+  if (has_catch_trials & has_uneven_trial_odds) {analysis_type = "Oddball with odds & catch trials"}
+  else if (has_uneven_trial_odds) {analysis_type = "Oddball with uneven trial odds"}
+  else if (has_catch_trials) {analysis_type = "Oddball with catch trials"}
   else (stop("Unknown Oddball file type."))
 }
 
-if (!(exists("analysis_type"))) {stop("\nUnknown file type. Can not proceed with analysis")}
+rm(list = c("has_catch_trials", "has_uneven_trial_odds"))
+
+# Analysis Type = Undefined -----------------------------------------------
+
+invisible(
+  if (!exists("analysis_type")) {stop("\nUnknown file type. Can not proceed with analysis")}
+  else (cat("Proceeding with analysis:", stringr::str_to_title(analysis_type), sep = "\t"))
+)
 
 # Build 'real' file name --------------------------------------------------
+
+
+
 
 if (analysis_type == "octave") {
   paste0(file_summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)`, "kHz_",
