@@ -37,6 +37,9 @@ response_window = unique(stim_master_list["Nose Out TL (s)"]) %>% as.numeric()
 # Get Lock Out time
 Lockout = unique(stim_master_list$`Time Out (s)`)[unique(stim_master_list$`Time Out (s)`) > 0]
 
+# Get Delay
+Delay = unique(stim_master_list$`Delay (s)`)
+
 # Check dB step size ------------------------------------------------------
 
 dB_step_size = unique(file_summary$steps)
@@ -119,19 +122,6 @@ invisible(
 # Build 'real' file name --------------------------------------------------
 
 
-
-
-if (analysis_type == "octave") {
-  paste0(file_summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)`, "kHz_",
-         file_summary %>% dplyr::filter(Type == 1) %>% .$min, "dB_",
-         duration, "ms_",
-         Lockout, "s"
-         # May be variable trial count and NG that need checking.
-         # Doesn't account for discrimination days when there is a range.
-         # Probably need more sub-types
-         )
-}
-
 # Check File name vs. file ------------------------------------------------
 
 
@@ -141,6 +131,6 @@ if (analysis_type == "octave") {
 # Variable cleanup --------------------------------------------------------
 # Remove temp variables from the environment as they shouldn't be needed again
 
-rm(list = c("stim_master_list"))
+# rm(list = c("stim_master_list"))
 
 

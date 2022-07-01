@@ -5,7 +5,6 @@
 # # Background sound
 # current_file_bg = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/TTS/data/20220609/Green2_4-32kHz_30-90dB_50ms_16s_1s_TR100ms_BG_PNK_30dB_20220609-101835_BOX#002.mat")
 
-
 current_file = current_file_bg
 
 
@@ -52,7 +51,6 @@ if (is.na(file_settings$BG.sound[[1]][1]) == TRUE) {
 
 }
 
-rm(background_file)
 
 # Extra file settings -----------------------------------------------------
 
@@ -150,3 +148,4 @@ rm(list = c("results_total_trials", "results_hits", "results_misses", "results_C
 
 # cleanup extraneous copies of the current file
 rm(list = c("current_file", 'file_settings', 'run_data_encoded', 'stim'))
+
