@@ -119,18 +119,3 @@ invisible(
   else (cat("Proceeding with analysis:", stringr::str_to_title(analysis_type), sep = "\t"))
 )
 
-# Build 'real' file name --------------------------------------------------
-
-
-# Check File name vs. file ------------------------------------------------
-
-
-# Expected vs. file -------------------------------------------------------
-
-
-# Variable cleanup --------------------------------------------------------
-# Remove temp variables from the environment as they shouldn't be needed again
-
-# rm(list = c("stim_master_list"))
-
-
