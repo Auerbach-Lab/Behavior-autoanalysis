@@ -109,7 +109,7 @@ if (all(run_data_encoded[7:8] != "0")) {
   run_data_encoded = run_data_encoded[1:6]
   }
 
-names(run_data_encoded) = list("Time_since_file_start_(s)", "Stim_ID", "Tial_type", "Attempts_to_complete", "Response", "Reaction_(ms)")
+names(run_data_encoded) = list("Time_since_file_start_(s)", "Stim_ID", "Tial_type", "Attempts_to_complete", "Response", "Reaction_(s)")
 
 run_data_encoded = run_data_encoded %>%
                    dplyr::mutate(Response = dplyr::case_when(Response == 1 ~ "Hit",
@@ -119,7 +119,7 @@ run_data_encoded = run_data_encoded %>%
                                                              TRUE ~ "ERROR"))
 
 run_data = dplyr::left_join(x = run_data_encoded,
-                            y = select(stim_master_list, -Repeat_number),
+                            y = dplyr::select(stim_master_list, -Repeat_number),
                             by = "Stim_ID", all.x = TRUE)
 
 
