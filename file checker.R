@@ -1,6 +1,7 @@
 
-# Notes -------------------------------------------------------------------
-# Assumes you have booth the 'called_for_file' and actual 'file_name'
+# Checking Stim File ------------------------------------------------------
+# Summarizes stim file and selects analysis type
+# Summarizes kHz ranges, dB step size, durations, lockout window, & delay range
 
 
 # Actual Stim -------------------------------------------------------------
