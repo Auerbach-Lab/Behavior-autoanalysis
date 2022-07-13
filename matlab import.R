@@ -16,7 +16,7 @@
 # file_BBN = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/Tsc2 Eker/data/20220712/RP4_BBN_20-80dB_300ms_8s_20220712-144008_BOX#004.mat")
 
 
-current_file = file_tones_bg
+current_file = file_BBN
 
 
 # File Breakdown ----------------------------------------------------------
@@ -95,16 +95,16 @@ results_FA = current_file$final.result[,,1]$FA.num[1]
 # Decode result table -----------------------------------------------------
 # Table of reaction times with # of stim
 
-# stim_master_list = stim$source.list
+stim_master_list = as.data.frame(stim$source.list)
 
-# stim$source.list isn't coming in as a table (for these test files it should be 9 wide by 29 long)
-# runs down the columns (check item 29, stim$source.list[[29]] == 1,28 in MATLAB)
-# This is because in MATLAB it is type cell (an array)
-# Brian has made a fix that can be run manually and submitted a pull request for R.matlab
+# remove sublists that are an artifact of importing
+# from: https://stackoverflow.com/questions/15930880/unlist-all-list-elements-in-a-dataframe
+stim_master_list = t(apply(stim_master_list, 1, unlist)) %>% as.data.frame()
 
-stim_master_list = read_csv("~/GitHub/Behavior-autoanalysis/source_list.csv", col_names = FALSE, show_col_types = FALSE)
+# add Column names
 names(stim_master_list) = append(unlist(stim$stim.tag.list), "Repeat_number", after = 0)
-# Add identifying number for decoding)
+
+# Add identifying number (for decoding)
 stim_master_list = dplyr::mutate(stim_master_list, "Stim_ID" = row_number())
 
 # Get stim variables automatically

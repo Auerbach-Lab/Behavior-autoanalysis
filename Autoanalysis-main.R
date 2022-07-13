@@ -15,7 +15,9 @@
 # Package loading ---------------------------------------------------------
 
 # data loading/manipulation
-library(R.matlab); library(readxl); library(tidyverse); library(dplyr); library(tidyr)
+library(R.matlab);
+source("~/GitHub/Behavior-autoanalysis/matlab import.R")
+library(readxl); library(tidyverse); library(dplyr); library(tidyr)
 
 # Analysis
 library(psych); library(psycho);

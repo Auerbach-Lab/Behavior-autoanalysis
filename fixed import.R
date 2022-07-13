@@ -27,11 +27,11 @@ library(methods)
 
 
 # Load file ---------------------------------------------------------------
-source("A:\\coding\\R.matlab\\R\\000.R")
-source("A:\\coding\\R.matlab\\R\\006.fixVarArgs.R")
-source("A:\\coding\\R.matlab\\R\\utils.R")
-source("A:\\coding\\R.matlab\\R\\zzz.R")
-source("A:\\coding\\R.matlab\\R\\readMat.R")
+source("~/GitHub/Behavior-autoanalysis/R/000.R")
+source("~/GitHub/Behavior-autoanalysis/R/006.fixVarArgs.R")
+source("~/GitHub/Behavior-autoanalysis/R/utils.R")
+source("~/GitHub/Behavior-autoanalysis/R/zzz.R")
+source("~/GitHub/Behavior-autoanalysis/R/readMat.R")
 file = readMat("A:\\coding\\matlab\\2by3cellarray.mat",verbose=-100,drop=TRUE)
 class(file$source.list)
 print(file$source.list)
