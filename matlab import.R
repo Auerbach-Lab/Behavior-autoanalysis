@@ -1,11 +1,22 @@
 
 # Loading current file ----------------------------------------------------
 # # No Background
-# current_file_nobg = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/TTS/data/20220609/Green1_4-32kHz_30-90dB_50ms_8s_1s_TR100ms_20220609-101834_BOX#001.mat")
+# file_tones_nobg = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/TTS/data/20220609/Green1_4-32kHz_30-90dB_50ms_8s_1s_TR100ms_20220609-101834_BOX#001.mat")
 # # Background sound
-# current_file_bg = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/TTS/data/20220609/Green2_4-32kHz_30-90dB_50ms_16s_1s_TR100ms_BG_PNK_30dB_20220609-101835_BOX#002.mat")
+# file_tones_bg = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/TTS/data/20220609/Green2_4-32kHz_30-90dB_50ms_16s_1s_TR100ms_BG_PNK_30dB_20220609-101835_BOX#002.mat")
+# # Octave training
+# file_octave_training = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/Fmr1 SD/data/Group 2/20220712/Red3_32kHz_60dB_16kHz_60db_300ms_4s_c5_NG3_20220712-112308_BOX#003.mat")
+# # Octave testing
+# file_octave_test = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/Fmr1 SD/data/Group 2/20220712/Red1_4-5.4kHz_75-62dB_300ms_12s_20220712-112306_BOX#001.mat")
+# # BBN training
+# file_BBN_training = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/Tsc2 Eker/data/20220712/GP2_BBN_60dB_0-0.5s_0catch_20220712-123217_BOX#004.mat")
+# # BBN duration
+# file_BBN_duration = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/Fmr1 SD/data/Group 3/20220224/Purple6_BBN_30-90dB_50-300ms_4s_TR200ms_20220224-152356_BOX#002.mat")
+# # BBN
+# file_BBN = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/Tsc2 Eker/data/20220712/RP4_BBN_20-80dB_300ms_8s_20220712-144008_BOX#004.mat")
 
-current_file = current_file_bg
+
+current_file = file_tones_bg
 
 
 # File Breakdown ----------------------------------------------------------
