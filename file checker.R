@@ -94,11 +94,13 @@ rm(list = c("has_different_dB_ranges_for_frequencies", "has_audible_NoGo", "has_
 # BBN file properties tests -----------------------------------------------
 
 has_one_dB = file_summary$min == file_summary$max
+has_multiple_durations = nrow(duration) > 1
 
 # For broadband files (training or otherwise)
 if (stim_type == "BBN") {
   # Determine if training
   if (has_one_dB) {analysis_type = "BBN Training"}
+  else if (has_multiple_durations) {analysis_type = "BBN duration"}
   else (analysis_type = "BBN")
 }
 
