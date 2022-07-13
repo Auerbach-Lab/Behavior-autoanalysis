@@ -6,10 +6,10 @@ summary_hits = dplyr::group_by(run_data_kept, Stim_ID) %>%
                    Misses = sum(Response == "Miss"),
                    CRs = sum(Response == "CR"),
                    FAs = sum(Response == "FA"),
-                   hit_percent = sum(Response == "Hit") / sum(Response == "Hit" | Response == "Miss") %>% round(digits = 3))
+                   hit_percent = round(sum(Response == "Hit") / sum(Response == "Hit" | Response == "Miss"), digits = 3))
 
 # Add it to a summary table
-if (exists(run_data_summary)) {
+if (exists("run_data_summary")) {
   run_data_summary = dplyr::left_join(x = run_data_summary,
                                       y = summary_hits,
                                       by = "Stim_ID", all.x = TRUE)
