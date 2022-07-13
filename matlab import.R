@@ -16,7 +16,7 @@
 # file_BBN = readMat("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/Tsc2 Eker/data/20220712/RP4_BBN_20-80dB_300ms_8s_20220712-144008_BOX#004.mat")
 
 
-current_file = file_BBN
+current_file = file_tones_nobg
 
 
 # File Breakdown ----------------------------------------------------------
@@ -95,7 +95,7 @@ results_FA = current_file$final.result[,,1]$FA.num[1]
 # Decode result table -----------------------------------------------------
 # Table of reaction times with # of stim
 
-stim_master_list = as.data.frame(stim$source.list)
+stim_master_list = stim$source.list
 
 # remove sublists that are an artifact of importing
 # from: https://stackoverflow.com/questions/15930880/unlist-all-list-elements-in-a-dataframe
@@ -103,6 +103,10 @@ stim_master_list = t(apply(stim_master_list, 1, unlist)) %>% as.data.frame()
 
 # add Column names
 names(stim_master_list) = append(unlist(stim$stim.tag.list), "Repeat_number", after = 0)
+
+# fix column types as they are all character
+stim_master_list = stim_master_list %>% dplyr::mutate_at(vars(Repeat_number, Type, `Freq (kHz)`, `Inten (dB)`, `Dur (ms)`, `Nose Out TL (s)`, `Time Out (s)`),
+                                                         ~as.numeric(.))
 
 # Add identifying number (for decoding)
 stim_master_list = dplyr::mutate(stim_master_list, "Stim_ID" = row_number())
