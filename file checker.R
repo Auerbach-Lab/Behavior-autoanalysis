@@ -6,6 +6,18 @@
 
 # Actual Stim -------------------------------------------------------------
 
+# Check that all stims are unique
+stim_not_unique = stim_master_list %>%
+                    dplyr::group_by(`Freq (kHz)`, `Inten (dB)`, `Dur (ms)`, `Type`) %>%
+                    dplyr::filter(n() > 1) %>%
+                    summarize(n = n(), .groups = 'drop')
+
+# Warning
+if (nrow(stim_not_unique) != 0) {
+  warning(paste0("Repeated stim.\nAction Required: Correct ", file_name, "\n"))
+  Warnings = append(Warnings, paste0("Action Required: Multiple (", nrow(stim_not_unique), ") identical stims in ", file_name))
+}
+
 # List of go sound frequencies
 file_frequencies = unique(stim_master_list["Freq (kHz)"])
 
