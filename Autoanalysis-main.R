@@ -62,6 +62,21 @@ source("~/GitHub/Behavior-autoanalysis/matlab import.R")
 source("~/GitHub/Behavior-autoanalysis/file checker.R")
 
 
+# File Specific Analysis --------------------------------------------------
+
+if (analysis_type = "standard tone") {source("~/GitHub/Behavior-autoanalysis/standard tone handler.R")
+} else if (analysis_type = "custom tone") {source("~/GitHub/Behavior-autoanalysis/custom tone handler.R")
+} else if (analysis_type = "octave training") {source("~/GitHub/Behavior-autoanalysis/octave training handler.R")
+} else if (analysis_type = "octave") {source("~/GitHub/Behavior-autoanalysis/octave handler.R")
+} else if (analysis_type = "BBN Training") {source("~/GitHub/Behavior-autoanalysis/BBN Training handler.R")
+} else if (analysis_type = "BBN duration") {source("~/GitHub/Behavior-autoanalysis/BBN duration handler.R")
+} else if (analysis_type = "BBN") {source("~/GitHub/Behavior-autoanalysis/BBN handler.R")
+} else if (analysis_type = "Oddball with odds & catch trials") {source("~/GitHub/Behavior-autoanalysis/Oddball odds catch handler.R")
+} else if (analysis_type = "Oddball with uneven trial odds") {source("~/GitHub/Behavior-autoanalysis/Oddball odds handler.R")
+} else if (analysis_type = "Oddball with catch trials") {source("~/GitHub/Behavior-autoanalysis/Oddball catch handler.R")
+} else {stop("Unknown analysis type. Can not continue")}
+
+
 # Summary Calculation -----------------------------------------------------
 
 
