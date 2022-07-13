@@ -106,7 +106,7 @@ if (stim_type == "BBN") {
   else (analysis_type = "BBN")
 }
 
-rm(list = c("has_one_dB"))
+rm(list = c("has_one_dB", "has_multiple_durations"))
 
 
 # Oddball file properties tests -------------------------------------------

@@ -24,7 +24,7 @@ Trials_kept = dplyr::count(run_data_kept) %>% as.numeric()
 # check
 if (Trials_kept != Trials_expected) stop("Omitting Trials - expected kept count does not match")
 
-rm(list = c("run_data", "omit_list"))
+rm(list = c("run_data", "omit_list", "omit_count", "total_trials"))
 
 # Basic Stats -------------------------------------------------------------
 
@@ -51,4 +51,4 @@ if (FA_percent >= .3) {
 }
 
 # Get average attempt number for summary sheet
-avg_attempts_kept = dplyr::summarise_at(run_data_kept, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
+avg_attempts = dplyr::summarise_at(run_data_kept, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete

@@ -23,6 +23,7 @@ if (has_Response_window & has_TR & has_BG) {
   run_file_name =  paste0(go_kHz_range, "_", go_dB_range, "_", duration, "ms_", Lockout, "s_", "TR", trigger_senesitivity, "ms")
 }
 
+rm(list = c("background_file", "BG", "dB_step_size", "Delay", "has_BG", "has_Response_window", "Lockout", "no_go_max_touching", "nose_light", "trigger_senesitivity"))
 
 # Check file name agreement -----------------------------------------------
 
@@ -37,6 +38,7 @@ if (run_file_name != file_name) {
   Warnings = append(Warnings, "Check: Missmatched file names.")
 }
 
+rm(list = c("run_file_name"))
 
 
 # By stim Summary Data ----------------------------------------------------
