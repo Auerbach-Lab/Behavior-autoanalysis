@@ -36,3 +36,16 @@ if (run_file_name != file_name) {
   warning(paste("Missmatched file names.", comp, sep = "\n"))
   Warnings = append(Warnings, "Check: Missmatched file names.")
 }
+
+
+
+# By stim Summary Data ----------------------------------------------------
+
+# Get Hits/Misses/CRs/FAs and Hit %
+source("~/GitHub/Behavior-autoanalysis/Hit_percent_by_stim.R")
+
+# Add Attempts
+source("~/GitHub/Behavior-autoanalysis/Attempts_by_stim.R")
+
+# Add average reaction time
+source("~/GitHub/Behavior-autoanalysis/RXN_by_stim.R")
