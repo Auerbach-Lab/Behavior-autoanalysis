@@ -17,6 +17,8 @@ if (nrow(stim_not_unique) != 0) {
   Warnings = append(Warnings, paste0("Action Required: Multiple (", nrow(stim_not_unique), ") identical stims in ", file_name))
 }
 
+rm(stim_not_unique)
+
 # Actual Stim -------------------------------------------------------------
 
 # List of go sound frequencies
