@@ -14,13 +14,13 @@ has_BG = (background_type != "None")
 BG = if (has_BG) paste0(stringr::str_remove(pattern = ".mat", string = background_file), "_", background_dB, "dB")
 
 if (has_Response_window & has_TR & has_BG) {
-  run_file_name =  paste0(go_kHz_range, "_", go_dB_range, "_", duration, "ms_", Lockout, "s_", response_window, "s_", "TR", trigger_senesitivity, "ms_", BG)
+  computed_file_name =  paste0(go_kHz_range, "_", go_dB_range, "_", duration, "ms_", Lockout, "s_", response_window, "s_", "TR", trigger_senesitivity, "ms_", BG)
 } else if (has_Response_window & has_TR ) {
-  run_file_name =  paste0(go_kHz_range, "_", go_dB_range, "_", duration, "ms_", Lockout, "s_", response_window, "s_", "TR", trigger_senesitivity, "ms")
+  computed_file_name =  paste0(go_kHz_range, "_", go_dB_range, "_", duration, "ms_", Lockout, "s_", response_window, "s_", "TR", trigger_senesitivity, "ms")
 } else if (has_Response_window) {
-  run_file_name =  paste0(go_kHz_range, "_", go_dB_range, "_", duration, "ms_", Lockout, "s_", response_window, "s")
+  computed_file_name =  paste0(go_kHz_range, "_", go_dB_range, "_", duration, "ms_", Lockout, "s_", response_window, "s")
 } else if (has_TR ) {
-  run_file_name =  paste0(go_kHz_range, "_", go_dB_range, "_", duration, "ms_", Lockout, "s_", "TR", trigger_senesitivity, "ms")
+  computed_file_name =  paste0(go_kHz_range, "_", go_dB_range, "_", duration, "ms_", Lockout, "s_", "TR", trigger_senesitivity, "ms")
 }
 
 rm(list = c("background_file", "BG", "dB_step_size", "Delay", "has_BG", "has_Response_window", "Lockout", "no_go_max_touching", "nose_light", "trigger_senesitivity"))
@@ -29,8 +29,8 @@ rm(list = c("background_file", "BG", "dB_step_size", "Delay", "has_BG", "has_Res
 
 # Check for mismatched file name
 # The background check is a temporary measure for files predating the rename from BG_PKN.mat to BG_PNK.mat (occured 7/1/2022)
-if (run_file_name != file_name) {
-  comp = waldo::compare(run_file_name %>% str_split(pattern = ""),
+if (computed_file_name != file_name) {
+  comp = waldo::compare(computed_file_name %>% str_split(pattern = ""),
                         file_name %>% str_split(pattern = ""),
                         x_arg = "Name from run",
                         y_arg = "Expected name")
@@ -38,7 +38,7 @@ if (run_file_name != file_name) {
   Warnings = append(Warnings, "Check: Missmatched file names.")
 }
 
-rm(list = c("run_file_name"))
+rm(list = c("computed_file_name"))
 
 
 # By stim Summary Data ----------------------------------------------------
