@@ -3,6 +3,9 @@ require(openxlsx)
 require(xml2)
 require(zip)
 
+
+# Build Workbook ----------------------------------------------------------
+
 wbfilename = "supervisor.xlsx"
 wb <- createWorkbook()
 options("openxlsx.borderColour" = "#4F80BD")
@@ -17,19 +20,24 @@ s0 <- createStyle(fgFill = "darkgray", fontColour = "white", textDecoration = "b
 addStyle(wb, 1, s0, rows = 1:1, cols = 1:12, gridExpand = TRUE)
 saveWorkbook(wb, wbfilename, overwrite = TRUE) ## save to working directory
 
+# Manually apply filter ---------------------------------------------------
+
 ziptemp = "./ziptemp"
 unzip(wbfilename, exdir = ziptemp)
+
 xmlfile <- paste(ziptemp, "/xl/tables/table3.xml", sep = "")
 x <- read_xml(xmlfile)
 autofilternode <- xml_find_first(x, "//d1:autoFilter", xml_ns(x))
-nodetoadd <- read_xml("<filterColumn colId=\"0\"><filters blank=\"1\" /></filterColumn>")
+nodetoadd <- read_xml("<filterColumn colId=\"0\"><filters blank=\"1\" /></filterColumn>")   #preselect 'blanks' filter on col A (0)
 xml_add_child(autofilternode, nodetoadd)
 write_xml(x, xmlfile)
+
 xmlfile <- paste(ziptemp, "/xl/worksheets/sheet1.xml", sep = "")
 x <- read_xml(xmlfile)
-nodes <- xml_find_all(x, "//d1:row[@r>3 and @r<25]", xml_ns(x))
+nodes <- xml_find_all(x, "//d1:row[@r>3 and @r<25]", xml_ns(x))     #d1 is because a namespace is in use; the node is named 'row'
 xml_set_attr(nodes, "hidden", 1, xml_ns(x))
 write_xml(x, xmlfile)
-files2zip <- dir(ziptemp, full.names=TRUE)
-zip(zipfile = wbfilename, dir(ziptemp, full.names=TRUE), mode = "cherry-pick", include_directories = FALSE)
-unlink(ziptemp, recursive = TRUE)
+
+files2zip <- dir(ziptemp, full.names = TRUE)
+zip(zipfile = wbfilename, dir(ziptemp, full.names = TRUE), mode = "cherry-pick", include_directories = FALSE)
+unlink(ziptemp, recursive = TRUE)   #delete temp directory
