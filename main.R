@@ -1,3 +1,4 @@
+
 Initialize <- function() {
    Load_Packages <- function() {
     # data loading/manipulation
@@ -16,7 +17,7 @@ Initialize <- function() {
   if (!exists("warnings_list")) warnings_list <<- list()  # initialize, if necessary, with empty list to record potential warnings_list
 }
 
-Import_Matlab <- function(current_mat_file) {
+Import_Matlab <- function() {
   Unlist_Matlab_To_Dataframe <- function(li) {
     return(t(apply(li, 1, unlist)) %>% as.data.frame())
   }
@@ -26,7 +27,7 @@ Import_Matlab <- function(current_mat_file) {
       trial_collection$name[1] %>%
       # remove excess info (i.e. .mat and then file location)
       stringr::str_remove(pattern = ".mat @ .*$", string = .)
-    cat("Loading file:", file_name, sep = "\t", fill = TRUE)
+    cat("Loaded file:", file_name, sep = "\t", fill = TRUE)
     return(file_name)
   }
 
@@ -167,7 +168,7 @@ Import_Matlab <- function(current_mat_file) {
 
     Query_Omitted_Trials <- function() {
       # get trial numbers to omit (these will be in a CSV format)
-      omit_list = "2, 32, 6"
+      omit_list = "1" #"2, 32, 6"
       #TODO actually do a popup and get information
 
       # cleanse any spaces
@@ -303,7 +304,7 @@ Import_Matlab <- function(current_mat_file) {
 
     analysis_type = NULL
 
-    Check_Tonal <- function() {
+    ID_Tonal <- function() {
       # Determine if it has custom ranges (i.e. not all frequencies have the same range)
       has_different_dB_ranges_for_frequencies = length(unique(file_summary$dB_min)) != 1 | length(unique(file_summary$dB_max)) != 1
       # Determine if octave file (in that case one of the normal intensity (dB) should be 0 or non-rewarded)
@@ -311,49 +312,54 @@ Import_Matlab <- function(current_mat_file) {
       has_audible_NoGo = any(file_summary$Type == 0)
       # Test octave files have multiple types of No Go trials in the audible range
       has_more_than_one_NoGo = length(unique(dplyr::filter(file_summary, Type == 0)$`Freq (kHz)`)) > 1
-      # Does the file have only a single frequency, for training?
+      # Does the file have only a single frequency
       has_only_one_frequency = length(unique(stim_master_list$`Freq (kHz)`)) == 1
+      # Does the file have only a single intensity (dB), i.e. training
+      has_one_dB = unique(file_summary$dB_min == file_summary$dB_max)
 
       # For tonal files (octaves, or mainly 4-32kHz)
-      if (has_different_dB_ranges_for_frequencies) analysis_type <<- "custom tone"
-      else if (has_audible_NoGo & has_more_than_one_NoGo) analysis_type <<- "octave"
-      else if (has_audible_NoGo & !has_more_than_one_NoGo) analysis_type <<- "training octave"
-      else if (has_only_one_frequency) analysis_type <<- "training tone"
-      else if (!has_different_dB_ranges_for_frequencies) analysis_type <<- "standard tone"
+      # DO NOT CHANGE THE TEXTUAL DESCRIPTIONS OR YOU WILL BREAK COMPARISONS LATER
+      if (!has_audible_NoGo & has_different_dB_ranges_for_frequencies) analysis_type <<- "Tone (Thresholding)"
+      else if (has_one_dB & has_only_one_frequency) analysis_type <<- "Training - Tone"
+      else if (has_audible_NoGo & has_more_than_one_NoGo) analysis_type <<- "Octave"
+      else if (has_audible_NoGo & !has_more_than_one_NoGo) analysis_type <<- "Training - Octave"
+      else if (!has_audible_NoGo & has_only_one_frequency ) analysis_type <<- "Tone (Single)"
+      else if (!has_audible_NoGo) analysis_type <<- "Tone (Standard)"
       else (stop("Unknown tonal file type."))
     }
 
-    Check_BBN <- function() {
+    ID_BBN <- function() {
       has_one_dB = file_summary$dB_min == file_summary$dB_max
       has_multiple_durations = length(unique(stim_master_list$`Dur (ms)`)) > 1
 
       # For broadband files (training or otherwise)
-      # Determine if training
-      if (has_one_dB) analysis_type <<- "BBN Training"
-      else if (has_multiple_durations) analysis_type <<- "BBN duration"
-      else (analysis_type = "BBN")
+      # DO NOT CHANGE THE TEXTUAL DESCRIPTIONS OR YOU WILL BREAK COMPARISONS LATER
+      if (has_one_dB) analysis_type <<- "Training - BBN"
+      else if (has_multiple_durations) analysis_type <<- "BBN Mixed Duration"
+      else (analysis_type <<- "BBN (Standard)")
     }
 
-    Check_Oddball <- function() {
+    ID_Oddball <- function() {
       # Determine if catch trials
       has_catch_trials = file_summary$catch
       # Determine if even odds
       has_uneven_trial_odds = length(unique(file_summary$odds.odds)) > 1
 
       # For Oddball files (training or otherwise)
-      if (has_catch_trials & has_uneven_trial_odds) analysis_type <<- "Oddball with odds & catch trials"
-      else if (has_catch_trials) analysis_type <<- "Oddball with catch trials"
-      else if (has_uneven_trial_odds) analysis_type <<- "Oddball with uneven trial odds"
-      else if (!has_catch_trials & !has_uneven_trial_odds) analysis_type <<- "Oddball standard"
+      # DO NOT CHANGE THE TEXTUAL DESCRIPTIONS OR YOU WILL BREAK COMPARISONS LATER
+      if (has_catch_trials & has_uneven_trial_odds) analysis_type <<- "Oddball (Uneven Odds & Catch)"
+      else if (has_uneven_trial_odds) analysis_type <<- "Oddball (Uneven Odds)"
+      else if (has_catch_trials) analysis_type <<- "Oddball (Catch)"
+      else if (!has_catch_trials & !has_uneven_trial_odds) analysis_type <<- "Oddball (Standard)"
       else stop("Unknown Oddball file type.")
     }
 
-    if (stim_type == "tone") Check_Tonal()
-    if (stim_type == "BBN") Check_BBN()
-    if (stim_type == "train") Check_Oddball()
+    if (stim_type == "tone") ID_Tonal()
+    if (stim_type == "BBN") ID_BBN()
+    if (stim_type == "train") ID_Oddball()
 
     if (is.null("analysis_type")) stop("\nUnknown file type. Can not proceed with analysis")
-    else (cat("Proceeding with analysis:", analysis_type, sep = "\t", fill = TRUE))
+    else (cat("Analysis type:", analysis_type, sep = "\t", fill = TRUE))
 
     return(analysis_type)
   }
@@ -362,7 +368,7 @@ Import_Matlab <- function(current_mat_file) {
     Get_File_Settings <- function() {
       file_settings = trial_collection$para[,,1]
 
-      # Background Type ---------------------------------------------------------
+      # Background Type
       if (is.na(file_settings$BG.sound[[1]][1]) == TRUE) {
         background_dB = "None"
         background_file = "None"
@@ -387,10 +393,9 @@ Import_Matlab <- function(current_mat_file) {
         background_type = background_type,
 
         # Maximum number of back to back no go trials (0 or blank is infinite)
-        no_go_max_touching = file_settings$no.go.trial.max.num[[1]],
+        nogo_max_touching = file_settings$no.go.trial.max.num[[1]],
 
         # settings from stim_master_list
-        response_window = unique(stim_master_list["Nose Out TL (s)"]) %>% as.numeric(),
         lockout = unique(stim_master_list$`Time Out (s)`)[unique(stim_master_list$`Time Out (s)`) > 0],
         delay = unique(stim_master_list$`Delay (s)`),
         duration = unique(stim_master_list["Dur (ms)"]), # List of length of go sound - can be up to 3 values (50, 100, & 300) in our current file system
@@ -401,73 +406,227 @@ Import_Matlab <- function(current_mat_file) {
         #   i.e. how long the rat has post trial start to respond
         # This is how long the nose must remain out to be counted as 'withdraw' or
         # response. Response time is for the withdraw.
-        trigger_sensitivity = file_settings$detect.time.win[[1]],
+        trigger_sensitivity = file_settings$detect.time.win[[1]] %>% as.numeric(),
 
         # Nose light operational?
         nose_light = file_settings$nose.light[[1]] %>% as.logical()
+
       )
+      filename_TR = stringr::str_extract(file_name,"_TR[:digit:]+ms") %>% str_extract("[:digit:]+") %>% as.numeric()
+      if (!is.na(filename_TR)) if (filename_TR != r$trigger_sensitivity) {
+        warn = paste0("Action Required: Mismatched trigger window in filename (", filename_TR, ") and settings (", r$trigger_sensitivity, ").")
+        warning(paste0(warn, "\n"))
+        warnings_list <<- append(warnings_list, warn)
+
+        if (r$trigger_sensitivity != 200) {
+          newname = stringr::str_replace(file_name,"_TR[:digit:]+ms",paste0("_TR", r$trigger_sensitivity, "ms"))
+        }
+        else {
+          newname = stringr::str_replace(file_name,"_TR[:digit:]+ms","")
+        }
+
+        warn = paste0("Overriding File Name: Old (", file_name, ") to New (", newname, ") based on trigger_sensitivity.")
+        warning(paste0(warn, "\n"))
+        warnings_list <<- append(warnings_list, warn)
+        file_name <<- newname
+      }
       if (length(r$response_window) > 1) stop("Multiple response windows:", r$response_window,". Aborting.")
 
       return(r)
     }
 
 
-    Tonal <- function() {
-      go_kHz_range = paste0(file_summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)` %>% min(), "-",
-                            file_summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)` %>% max(), "kHz")
+    Tonal_Filename <- function() {
+      if (analysis_type == "Tone (Standard)") {
+        go_kHz_range = paste0(file_summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)` %>% min(), "-",
+                              file_summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)` %>% max(), "kHz")
+        go_dB_range = paste0(file_summary %>% dplyr::filter(Type == 1) %>% .$dB_min %>% unique(), "-",
+                             file_summary %>% dplyr::filter(Type == 1) %>% .$dB_max %>% unique(), "dB")
 
-      go_dB_range = paste0(file_summary %>% dplyr::filter(Type == 1) %>% .$dB_min %>% unique(), "-",
-                           file_summary %>% dplyr::filter(Type == 1) %>% .$dB_max %>% unique(), "dB")
-
-      print(file_summary)
-      print(go_kHz_range)
-      print(go_dB_range)
-      print(file_settings$duration)
-      print(file_settings$lockout)
-
-      has_Response_window = file_settings$response_window != 2
-      has_TR = file_settings$trigger_sensitivity != 200
-      has_BG = file_settings$background_type != "None"
-      BG = if (has_BG) paste0(stringr::str_remove(pattern = ".mat", string = file_settings$background_file), "_", background_dB, "dB")
-
-      if (has_Response_window & has_TR & has_BG) {
-        computed_file_name =  paste0(go_kHz_range, "_", go_dB_range, "_", file_settings$duration, "ms_", file_settings$lockout, "s_", file_settings$response_window, "s_", "TR", file_settings$trigger_sensitivity, "ms_", BG)
-      } else if (has_Response_window & has_TR ) {
-        computed_file_name =  paste0(go_kHz_range, "_", go_dB_range, "_", file_settings$duration, "ms_", file_settings$lockout, "s_", file_settings$response_window, "s_", "TR", file_settings$trigger_sensitivity, "ms")
-      } else if (has_Response_window) {
-        computed_file_name =  paste0(go_kHz_range, "_", go_dB_range, "_", file_settings$duration, "ms_", file_settings$lockout, "s_", file_settings$response_window, "s")
-      } else if (has_TR ) {
-        computed_file_name =  paste0(go_kHz_range, "_", go_dB_range, "_", file_settings$duration, "ms_", file_settings$lockout, "s_", "TR", file_settings$trigger_senesitivity, "ms")
+        computed_file_name = paste0(go_kHz_range, "_", go_dB_range, "_", file_settings$duration, "ms_", file_settings$lockout, "s")
       }
 
-      print(return(computed_file_name))
+      else if (analysis_type == "Tone (Single)") {
+        go_kHz = paste0(file_summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)`, "kHz")
+        go_dB_range = paste0(file_summary %>% dplyr::filter(Type == 1) %>% .$dB_min %>% unique(), "-",
+                             file_summary %>% dplyr::filter(Type == 1) %>% .$dB_max %>% unique(), "dB")
+
+        computed_file_name = paste0(go_kHz, "_", go_dB_range, "_", file_settings$duration, "ms_", file_settings$lockout, "s")
+      }
+
+      else if (analysis_type == "Tone (Thresholding)") {
+        go_kHz_range = paste0(file_summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)` %>% min(), "-",
+                              file_summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)` %>% max(), "kHz")
+        dB_step_size = unique(file_summary$dB_step_size) %>% as.numeric()
+        if (dB_step_size == 5) go_dB_range = "MIX5stepdB"
+        else if (dB_step_size == 10) go_dB_range = "MIXdB"
+        else stop("Tone (Thresholding): Unrecognized dB_step_size (", dB_step_size,"). Aborting.")
+        rat_ID = stringr::str_split(file_name, "_") %>% unlist() %>% .[1]
+        computed_file_name = paste0(rat_ID, "_", go_kHz_range, "_", go_dB_range, "_", file_settings$duration, "ms_", file_settings$lockout, "s")
+      }
+
+      else if (analysis_type == "Training - Tone") {
+        go_kHz = paste0(file_summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)`, "kHz_")
+        go_dB = paste0(stim_master_list %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB_")
+        catch_number = paste0(stim_master_list %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
+        delay = file_settings$delay %>% stringr::str_replace(" ", "-")
+        lockout = `if`(length(file_settings$lockout) > 0, file_settings$lockout, 0)
+
+        computed_file_name = paste0(go_kHz, go_dB)
+        if (length(catch_number) == 0) computed_file_name = paste0(computed_file_name, delay, "s_0catch")
+        else if (catch_number > 0) computed_file_name = paste0(computed_file_name, catch_number, "catch_", lockout, "s")
+      }
+
+      else if (analysis_type == "Octave")
+      {
+        go_kHz = paste0(stim_master_list %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)`, "-")
+        nogo_kHz = paste0(stim_master_list %>% dplyr::filter(Type == 0) %>% dplyr::arrange(Stim_ID) %>% tail(n = 1) %>% .$`Freq (kHz)`, "kHz_")
+        nogo_kHz2 = paste0(stim_master_list %>% dplyr::filter(Type == 0) %>% dplyr::arrange(Stim_ID) %>% tail(n = 2) %>% head(n = 1) %>% .$`Freq (kHz)` %>% round(digits = 1), "kHz_")
+        go_dB = paste0(stim_master_list %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`)
+        nogo_dB = paste0(stim_master_list %>% dplyr::filter(Type == 0) %>% dplyr::arrange(Stim_ID) %>% tail(n = 1) %>% .$`Inten (dB)`)
+        has_dB_range = go_dB != nogo_dB
+
+        computed_file_name = paste0(go_kHz, nogo_kHz)
+        computed_file_name2 = paste0(go_kHz, nogo_kHz2)
+        if (has_dB_range) {
+          computed_file_name = paste0(computed_file_name, go_dB, "-")
+          computed_file_name2 = paste0(computed_file_name2, go_dB, "-")
+        }
+        computed_file_name = paste0(computed_file_name, nogo_dB, "dB_", file_settings$duration, "ms_", file_settings$lockout, "s")
+        computed_file_name2 = paste0(computed_file_name2, nogo_dB, "dB_", file_settings$duration, "ms_", file_settings$lockout, "s")
+        computed_file_name = list(computed_file_name, computed_file_name2) # should be safe from the later pastes because they shouldn't fire
+      }
+
+      else if (analysis_type == "Training - Octave")
+      {
+        go_kHz = paste0(stim_master_list %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)`, "kHz_")
+        nogo_kHz = paste0(stim_master_list %>% dplyr::filter(Type == 0) %>% .$`Freq (kHz)`, "kHz_")
+        go_dB = paste0(stim_master_list %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB_")
+        nogo_dB = paste0(stim_master_list %>% dplyr::filter(Type == 0) %>% .$`Inten (dB)`, "dB_")
+        catch_number = paste0(stim_master_list %>% dplyr::filter(Type == 0) %>% .$Repeat_number)
+
+        computed_file_name = paste0(go_kHz, go_dB, nogo_kHz, nogo_dB, file_settings$duration, "ms_", file_settings$lockout, "s")
+        if (catch_number != 3) computed_file_name = paste0(computed_file_name, "_c", catch_number)
+        if (file_settings$nogo_max_touching != 1) computed_file_name = paste0(computed_file_name, "_NG", file_settings$nogo_max_touching)
+      }
+
+
+      response_window = unique(stim_master_list["Nose Out TL (s)"]) %>% as.numeric()
+      has_Response_window = response_window != 2
+      has_TR = file_settings$trigger_sensitivity != 200
+      has_BG = file_settings$background_type != "None"
+      BG = if (has_BG) paste0(stringr::str_remove(pattern = ".mat", string = file_settings$background_file), "_", file_settings$background_dB, "dB")
+
+      if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
+      if (has_TR & analysis_type != "Tone (Thresholding)") computed_file_name = paste0(computed_file_name, "_", "TR", file_settings$trigger_sensitivity, "ms")
+      if (has_BG) computed_file_name = paste0(computed_file_name, "_", BG)
+
+      return(computed_file_name)
     }
 
-    BBN <- function() {
+    BBN_Filename <- function() {
+      if (analysis_type == "Training - BBN") {
+        go_dB = paste0(stim_master_list %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB_")
+        catch_number = paste0(stim_master_list %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
+        delay = file_settings$delay %>% stringr::str_replace(" ", "-")
+        lockout = `if`(length(file_settings$lockout) > 0, file_settings$lockout, 0)
 
+        computed_file_name = paste0("BBN_", go_dB)
+        if (length(catch_number) == 0) computed_file_name = paste0(computed_file_name, delay, "s_0catch")
+        else if (catch_number > 0) computed_file_name = paste0(computed_file_name, catch_number, "catch_", lockout, "s")
+      }
+      else
+      {
+        go_dB_range = paste0(file_summary %>% dplyr::filter(Type == 1) %>% .$dB_min %>% unique(), "-",
+                             file_summary %>% dplyr::filter(Type == 1) %>% .$dB_max %>% unique(), "dB")
+
+        has_duration_range = nrow(unique(file_settings$duration)) > 1
+        if (has_duration_range) {
+          duration = paste0(min(file_settings$duration), "-",
+                            max(file_settings$duration), "")
+        } else {
+          duration = file_settings$duration
+        }
+
+        response_window = unique(stim_master_list["Nose Out TL (s)"]) %>% as.numeric()
+        has_Response_window = response_window != 2
+        has_TR = file_settings$trigger_sensitivity != 200
+        has_BG = file_settings$background_type != "None"
+
+        BG = if (has_BG) paste0(stringr::str_remove(pattern = ".mat", string = file_settings$background_file), "_", file_settings$background_dB, "dB")
+
+        computed_file_name = paste0("BBN_", go_dB_range, "_", duration, "ms_", file_settings$lockout, "s")
+        if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
+        if (has_TR) computed_file_name = paste0(computed_file_name, "_", "TR", file_settings$trigger_sensitivity, "ms")
+        if (has_BG) computed_file_name = paste0(computed_file_name, "_", BG)
+      }
+
+
+      #TODO: Training file naming
+      return(computed_file_name)
     }
 
-    Oddball <- function() {
+    Oddball_Filename <- function() {
+      if (file_summary$nogo_freq == 0) nogo_freq = "BBN"
+      else nogo_freq = paste0(file_summary$nogo_freq, "kHz")
 
+      computed_file_name = paste0(file_summary$go_freq, "kHz_", file_summary$go_dB, "dB_", nogo_freq, "_", file_summary$nogo_dB, "dB_", file_settings$lockout, "s_", file_summary$go_position_start, "-", file_summary$go_position_stop)
+      if (analysis_type == "Oddball (Uneven Odds & Catch)") computed_file_name = paste0(computed_file_name, "_odds_NG")
+      if (analysis_type == "Oddball (Uneven Odds)") computed_file_name = paste0(computed_file_name, "_odds")
+      if (analysis_type == "Oddball (Catch)") computed_file_name = paste0(computed_file_name, "_catch")
+
+      return(computed_file_name)
     }
-
-
-
 
 
     file_settings = Get_File_Settings()
+    computed_file_name = switch(stim_type,
+                                "tone" = Tonal_Filename(),
+                                "BBN" = BBN_Filename(),
+                                "train" = Oddball_Filename())
+    if (is.null(computed_file_name)) stop("Unknown file type. Can not create filename.")
 
-    if (stim_type == "tone") Tonal()
-    else if (stim_type == "BBN") BBN()
-    else if (stim_type == "train") Oddball()
-    else stop("\nUnknown file type. Can not create filename.")
+    if (length(computed_file_name) > 1 ) {
+      if (!(file_name %in% computed_file_name)) {
+        warn = paste0("Caution: mismatch in provided filename: ", file_name, "\n  ",
+                      "  possible calculated filename by data: ", computed_file_name)
+        warning(paste0(warn, "\n"))
+        warnings_list <<- append(warnings_list, warn)
+      }
+      else {
+        computed_file_name = file_name #at this point we've guaranteed file_name and (one of the) computed_file_name match, so we can just return file_name, i.e. the match
+      }
+    } else {
+      if (file_name != computed_file_name) {
+        warn = paste0("Caution: mismatch in provided filename: ", file_name, "\n  ",
+                      "       calculated filename by contents: ", computed_file_name)
+        warning(paste0(warn, "\n"))
+        warnings_list <<- append(warnings_list, warn)
+      }
+    }
+
+    # we return COMPUTED filename because the stored one could have errors like 'db' for 'dB' etc
+    return(computed_file_name)
+  }
+
+  Build_UUID <- function() {
+    creation_time = current_mat_file$log[[2]][2] %>% unlist #hoist the datestamp out of the loaded .mat file
+    trial1_start_time = run_data$`Time_since_file_start_(s)`[1]
+    trial1_delay_time = run_data$`Delay (s)`[1]
+    current_file_UUID = paste0(creation_time, "_", trial1_start_time, "_", trial1_delay_time)
+
+    return(current_file_UUID)
   }
 
 
+
 # Import Workflow ---------------------------------------------------------
+  file_to_load = file.choose()
+  cat("Loading file...", file_to_load, sep = "\t", fill = TRUE)
+  current_mat_file = R.matlab::readMat(file_to_load)
   trial_collection = current_mat_file$stim[,,1] # matlab object containing all (1000) trial configurations, and the parameters specified to generate individual trials
   file_name = Get_File_Name()
-  stim_master_list <<- Get_Stim_Master_List()
+  stim_master_list = Get_Stim_Master_List()
 
   # manually calculate properties
   stim_block_size = sum(stim_master_list["Repeat_number"])
@@ -479,12 +638,11 @@ Import_Matlab <- function(current_mat_file) {
       stim_type = "train"
     }
     else stop(paste0("Multiple non-train stim types: ", stim_type))
-  }
-  else {
+  } else {
     stim_type = stim_type %>% as.character()
   }
 
-  # load data from .mat file
+  # l data from .mat file
   total_trials = hits_calc = misses_calc = CRs_calc = FAs_calc = NULL
   run_data <<- Get_Run_Data()
 
@@ -495,10 +653,28 @@ Import_Matlab <- function(current_mat_file) {
   file_summary = NULL
   analysis_type <<- Identify_Analysis_Type()
 
-  # filename
-  Build_Filename()
+  # filenames
+  computed_file_name = Build_Filename()
+  #TODO: actually pluck assigned_filename from excel or whatever
+  assigned_file_name = "16-32kHz_60dB_300ms_16s" #octave.mat
+  if (computed_file_name != assigned_file_name ) {
+    warn = paste0("Action needed: Was rat run on the wrong file?\n",
+                  "ERROR: Filename -- ", computed_file_name, " -- does not match\n",
+                  "     Assignment -- ", assigned_file_name, "")
+    warning(paste0(warn, "\n"))
+    warnings_list <<- append(warnings_list, warn)
+  }
+  cat("Filename checks complete.", sep = "\t", fill = TRUE)
+
+  # final validations before we go and add this .mat to the master dataframe
+  current_UUID = Build_UUID()
+  is_old = FALSE #current_file_UUID %in% accepted_run_data$UUID
+    if (is_old) { #TODO: accepted_run_data needs to exist
+      stop(paste0("ABORT: Has this file already been added? -- ", file_name, " -- ", current_file_UUID))
+    }
 
 
+  # commit to folding in - display warnings and get user input to override them
 
 
 
@@ -512,8 +688,7 @@ Import_Matlab <- function(current_mat_file) {
 
 
 
-
 # MAIN ---------------------------------------------------------
 Initialize()
-Import_Matlab(R.matlab::readMat(file.choose()))
+Import_Matlab()
 
