@@ -313,19 +313,26 @@ Import_Matlab <- function() {
           dplyr::filter(...1 != "")
       })
 
-      ranges = omit_list %>%
-        dplyr::filter(str_detect(string = ...1, pattern = "-")) %>%
-        rowwise() %>%
-        mutate(min = stringr::str_extract(string = ...1, pattern = "[:digit:]+(?=-)") %>% as.numeric(),
-               max = stringr::str_extract(string = ...1, pattern = "(?<=-)[:digit:]+") %>% as.numeric(),
-               s = list(seq(min,max))) %>%
-        .$s %>% as.list() %>% unlist(recursive = TRUE)
-
-      whole_numbers = omit_list %>%
+     whole_numbers = omit_list %>%
         dplyr::filter(!str_detect(string = ...1, pattern = "-")) %>%
         as.list() %>% unlist(recursive = TRUE) %>% as.numeric()
 
-      omit_list = c(whole_numbers, ranges) %>% sort()
+     ranges = omit_list %>%
+       dplyr::filter(str_detect(string = ...1, pattern = "-"))
+
+     if(nrow(ranges)) {
+       ranges = ranges %>%
+         rowwise() %>%
+         mutate(min = stringr::str_extract(string = ...1, pattern = "[:digit:]+(?=-)") %>% as.numeric(),
+                max = stringr::str_extract(string = ...1, pattern = "(?<=-)[:digit:]+") %>% as.numeric(),
+                s = list(seq(min,max))) %>%
+         .$s %>% as.list() %>% unlist(recursive = TRUE)
+       omit_list = c(whole_numbers, ranges)
+     } else {
+       omit_list = whole_numbers
+     }
+
+      omit_list = sort(omit_list)
       old_omit_list = unlist(tail(run_archive$omit_list, n = 1), recursive = TRUE)
 
       if (identical(omit_list, old_omit_list)) stop(paste0("ERROR: Stale exclude/omit list detected.\nPrior ",
@@ -334,8 +341,6 @@ Import_Matlab <- function() {
                                                     "Current file ", run_properties$rat_name, " omitting: ",
                                                     paste(omit_list, collapse = " "), "\n",
                                                     "Please correct omit list and try again."))
-
-      run_properties$omit_list <<- list(omit_list)
 
       return(omit_list)
     }
@@ -357,10 +362,13 @@ Import_Matlab <- function() {
 
       return(r)
     }
-    omit_list = NULL
+
+
+    omit_list = ""
     r = run_data
     if (exclude_trials != "") omit_list = Query_Omitted_Trials()
-    if (!is.null(omit_list)) r = Remove_Trials(omit_list)
+    run_properties$omit_list <<- list(omit_list)
+    if (rlang::is_empty(omit_list)) r = Remove_Trials(omit_list)
     return(r)
   }
 
@@ -891,8 +899,8 @@ Construct_Run_Entry <- function() {
     rat_name = run_properties$rat_name,
     rat_ID = rat_archive %>%
       dplyr::filter(Rat_name == run_properties$rat_name) %>%
-      dplyr::filter(start_date < date) %>%
-      dplyr::filter(date < end_date | is.na(end_date)) %>% .$Rat_ID,
+      dplyr::filter(start_date <= date) %>%
+      dplyr::filter(date <= end_date | is.na(end_date)) %>% .$Rat_ID,
 
     # weight = analysis$weight,
     # weight_change = analysis$weight_change,    #   weight delta %
@@ -913,7 +921,6 @@ Construct_Run_Entry <- function() {
     omit_list = run_properties$omit_list,    #   omit list?
     UUID = run_properties$UUID    #   uuid
   )
-
   return(r)
 
 }
