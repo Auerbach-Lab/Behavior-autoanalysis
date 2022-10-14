@@ -15,7 +15,28 @@ user_settings = list(
 
   # Delay window default
   delay_default = "1 4",
-  delay_oddball = "1 2"
+  delay_oddball = "1 2",
 
-  # Thresholds for performance warnings
+  # Cutoffs for performance warnings
+  minimum_trials = list(
+    "Training - Octave" = 264, #?
+    "Octave" = 264, #?
+
+    "Training - Tone" = 50, #?
+    "Tone (Standard)" = 240,
+    "Tone (Thresholding)" = 240,
+    "Tone (Single)" = 240,
+
+    "Training - BBN" = 50,
+    "BBN (Standard)" = 240,
+    "BBN Mixed Duration" = 330,
+
+    "Oddball (Standard)" = 330,
+    "Oddball (Uneven Odds)" = 330,
+    "Oddball (Uneven Odds & Catch)" = 330,
+    "Oddball (Catch)" = 330),
+
+  minimum_hit_percent = 0.850,
+  maximum_FA_percent = 0.200,
+  maximum_attempts_per_trial = 1.5
 )
