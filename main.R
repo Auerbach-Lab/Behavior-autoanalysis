@@ -16,6 +16,9 @@ Initialize <- function() {
   setwd(user_settings$projects_folder)  # working directory from settings.R
   warnings_list <<- list()
   analysis <<- list()
+  rat_archive <<- read.csv("A:/coding/Behavior-autoanalysis/rat_archive.csv", na.strings = "N/A")
+  #load("trial_archive.Rdata")
+  #load("run_Archive.Rdata")
 }
 
 Import_Matlab <- function() {
@@ -87,6 +90,36 @@ Import_Matlab <- function() {
       return(r)
     }
 
+    Get_Rat_Name <- function() {
+      # greedy group: (.*) to strip off as much as possible
+      # then the main capture group which contains
+        # lookbehind for a \ escaped once because R, and then again cause regex, to \\\\: (?<=\\\\)
+        # capture of the rat name, lazy to avoid underscores: .+?
+        # lookahead for a _: (?=_)
+      r = stringr::str_match_all(file_to_load, pattern="(.*)((?<=\\\\).+?(?=_))") %>%
+        unlist(recursive = TRUE) %>%
+        tail (n = 1)
+
+      if (rlang::is_empty(r)) stop("ERROR: system filename improper: ", file_to_load)
+
+      return(r)
+    }
+
+    Get_Box_Number <- function() {
+      # greedy group: (.*) to strip off as much as possible
+      # then the main capture group which contains
+      # lookbehind for a _BOX#: (?<=_BOX#)
+      # capture of the box number: [:digit:]+
+      # lookahead for the extension: (?=.mat)
+      r = stringr::str_match_all(file_to_load, pattern="(.*)((?<=_BOX#)[:digit:]+(?=.mat))") %>%
+        unlist(recursive = TRUE) %>%
+        tail (n = 1) %>%
+        as.numeric()
+
+      return(r)
+    }
+
+
     Get_Delay_Range <- function() {
       if (stim_type == "train") {
         r = stim_encoding_table %>% dplyr::filter(Repeat_number > 0) %>% .$`Delay (s)` %>% unique()
@@ -133,6 +166,9 @@ Import_Matlab <- function() {
     }
 
     r = list(
+      rat_name = Get_Rat_Name(),
+      box = Get_Box_Number(),
+
       stim_filename = Get_Stim_Filename(),
       stim_block_size = sum(stim_encoding_table["Repeat_number"]),
       stim_type = stim_type,
@@ -188,6 +224,7 @@ Import_Matlab <- function() {
       r$stim_filename = newname
     }
     if (length(r$response_window) > 1) stop("Multiple response windows:", r$response_window,". Aborting.")
+
 
     return(r)
   }
@@ -265,32 +302,52 @@ Import_Matlab <- function() {
     return(run_data)
   }
 
+  # These are typically demos or could trials that are ruled invalid by an observer.
   Omit_Trials <- function() {
-    # These are typically demos or could trials that are ruled invalid by an observer.
-
     Query_Omitted_Trials <- function() {
-      # get trial numbers to omit (these will be in a CSV format)
-      omit_list = "1" #"2, 32, 6"
-      #TODO actually do a popup and get information
+      suppressMessages({
+        omit_list = exclude_trials %>%
+          stringr::str_replace_all(string = ., pattern = "[:space:]", replacement = "") %>%
+          stringr::str_split(string = ., pattern = ",") %>%
+          as_tibble(.name_repair = c("universal")) %>%
+          dplyr::filter(...1 != "")
+      })
 
-      # cleanse any spaces
-      omit_list = gsub("[[:space:]]", "", omit_list)
-      # split string into list
-      omit_list = strsplit(omit_list,",") #TODO Noelle said make this stringr but it isn't
+      ranges = omit_list %>%
+        dplyr::filter(str_detect(string = ...1, pattern = "-")) %>%
+        rowwise() %>%
+        mutate(min = stringr::str_extract(string = ...1, pattern = "[:digit:]+(?=-)") %>% as.numeric(),
+               max = stringr::str_extract(string = ...1, pattern = "(?<=-)[:digit:]+") %>% as.numeric(),
+               s = list(seq(min,max))) %>%
+        .$s %>% as.list() %>% unlist(recursive = TRUE)
 
-      #TODO handle ranges
+      whole_numbers = omit_list %>%
+        dplyr::filter(!str_detect(string = ...1, pattern = "-")) %>%
+        as.list() %>% unlist(recursive = TRUE) %>% as.numeric()
+
+      omit_list = c(whole_numbers, ranges) %>% sort()
+      old_omit_list = unlist(tail(run_archive$omit_list, n = 1), recursive = TRUE)
+
+      if (identical(omit_list, old_omit_list)) stop(paste0("ERROR: Stale exclude/omit list detected.\nPrior ",
+                                                    tail(run_archive$rat_name, n = 1), " omitted trials: ",
+                                                    paste(old_omit_list, collapse = " "), "\n",
+                                                    "Current file ", run_properties$rat_name, " omitting: ",
+                                                    paste(omit_list, collapse = " "), "\n",
+                                                    "Please correct omit list and try again."))
+
+      run_properties$omit_list <<- list(omit_list)
 
       return(omit_list)
     }
 
     Remove_Trials <- function(omit_list) {
       # filter lines out of data
-      omitted = run_data %>% dplyr::filter(row_number() %in% omit_list[[1]])
+      omitted = run_data %>% dplyr::filter(row_number() %in% omit_list)
       # TODO shove omitted to nonrat permanent rdata
 
-      r = run_data %>% dplyr::filter(!row_number() %in% omit_list[[1]])
+      r = run_data %>% dplyr::filter(!row_number() %in% omit_list)
       # get number of trials omitted
-      omit_count = length(omit_list[[1]]) %>% as.numeric()
+      omit_count = length(omit_list) %>% as.numeric()
       # calculate expected trials
       Trials_expected = run_data %>% dplyr::count() %>% as.numeric() - omit_count
       # Calculate # of kept trials
@@ -300,12 +357,27 @@ Import_Matlab <- function() {
 
       return(r)
     }
-
+    omit_list = NULL
     r = run_data
-    omit_list = Query_Omitted_Trials()
+    if (exclude_trials != "") omit_list = Query_Omitted_Trials()
     if (!is.null(omit_list)) r = Remove_Trials(omit_list)
     return(r)
   }
+
+  Number_Complete_Blocks <- function() {
+    r = run_data
+    block_status = r %>%
+      dplyr::group_by(Block_number) %>%
+      dplyr::summarise(Block_number = unique(Block_number), size = n(), complete = size == run_properties$stim_block_size) %>%
+      dplyr::filter(complete) %>%
+      dplyr::mutate(complete_block_number = row_number()) %>%
+      dplyr::select(Block_number, complete_block_number)
+
+    r = dplyr::left_join(r, block_status, by = "Block_number")
+    return(r)
+  }
+
+
 
 # Import Workflow ---------------------------------------------------------
   file_to_load = file.choose()
@@ -318,6 +390,7 @@ Import_Matlab <- function() {
   # l data from .mat file
   run_data <<- Get_Run_Data()
   run_data <<- Omit_Trials()
+  run_data <<- Number_Complete_Blocks()
 }
 
 Identify_Analysis_Type <- function() {
@@ -730,44 +803,120 @@ Check_UUID <- function() {
 
 Check_Performance_Cutoffs <- function() {
   Calculate_Summary_Statistics <- function() {
-    analysis$trial_count <<- run_data %>% dplyr::count() %>% as.numeric()
-    analysis$hits <<- run_data %>% dplyr::filter(Response == "Hit") %>% dplyr::count() %>% as.numeric()
-    analysis$misses <<- run_data %>% dplyr::filter(Response == "Miss") %>% dplyr::count() %>% as.numeric()
-    analysis$CRs <<- run_data %>% dplyr::filter(Response == "CR") %>% dplyr::count() %>% as.numeric()
-    analysis$FAs <<- run_data %>% dplyr::filter(Response == "FA") %>% dplyr::count() %>% as.numeric()
-    analysis$hit_percent <<- analysis$hits / analysis$trial_count
-    analysis$FA_percent <<- analysis$FAs / analysis$trial_count
-    analysis$mean_attempts_per_trial <<- dplyr::summarise_at(run_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
+    analysis$stats$trial_count <<- run_data %>% dplyr::count() %>% as.numeric()
+    analysis$stats$hits <<- run_data %>% dplyr::filter(Response == "Hit") %>% dplyr::count() %>% as.numeric()
+    analysis$stats$misses <<- run_data %>% dplyr::filter(Response == "Miss") %>% dplyr::count() %>% as.numeric()
+    analysis$stats$CRs <<- run_data %>% dplyr::filter(Response == "CR") %>% dplyr::count() %>% as.numeric()
+    analysis$stats$FAs <<- run_data %>% dplyr::filter(Response == "FA") %>% dplyr::count() %>% as.numeric()
+    analysis$stats$hit_percent <<- analysis$stats$hits / analysis$stats$trial_count
+    analysis$stats$FA_percent <<- analysis$stats$FAs / analysis$stats$trial_count
+    analysis$stats$mean_attempts_per_trial <<- dplyr::summarise_at(run_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
   }
 
   Calculate_Summary_Statistics()
-  if (analysis$trial_count < analysis$minimum_trials) {
-    warn = paste0("Low trial count: ", analysis$trial_count, " (cutoff is ", analysis$minimum_trials,")")
+  if (analysis$stats$trial_count < analysis$minimum_trials) {
+    warn = paste0("Low trial count: ", analysis$stats$trial_count, " (cutoff is ", analysis$minimum_trials,")")
     warning(paste0(warn, "\n"))
     warnings_list <<- append(warnings_list, warn)
   }
 
-  if (analysis$hit_percent < user_settings$minimum_hit_percent) {
-    warn = paste0("Low hit rate: ", round(analysis$hit_percent * 100, digits = 1), "%")
+  if (analysis$stats$hit_percent < user_settings$minimum_hit_percent) {
+    warn = paste0("Low hit rate: ", round(analysis$stats$hit_percent * 100, digits = 1), "%")
     warning(paste0(warn, "\n"))
     warnings_list <<- append(warnings_list, warn)
   }
 
-  if (analysis$FA_percent > user_settings$maximum_FA_percent) {
-    warn = paste0("High false alarm (FA) rate: ", round(analysis$FA_percent * 100, digits = 1), "%")
+  if (analysis$stats$FA_percent > user_settings$maximum_FA_percent) {
+    warn = paste0("High false alarm (FA) rate: ", round(analysis$stats$FA_percent * 100, digits = 1), "%")
     warning(paste0(warn, "\n"))
     warnings_list <<- append(warnings_list, warn)
   }
 
-  if (analysis$mean_attempts_per_trial > user_settings$maximum_attempts_per_trial) {
-    warn = paste0("High mean attempts per trial: ", round(analysis$mean_attempts_per_trial, digits = 2))
+  if (analysis$stats$mean_attempts_per_trial > user_settings$maximum_attempts_per_trial) {
+    warn = paste0("High mean attempts per trial: ", round(analysis$stats$mean_attempts_per_trial, digits = 2))
     warning(paste0(warn, "\n"))
     warnings_list <<- append(warnings_list, warn)
   }
-
-
 }
 
+#TODO: this is untested!!!
+Check_Multipart_Run <- function () {
+  Renumber_Complete_Blocks <- function() {
+    issue_rows = run_archive %>%
+      dplyr::filter(date == analysis$date && rat_name == run_properties$rat_name) %>%
+      dplyr::select(UUID, time)
+
+    r = trial_archive %>%
+      dplyr::filter(UUID %in% issue_UUIDs$UUID) %>%
+      dplyr::left_join(issue_rows, by = "UUID") %>%
+      dplyr::arrange(time)
+
+    block_status = r %>%
+      dplyr::group_by(time, Block_number) %>%
+      dplyr::summarise(Block_number = unique(Block_number), size = n(), complete = size == run_properties$stim_block_size) %>%
+      dplyr::filter(complete) %>%
+      dplyr::mutate(complete_block_number = row_number()) %>%
+      dplyr::select(Block_number, complete_block_number, UUID)
+
+    r = dplyr::left_join(r, block_status, by = "UUID") %>%
+      dplyr::mutate(complete_block_number = dplyr::coalesce(complete_block_number.y, complete_block_number.x)) %>%
+      dplyr::select(-complete_block_number.y, -complete_block_number.x)
+
+    return(r)
+  }
+
+  is_multiple =
+    run_archive %>%
+    dplyr::filter(date == analysis$date && rat_name == run_properties$rat_name) %>%
+    unique() %>%
+    nrow() > 0
+
+  if (is_multiple) {
+    Renumber_Complete_Blocks()
+    warn = paste0("Multiple runs detected for rat (", run_properties$rat_name, ") on this date (", analysis$date, ").",
+                  "\n  Renumbering complete blocks.")
+    warning(paste0(warn, "\n"))
+    warnings_list <<- append(warnings_list, warn)
+  }
+}
+
+Construct_Run_Entry <- function() {
+  date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
+  time = run_properties$creation_time %>% stringr::str_sub(9,15) %>% as.numeric()
+  # using data.frame instead of tibble automatically can unpack run_stats into columns but still need concatenation for warnings_list
+  r = tibble(
+    date = date,
+    time = time,
+    box = run_properties$box,    # TODO: calculated box from MAT file not external FOO.mat filename
+    rat_name = run_properties$rat_name,
+    rat_ID = rat_archive %>%
+      dplyr::filter(Rat_name == run_properties$rat_name) %>%
+      dplyr::filter(start_date < date) %>%
+      dplyr::filter(date < end_date | is.na(end_date)) %>% .$Rat_ID,
+
+    # weight = analysis$weight,
+    # weight_change = analysis$weight_change,    #   weight delta %
+
+    file_name = analysis$computed_file_name,
+    # assigned_file = assignment$assigned_file_name,    # TODO: actually get this
+    # experiment = assignment$experiment,
+    # phase = assignment$phase,
+    stim_type = run_properties$stim_type,
+    analysis_type = analysis$type,
+    run_stats = list(analysis$stats),
+    block_size = run_properties$stim_block_size,
+    complete_block_count = run_data$complete_block_number %>% max(na.rm = TRUE),
+
+    invalid = "",    #   invalid column that is blank
+    # run_comments = analysis$comments,    #   undergrad comments
+    warnings_list = list(warnings_list),    #   warnings list
+    omit_list = run_properties$omit_list,    #   omit list?
+    UUID = run_properties$UUID    #   uuid
+  )
+
+  return(r)
+
+}
 
 # MAIN ---------------------------------------------------------
 # set up environment
@@ -786,6 +935,9 @@ Check_Assigned_Filename()
 # generate UUID for run
 Check_UUID()
 
+# handle weight
+#Weight_Analysis()
+
 # check run performance against user-settings cutoffs
 Check_Performance_Cutoffs()
 
@@ -793,6 +945,8 @@ Check_Performance_Cutoffs()
 
 # commit to folding in - display warnings and get user input to override them (and submit to master dataframe), or give option to commit to invalid/storage-only dataframe
 # curate data prior to folding in, adding disqualifier flags etc (but omitted trials are always totally gone)
+
+
 
 # # get run comments and weight -> run_archive
 #   uuid
@@ -815,7 +969,14 @@ Check_Performance_Cutoffs()
 #   invalid column that is blank
 #   block size
 #   complete blocks
+row_to_add = Construct_Run_Entry()
+run_archive = rbind(run_archive, row_to_add)
 
+save(run_archive, file = "run_archive.Rdata", ascii = TRUE, compress = FALSE)
+#write.csv(run_archive, file = "run_archive.csv")
+
+#run_archive$warnings_list %>% head(n = 1) %>% unlist() %>% stringr::str_c(sep="\n") %>% str()
+  #unlist() %>% paste(collapse='\n') %>% print()
 
 
 # # actually fold run_data -> trial_archive
@@ -837,4 +998,4 @@ Check_Performance_Cutoffs()
 # do analyses
 # pop up charts and stuff for undergrads to sign off on (where do the comments they provide on 'no' get saved? text file alongside individual exported graph image? dedicated df? master df in one long appended cell for all comments to graphs?)
 
-
+# TODO: need to be able to export df->.csv but we want to store as tibble->.Rdata
