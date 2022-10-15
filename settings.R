@@ -1,6 +1,6 @@
 user_settings = list(
   # The folder where the project subfolders are:
-  projects_folder = 'A:/coding/Behavior-autoanalysis',
+  projects_folder = 'A:/coding/Behavior-autoanalysis/',
 
   # Minimum number of blocks of trials to keep (vs. discard day) not counting the
   # 1st block which will be dropped
