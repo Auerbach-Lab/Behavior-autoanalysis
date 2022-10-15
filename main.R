@@ -16,7 +16,7 @@ Initialize <- function() {
   setwd(user_settings$projects_folder)  # working directory from settings.R
   warnings_list <<- list()
   analysis <<- list()
-  rat_archive <<- read.csv(paste0(projects_folder, "rat_archive.csv", na.strings = "N/A"))
+  rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = "N/A")
   #load("trial_archive.Rdata")
   #load("run_Archive.Rdata")
 }
