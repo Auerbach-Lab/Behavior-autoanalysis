@@ -24,6 +24,10 @@ Initialize <- function() {
   #load("run_Archive.Rdata")
 }
 
+Throw_Warning <- function() {
+  # We don't do this because it means the warning names this method, rather than the place where the check failed
+}
+
 Import_Matlab <- function() {
   Unlist_Matlab_To_Dataframe <- function(li) {
     return(t(apply(li, 1, unlist)) %>% as.data.frame())
@@ -939,38 +943,43 @@ Check_Weight <- function() {
   }
 }
 
-Construct_Run_Entry <- function() {
-  date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
-  time = run_properties$creation_time %>% stringr::str_sub(9,15) %>% as.numeric()
+Add_to_Run_Archive <- function() {
+  Construct_Run_Entry <- function() {
+    date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
+    time = run_properties$creation_time %>% stringr::str_sub(9,15) %>% as.numeric()
 
-  # using data.frame instead of tibble automatically can unpack run_stats into columns but still need concatenation for warnings_list
-  r = tibble(
-    date = date,
-    time = time,
-    box = run_properties$box,    # TODO: calculated box from MAT file not external FOO.mat filename
-    rat_name = run_properties$rat_name,
-    rat_ID = Get_Rat_ID(run_properties$rat_name),
-    weight = analysis$weight,
-    weight_change = analysis$weight_change,
+    # using data.frame instead of tibble automatically can unpack run_stats into columns but still need concatenation for warnings_list
+    r = tibble(
+      date = date,
+      time = time,
+      box = run_properties$box,    # TODO: calculated box from MAT file not external FOO.mat filename
+      rat_name = run_properties$rat_name,
+      rat_ID = Get_Rat_ID(run_properties$rat_name),
+      weight = analysis$weight,
+      weight_change = analysis$weight_change,
 
-    file_name = analysis$computed_file_name,
-    # assigned_file = assignment$assigned_file_name,    # TODO: actually get this
-    # experiment = assignment$experiment,
-    # phase = assignment$phase,
-    stim_type = run_properties$stim_type,
-    analysis_type = analysis$type,
-    run_stats = list(analysis$stats),
-    block_size = run_properties$stim_block_size,
-    complete_block_count = run_data$complete_block_number %>% max(na.rm = TRUE),
+      file_name = analysis$computed_file_name,
+      # assigned_file = assignment$assigned_file_name,    # TODO: actually get this
+      # experiment = assignment$experiment,
+      # phase = assignment$phase,
+      stim_type = run_properties$stim_type,
+      analysis_type = analysis$type,
+      run_stats = list(analysis$stats),
+      block_size = run_properties$stim_block_size,
+      complete_block_count = run_data$complete_block_number %>% max(na.rm = TRUE),
 
-    invalid = "",    # supervisor can manually mark runs as invalid, putting reasoning here
-    run_comments = observations,    #   undergrad comments
-    warnings_list = list(warnings_list),    #   warnings list
-    omit_list = run_properties$omit_list,    #   omit list?
-    UUID = run_properties$UUID    #   uuid
-  )
-  return(r)
+      invalid = "",    # supervisor can manually mark runs as invalid, putting reasoning here
+      run_comments = observations,    #   undergrad comments
+      warnings_list = list(warnings_list),    #   warnings list
+      omit_list = run_properties$omit_list,    #   omit list?
+      UUID = run_properties$UUID    #   uuid
+    )
+    return(r)
+  }
 
+  row_to_add = Construct_Run_Entry()
+  run_archive <<- rbind(run_archive, row_to_add)
+  save(run_archive, file = "run_archive.Rdata", ascii = TRUE, compress = FALSE)
 }
 
 # MAIN ---------------------------------------------------------
@@ -996,61 +1005,20 @@ Check_Weight()
 # check run performance against user-settings cutoffs
 Check_Performance_Cutoffs()
 
-# check consistency
+# check run performance against past performance for this rat in this experimental phase
+# Check_Performance_Consistency
 
 # commit to folding in - display warnings and get user input to override them (and submit to master dataframe), or give option to commit to invalid/storage-only dataframe
 # curate data prior to folding in, adding disqualifier flags etc (but omitted trials are always totally gone)
-
-
-
-# # get run comments and weight -> run_archive
-#   uuid
-#   rat name/id
-#   calculated box
-#   date
-#   time
-#   calculated file name
-#   assigned file name
-#   experiment
-#   experimental phase
-#   stim type
-#   analysis type
-#   omit list?
-#   undergrad comments
-#   weight
-#   weight delta %
-#   run statistics not as list
-#   warnings list
-#   invalid column that is blank
-#   block size
-#   complete blocks
-row_to_add = Construct_Run_Entry()
-run_archive = rbind(run_archive, row_to_add)
-
-save(run_archive, file = "run_archive.Rdata", ascii = TRUE, compress = FALSE)
-#write.csv(run_archive, file = "run_archive.csv")
-
-#run_archive$warnings_list %>% head(n = 1) %>% unlist() %>% stringr::str_c(sep="\n") %>% str()
-  #unlist() %>% paste(collapse='\n') %>% print()
-
-
-# # actually fold run_data -> trial_archive
-
-
-# # TODO: we probably need a rat_archive lookup at some point for analyses
-#   rat uid
-#   rat name color number
-#   date of birth
-#   genotype
-#   sex
-#
-# # plus a 48-line dataframe of box+time combos that represents the current 'schedule'
-#   rat uid/name
-#   assigned box
-#   timeslot
-
+# Report_Warnings_and_Confirm()
+Add_to_Run_Archive()
+# Add_to_Trial_Archive() actually fold run_data -> trial_archive
 
 # do analyses
 # pop up charts and stuff for undergrads to sign off on (where do the comments they provide on 'no' get saved? text file alongside individual exported graph image? dedicated df? master df in one long appended cell for all comments to graphs?)
 
-# TODO: need to be able to export df->.csv but we want to store as tibble->.Rdata
+
+# # plus a 48-line dataframe of box+time combos that represents the current 'schedule'
+#   rat uid/name
+#   assigned box
+#   timeslot
