@@ -1,13 +1,16 @@
 
 Initialize <- function() {
    Load_Packages <- function() {
-    # data loading/manipulation
-    library(R.matlab);
-    library(readxl); library(tidyverse); library(dplyr); library(tidyr)
-    # Analysis
+    # data loading external file formats
+    library(R.matlab); library(readxl);
+
+    # data manipulation
+    library(tidyverse); library(dplyr); library(tidyr); library(rlang);
+
+    # analysis
     library(psych); library(psycho);
 
-    # Data visualization
+    # data visualization
     library(ggplot2); library(forcats);
   }
 
@@ -16,7 +19,7 @@ Initialize <- function() {
   setwd(user_settings$projects_folder)  # working directory from settings.R
   warnings_list <<- list()
   analysis <<- list()
-  rat_archive <<- read.csv(paste0(projects_folder, "rat_archive.csv", na.strings = "N/A"))
+  rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = "N/A")
   #load("trial_archive.Rdata")
   #load("run_Archive.Rdata")
 }
@@ -796,16 +799,16 @@ Check_UUID <- function() {
     return(current_file_UUID)
   }
 
-  Is_New_UUID <- function() {
-    is_new = TRUE #current_file_UUID %in% accepted_run_data$UUID
-    if (!is_new) { #TODO: master data frame (accepted_run_data?) needs to exist
-      stop(paste0("ABORT: Has this file already been added? -- ", analysis$computed_file_name, " -- ", current_file_UUID))
+  Is_New_UUID <- function(uuid) {
+    is_old = uuid %in% run_archive$UUID
+    if (is_old) {
+      stop(paste0("ABORT: This file has already been added: ", uuid))
     }
-    return(is_new)
+    return(!is_old)
   }
 
   run_properties$UUID <<- Build_UUID()
-  return(Is_New_UUID())
+  return(Is_New_UUID(run_properties$UUID))
 }
 
 
@@ -888,22 +891,67 @@ Check_Multipart_Run <- function () {
   }
 }
 
+Get_Rat_ID = function(check_name) {
+  date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
+  rat_ID = rat_archive %>%
+    dplyr::filter(Rat_name == check_name) %>%
+    dplyr::filter(start_date <= date) %>%
+    dplyr::filter(date <= end_date | is.na(end_date)) %>% .$Rat_ID
+  return(rat_ID)
+}
+
+Check_Weight <- function() {
+  rat_weights = NULL
+  if(!rlang::is_empty(run_archive)) {
+    rat_weights =
+      run_archive %>%
+      dplyr::filter(rat_ID == Get_Rat_ID(run_properties$rat_name)) %>%
+      .$weight
+  }
+
+  if(rlang::is_empty(rat_weights)) {
+    warn = paste0("No old weights for ", run_properties$rat_name, "(", Get_Rat_ID(run_properties$rat_name), "). Is this rat new?")
+    warning(paste0(warn, "\n"))
+    warnings_list <<- append(warnings_list, warn)
+
+    analysis$weight <<- weight
+    analysis$weight_change <<- 0
+  } else {
+    old_weight = tail(rat_weights, n = 1) # this assumes the most recently-added entry is most recent date, should be generally true
+    max_weight = max(rat_weights)
+
+    analysis$weight <<- weight
+    analysis$weight_change <<- weight - old_weight  # negative if lost weight
+
+    weight_change_daily_percent = analysis$weight_change / old_weight # negative if lost weight
+    weight_change_overall_percent = (weight - max_weight) / max_weight # negative if lost weight
+
+    if (-1 * weight_change_daily_percent > user_settings$maximum_weight_change_daily_percent) {
+      warn = paste0("ACTION REQUIRED: Weight fell by more than ", 100*user_settings$maximum_weight_change_daily_percent, "% in one day. (", old_weight, " -> ", weight, ").")
+      warning(paste0(warn, "\n"))
+      warnings_list <<- append(warnings_list, warn)
+    }
+    if (-1 * weight_change_overall_percent > user_settings$maximum_weight_change_overall_percent) {
+      warn = paste0("ACTION REQUIRED: Rat has lost more than ", 100*user_settings$maximum_weight_change_overall_percent, "% of maximum body weight. (", max_weight, " -> ", weight, ").")
+      warning(paste0(warn, "\n"))
+      warnings_list <<- append(warnings_list, warn)
+    }
+  }
+}
+
 Construct_Run_Entry <- function() {
   date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
   time = run_properties$creation_time %>% stringr::str_sub(9,15) %>% as.numeric()
+
   # using data.frame instead of tibble automatically can unpack run_stats into columns but still need concatenation for warnings_list
   r = tibble(
     date = date,
     time = time,
     box = run_properties$box,    # TODO: calculated box from MAT file not external FOO.mat filename
     rat_name = run_properties$rat_name,
-    rat_ID = rat_archive %>%
-      dplyr::filter(Rat_name == run_properties$rat_name) %>%
-      dplyr::filter(start_date <= date) %>%
-      dplyr::filter(date <= end_date | is.na(end_date)) %>% .$Rat_ID,
-
-    # weight = analysis$weight,
-    # weight_change = analysis$weight_change,    #   weight delta %
+    rat_ID = Get_Rat_ID(run_properties$rat_name),
+    weight = analysis$weight,
+    weight_change = analysis$weight_change,
 
     file_name = analysis$computed_file_name,
     # assigned_file = assignment$assigned_file_name,    # TODO: actually get this
@@ -915,8 +963,8 @@ Construct_Run_Entry <- function() {
     block_size = run_properties$stim_block_size,
     complete_block_count = run_data$complete_block_number %>% max(na.rm = TRUE),
 
-    invalid = "",    #   invalid column that is blank
-    # run_comments = analysis$comments,    #   undergrad comments
+    invalid = "",    # supervisor can manually mark runs as invalid, putting reasoning here
+    run_comments = observations,    #   undergrad comments
     warnings_list = list(warnings_list),    #   warnings list
     omit_list = run_properties$omit_list,    #   omit list?
     UUID = run_properties$UUID    #   uuid
@@ -943,7 +991,7 @@ Check_Assigned_Filename()
 Check_UUID()
 
 # handle weight
-#Weight_Analysis()
+Check_Weight()
 
 # check run performance against user-settings cutoffs
 Check_Performance_Cutoffs()
