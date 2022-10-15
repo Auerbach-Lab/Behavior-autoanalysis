@@ -901,6 +901,7 @@ Get_Rat_ID = function(check_name) {
     dplyr::filter(Rat_name == check_name) %>%
     dplyr::filter(start_date <= date) %>%
     dplyr::filter(date <= end_date | is.na(end_date)) %>% .$Rat_ID
+  if(length(rat_ID) > 1) stop(paste0("ABORT: Overlapping rats on date ", date, " with name ", check_name, ". Cannot determine Rat ID."))
   return(rat_ID)
 }
 
@@ -926,7 +927,6 @@ Check_Weight <- function() {
 
     analysis$weight <<- weight
     analysis$weight_change <<- weight - old_weight  # negative if lost weight
-
     weight_change_daily_percent = analysis$weight_change / old_weight # negative if lost weight
     weight_change_overall_percent = (weight - max_weight) / max_weight # negative if lost weight
 
