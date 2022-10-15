@@ -1,13 +1,16 @@
 
 Initialize <- function() {
    Load_Packages <- function() {
-    # data loading/manipulation
-    library(R.matlab);
-    library(readxl); library(tidyverse); library(dplyr); library(tidyr)
-    # Analysis
+    # data loading external file formats
+    library(R.matlab); library(readxl);
+
+    # data manipulation
+    library(tidyverse); library(dplyr); library(tidyr); library(rlang);
+
+    # analysis
     library(psych); library(psycho);
 
-    # Data visualization
+    # data visualization
     library(ggplot2); library(forcats);
   }
 
