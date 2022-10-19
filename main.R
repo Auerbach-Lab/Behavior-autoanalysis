@@ -815,20 +815,37 @@ Check_UUID <- function() {
   return(Is_New_UUID(run_properties$UUID))
 }
 
+Calculate_Summary_Statistics <- function() {
+  trial_count = run_data %>% dplyr::count() %>% as.numeric()
+  hits = run_data %>% dplyr::filter(Response == "Hit") %>% dplyr::count() %>% as.numeric()
+  misses = run_data %>% dplyr::filter(Response == "Miss") %>% dplyr::count() %>% as.numeric()
+  CRs = run_data %>% dplyr::filter(Response == "CR") %>% dplyr::count() %>% as.numeric()
+  FAs = run_data %>% dplyr::filter(Response == "FA") %>% dplyr::count() %>% as.numeric()
+  hit_percent = hits / trial_count
+  FA_percent = FAs / trial_count
+  mean_attempts_per_trial = dplyr::summarise_at(run_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
+  #TODO dprime =
+  #TODO threshold =
+
+  stats = list(
+    trial_count = trial_count,
+    hits = hits,
+    misses = misses,
+    CRs = CRs,
+    FAs = FAs,
+    hit_percent = hit_percent,
+    FA_percent = FA_percent,
+    mean_attempts_per_trial = mean_attempts_per_trial
+    #dprime
+    #reaction_time
+    #threshold
+  )
+
+  return(stats)
+}
+
 
 Check_Performance_Cutoffs <- function() {
-  Calculate_Summary_Statistics <- function() {
-    analysis$stats$trial_count <<- run_data %>% dplyr::count() %>% as.numeric()
-    analysis$stats$hits <<- run_data %>% dplyr::filter(Response == "Hit") %>% dplyr::count() %>% as.numeric()
-    analysis$stats$misses <<- run_data %>% dplyr::filter(Response == "Miss") %>% dplyr::count() %>% as.numeric()
-    analysis$stats$CRs <<- run_data %>% dplyr::filter(Response == "CR") %>% dplyr::count() %>% as.numeric()
-    analysis$stats$FAs <<- run_data %>% dplyr::filter(Response == "FA") %>% dplyr::count() %>% as.numeric()
-    analysis$stats$hit_percent <<- analysis$stats$hits / analysis$stats$trial_count
-    analysis$stats$FA_percent <<- analysis$stats$FAs / analysis$stats$trial_count
-    analysis$stats$mean_attempts_per_trial <<- dplyr::summarise_at(run_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
-  }
-
-  Calculate_Summary_Statistics()
   if (analysis$stats$trial_count < analysis$minimum_trials) {
     warn = paste0("Low trial count: ", analysis$stats$trial_count, " (cutoff is ", analysis$minimum_trials,")")
     warning(paste0(warn, "\n"))
@@ -892,6 +909,8 @@ Check_Multipart_Run <- function () {
                   "\n  Renumbering complete blocks.")
     warning(paste0(warn, "\n"))
     warnings_list <<- append(warnings_list, warn)
+
+    #TODO: handle duplicating file assignment to extra runs
   }
 }
 
@@ -948,7 +967,7 @@ Add_to_Run_Archive <- function() {
     date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
     time = run_properties$creation_time %>% stringr::str_sub(9,15) %>% as.numeric()
 
-    # using data.frame instead of tibble automatically can unpack run_stats into columns but still need concatenation for warnings_list
+    # using data.frame instead of tibble automatically can unpack $stats into columns but still need concatenation for warnings_list
     r = tibble(
       date = date,
       time = time,
@@ -962,14 +981,15 @@ Add_to_Run_Archive <- function() {
       # assigned_file = assignment$assigned_file_name,    # TODO: actually get this
       # experiment = assignment$experiment,
       # phase = assignment$phase,
+      # supervisor_comment = assignment$supervisor_comment?  or is this per .. rat?
       stim_type = run_properties$stim_type,
       analysis_type = analysis$type,
-      run_stats = list(analysis$stats),
+      stats = list(analysis$stats),
       block_size = run_properties$stim_block_size,
       complete_block_count = run_data$complete_block_number %>% max(na.rm = TRUE),
 
       invalid = "",    # supervisor can manually mark runs as invalid, putting reasoning here
-      run_comments = observations,    #   undergrad comments
+      comments = observations,    #   undergrad comments
       warnings_list = list(warnings_list),    #   warnings list
       omit_list = run_properties$omit_list,    #   omit list?
       UUID = run_properties$UUID    #   uuid
@@ -989,8 +1009,9 @@ Initialize()
 # load run's .mat file
 Import_Matlab()
 
-# identify analysis type
+# identify analysis type and get summary stats
 analysis = Identify_Analysis_Type()
+analysis$stats = Calculate_Summary_Statistics()
 
 # calculate canonical filename
 analysis$computed_file_name = Build_Filename()
@@ -1002,9 +1023,9 @@ Check_UUID()
 # handle weight
 Check_Weight()
 
+
 # check run performance against user-settings cutoffs
 Check_Performance_Cutoffs()
-
 # check run performance against past performance for this rat in this experimental phase
 # Check_Performance_Consistency
 
