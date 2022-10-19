@@ -4,15 +4,23 @@ require(xml2)
 require(zip)
 
 Define_Styles <- function() {
-  rat_name_style <<- createStyle(fontSize = 20, textDecoration = "bold", valign = "center")
-  date_style <<- createStyle(valign = "center", halign = "right", wrapText = TRUE)
-  mandatory_input_reject_style <<- createStyle(fgFill = "#FFE699", fontColour = "#9C5700", valign = "center", wrapText = TRUE)
-  #mandatory_input_accept_style <<-
-
+  rat_name_style <<- createStyle(fontSize = 20, textDecoration = "bold")
+  rat_header_style <<- createStyle(valign = "center", wrapText = TRUE)
+  date_style <<- createStyle(halign = "right")
+  mandatory_input_reject_style <<- createStyle(bgFill = "#FFE699", fontColour = "#9C5700")  #conditional uses bg
+  mandatory_input_accept_style <<- createStyle(bgFill = "#C6EFCE", fontColour = "#006100")  #conditional uses bg
+  optional_input_style <<- createStyle(fgFill = "#FFFFCC", fontColour = "#9C5700")          #regular uses fg
+  warning_style <<- createStyle(bgFill = "#FFC7CE", fontColour = "#9C0006")                 #conditional uses bg
+  halign_center_style <<- createStyle(halign = "center")
   table_header_style <<- createStyle(fgFill = "darkgray", fontColour = "white", textDecoration = "bold")
 }
 
 Build_Row <- function(run) {
+  Parse_Warnings <- function () {
+    r = run$warnings_list[[1]] %>% unlist() %>% stringr::str_c(collapse = "\t")
+    return(r)
+  }
+
   colA_phase = "Some Trial Phase Name" #TODO
   colB_blank = ""
   colC_date = paste0(substr(run$date, 5, 6), "/", substr(run$date, 7, 8), "/",substr(run$date, 1, 4))
@@ -60,7 +68,7 @@ Build_Row <- function(run) {
     "                        " = "", #Y
     "                         " = "", #Z
     "                          " = "", #AA
-    "                           " = run$warnings_list[[1]] %>% unlist() %>% stringr::str_c(collapse = "\t"), #AB
+    "                           " = Parse_Warnings(), #AB
     "                            " = run$comments,  #AC
     check.names = FALSE, fix.empty.names = FALSE)
   return(df)
@@ -75,13 +83,13 @@ Setup_Workbook <- function() {
 
   addWorksheet(wb, sheetName = "Summary", tabColour = "limegreen")
 
-  setColWidths(wb, sheet = 1, cols = "A", widths = 20)
-  setColWidths(wb, sheet = 1, cols = 2:3, widths = 10)
-  setColWidths(wb, sheet = 1, cols = "D", widths = 25)
-  setColWidths(wb, sheet = 1, cols = 5:27, widths = 5)
-  setColWidths(wb, sheet = 1, cols = 18:28, widths = 5, hidden = TRUE) # hide reserved-for-future columns
-  setColWidths(wb, sheet = 1, cols = "AB", widths = 18, hidden = TRUE)
-  setColWidths(wb, sheet = 1, cols = "AC", widths = 50)
+  setColWidths(wb, 1, cols = "A", widths = 20)
+  setColWidths(wb, 1, cols = 2:3, widths = 10)
+  setColWidths(wb, 1, cols = "D", widths = 25)
+  setColWidths(wb, 1, cols = 5:27, widths = 5)
+  setColWidths(wb, 1, cols = 18:27, widths = 5, hidden = TRUE) # hide reserved-for-future columns
+  setColWidths(wb, 1, cols = "AB", widths = 18, hidden = TRUE) #
+  setColWidths(wb, 1, cols = "AC", widths = 50)
 
   return(wb)
 }
@@ -103,7 +111,16 @@ Calculate_Next_Run_Text <- function () {
 
 
 Add_Rat_To_Workbook <- function(wb, row, rat_ID) {
-  run = run_archive[2,] #TODO more than one run, selected by rat_ID
+  Set_Height_Main_Row <- function() {
+    warning_count = length(run$warnings_list[[1]])
+    height_by_count = 13*warning_count+2
+    min_height = 28
+    height_to_set = max(min_height, height_by_count)
+    setRowHeights(wb, 1, rows = row, heights = height_to_set)
+  }
+
+
+  run = run_archive[1,] #TODO more than one run, selected by rat_ID
   rat_name = run$rat_name %>% stringr::str_to_upper(string = .)
   digit_index = str_locate(string = rat_name, pattern = "[:digit:]")[1]
   rat_name = paste0(stringr::str_sub(rat_name, 1, digit_index - 1),
@@ -133,31 +150,54 @@ Add_Rat_To_Workbook <- function(wb, row, rat_ID) {
     check.names = FALSE, fix.empty.names = FALSE
   )
 
-  writeData(wb, sheet = 1, x = df, startRow = row, colNames = FALSE, rowName = FALSE)
-  addStyle(wb, sheet = 1, rat_name_style, rows = row, cols = 1)
-  addStyle(wb, sheet = 1, date_style, rows = row, cols = 2:3)
-  #addStyle(wb, sheet = 1, rat_header_style, rows = row, cols = 4:29)
 
-  #TODO: Conditional Format
-  addStyle(wb, sheet = 1, mandatory_input_reject_style, rows = row, cols = 4)
-  addStyle(wb, sheet = 1, mandatory_input_reject_style, rows = row, cols = 6:10)
+  #Rat Name
+  addStyle(wb, 1, rat_name_style, rows = row, cols = 1)
+
+  #Date
+  addStyle(wb, 1, date_style, rows = row, cols = 2:3)
+  mergeCells(wb, 1, cols = 2:3, rows = row) # date merge
+
+  #Tomorrow's Filename
+  conditionalFormatting(wb, 1, type = "contains", rule = "[[", style = mandatory_input_reject_style, rows = row, cols = 4)
+  conditionalFormatting(wb, 1, type = "notcontains", rule = "[[", style = mandatory_input_accept_style, rows = row, cols = 4)
+
+  #Experimental Phase
+  conditionalFormatting(wb, 1, type = "contains", rule = "[[", style = mandatory_input_reject_style, rows = row, cols = 6:10)
+  conditionalFormatting(wb, 1, type = "notcontains", rule = "[[", style = mandatory_input_accept_style, rows = row, cols = 6:10)
+  mergeCells(wb, 1, cols = 6:10, rows = row) # experimental phase merge
+
+  #Global Comment Field
+  addStyle(wb, 1, rows = row, cols = 12:17, style = optional_input_style) # center the warning text
+  mergeCells(wb, 1, cols = 12:17, rows = row) # rat global comment merge
+
+  #Warnings
+  conditionalFormatting(wb, 1, type = "expression", rule = "==\"Warnings: none\"", style = mandatory_input_accept_style, rows = row, cols = 29)
+  conditionalFormatting(wb, 1, type = "expression", rule = "!=\"Warnings: none\"", style = warning_style, rows = row, cols = 29)
+  addStyle(wb, 1, rows = row, cols = 29, style = halign_center_style, stack = TRUE) # center the warning text
+
+  # openxlsx has trouble writing linebreaks to a single cell
+  # so instead, above in Parse_Warnings we write them tab-separated
+  # This excel formula then reads the tab-sep cell and formats it with linebreaks, as a workaround
+  v = c("IF(LEN(AB3)=0,\"Warnings: none\", SUBSTITUTE(AB3, \"	\", \"\n\"))") #TODO change AB3 hardcoded to tablerow etc
+  writeFormula(wb, 1, x = v, startRow = row, startCol = 29)
+
+  #Entire Main Row
+  addStyle(wb, 1, rows = row, cols = 1:29, style = rat_header_style, stack = TRUE) # vertically center & wrap the main row
+  Set_Height_Main_Row()
+  writeData(wb, 1, x = df, startRow = row, colNames = FALSE, rowNames = FALSE)
 
 
-  mergeCells(wb, sheet = 1, cols = 2:3, rows = row) # date merge
-  mergeCells(wb, sheet = 1, cols = 6:10, rows = row) # experimental phase merge
-  mergeCells(wb, sheet = 1, cols = 12:17, rows = row) # rat global comment merge
 
 
 
   # then write the table
-  df_table = Build_Row(run_archive[2,])
+  df_table = Build_Row(run)
   table_row = row+1
-  writeDataTable(wb, sheet = 1, x = df_table, startRow = table_row, colNames = TRUE, rowNames = FALSE, bandedRows = FALSE, tableStyle = "TableStyleMedium18")
-  addStyle(wb, sheet = 1, table_header_style, rows = table_row, cols = 1:29, gridExpand = TRUE)
+  writeDataTable(wb, 1, x = df_table, startRow = table_row, colNames = TRUE, rowNames = FALSE, bandedRows = FALSE, tableStyle = "TableStyleMedium18")
+  addStyle(wb, 1, table_header_style, rows = table_row, cols = 1:29, gridExpand = TRUE)
 
-  #TODO change AB3 hardcoded to tablerow etc
-  v = c("SUBSTITUTE(AB3, \"	\", \"\n\")") # formula needed to turn list of warnings into 1-cell wrapping with line breaks
-  writeFormula(wb, sheet = 1, x = v, startRow = row, startCol = 29)
+
 
   return(wb)
 }
