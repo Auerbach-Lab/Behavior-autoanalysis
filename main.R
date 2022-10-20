@@ -167,7 +167,7 @@ Import_Matlab <- function() {
       if ("train" %in% stim_type$`Stim Source`) {
         stim_type = "train"
       }
-      else stop(paste0("Multiple non-oddball stim types: ", stim_type))
+      else stop(paste0("ABORT: Multiple non-oddball stim types: ", stim_type))
     } else {
       stim_type = stim_type %>% as.character()
     }
@@ -230,7 +230,7 @@ Import_Matlab <- function() {
       warnings_list <<- append(warnings_list, warn)
       r$stim_filename = newname
     }
-    if (length(r$response_window) > 1) stop("Multiple response windows:", r$response_window,". Aborting.")
+    if (length(r$response_window) > 1) stop("ABORT: Multiple response windows:", r$response_window,". Aborting.")
 
 
     return(r)
@@ -267,11 +267,11 @@ Import_Matlab <- function() {
       }
       else {
         # Check calculated stats against MATLAB summary stats
-        if (total_trials != results_total_trials) stop(paste0("Trial count summary (", results_total_trials, ") does not match Data (", total_trials, ")."))
-        if (hits_calc != results_hits) stop(paste0("Hit count summary (", results_hits, ") does not match Data (", hits_calc, ")."))
-        if (misses_calc != results_misses) stop(paste0("Miss count summary (", results_misses, ") does not match Data (", misses_calc, ")."))
-        if (CRs_calc != results_CR) stop(paste0("Correct rejection count summary (", results_CR, ") does not match Data (", CRs_calc, ")."))
-        if (FAs_calc != results_FA) stop(paste0("False alarm count summary (", results_FA, ") does not match Data (", FAs_calc, ")."))
+        if (total_trials != results_total_trials) stop(paste0("ABORT: Trial count summary (", results_total_trials, ") does not match Data (", total_trials, ")."))
+        if (hits_calc != results_hits) stop(paste0("ABORT: Hit count summary (", results_hits, ") does not match Data (", hits_calc, ")."))
+        if (misses_calc != results_misses) stop(paste0("ABORT: Miss count summary (", results_misses, ") does not match Data (", misses_calc, ")."))
+        if (CRs_calc != results_CR) stop(paste0("ABORT: Correct rejection count summary (", results_CR, ") does not match Data (", CRs_calc, ")."))
+        if (FAs_calc != results_FA) stop(paste0("ABORT: False alarm count summary (", results_FA, ") does not match Data (", FAs_calc, ")."))
       }
     }
 
@@ -280,7 +280,7 @@ Import_Matlab <- function() {
 
     # The MATLAB file has 2 extra columns for some unknown reason
     if (all(run_data_encoded[7:8] != "0")) {
-      stop("What are these columns storing?")
+      stop("ABORT: Two extra columns. What are these columns storing?")
     } else {
       run_data_encoded = run_data_encoded[1:6]
     }
@@ -365,7 +365,7 @@ Import_Matlab <- function() {
       # Calculate # of kept trials
       Trials = dplyr::count(r) %>% as.numeric()
       # check
-      if (Trials != Trials_expected) stop("Expected kept count does not match")
+      if (Trials != Trials_expected) stop("ABORT: Expected kept count does not match.")
 
       return(r)
     }
@@ -512,7 +512,7 @@ Identify_Analysis_Type <- function() {
     else if (has_audible_NoGo & !has_more_than_one_NoGo) r = "Training - Octave"
     else if (!has_audible_NoGo & has_only_one_frequency ) r = "Tone (Single)"
     else if (!has_audible_NoGo) r =  "Tone (Standard)"
-    else (stop("Unknown tonal file type."))
+    else (stop("ABORT: Unknown tonal file type."))
 
     return(r)
   }
@@ -543,7 +543,7 @@ Identify_Analysis_Type <- function() {
     else if (has_uneven_trial_odds) r = "Oddball (Uneven Odds)"
     else if (has_catch_trials) r = "Oddball (Catch)"
     else if (!has_catch_trials & !has_uneven_trial_odds) r = "Oddball (Standard)"
-    else stop("Unknown Oddball file type.")
+    else stop("ABORT: Unknown Oddball file type.")
     return(r)
   }
 
@@ -557,14 +557,14 @@ Identify_Analysis_Type <- function() {
 
   if (run_properties$stim_type == "BBN" | run_properties$stim_type == "tone") run_properties <<- append(run_properties, list(summary = Get_File_Summary_BBN_Tone()))
   else if (run_properties$stim_type == "train") run_properties <<- append(run_properties, list(summary = Get_File_Summary_Oddball()))
-  else stop(paste0("Unknown stim type: ", run_properties$stim_type))
+  else stop(paste0("ABORT: Unknown stim type: ", run_properties$stim_type))
 
   r = NULL
   if (run_properties$stim_type == "tone") r = ID_Tonal()
   if (run_properties$stim_type == "BBN") r = ID_BBN()
   if (run_properties$stim_type == "train") r = ID_Oddball()
 
-  if (is.null("r")) stop("\nUnknown file type. Can not proceed with analysis")
+  if (is.null("r")) stop("ABORT: Unknown file type. Can not proceed with analysis")
   else (cat("Analysis type:", r, sep = "\t", fill = TRUE))
 
   r = list(type = r,
@@ -606,7 +606,7 @@ Build_Filename <- function() {
       dB_step_size = unique(run_properties$summary$dB_step_size) %>% as.numeric()
       if (dB_step_size == 5) go_dB_range = "MIX5stepdB"
       else if (dB_step_size == 10) go_dB_range = "MIXdB"
-      else stop("Tone (Thresholding): Unrecognized dB_step_size (", dB_step_size,"). Aborting.")
+      else stop("ABORT: Tone (Thresholding): Unrecognized dB_step_size (", dB_step_size,"). Aborting.")
       rat_ID = stringr::str_split(run_properties$stim_filename, "_") %>% unlist() %>% .[1]
       computed_file_name = paste0(rat_ID, "_", go_kHz_range, "_", go_dB_range, "_", run_properties$duration, "ms_", run_properties$lockout, "s")
     }
@@ -750,7 +750,7 @@ Build_Filename <- function() {
                               "tone" = Tonal_Filename(),
                               "BBN" = BBN_Filename(),
                               "train" = Oddball_Filename())
-  if (is.null(computed_file_name)) stop("Unknown file type. Can not create filename.")
+  if (is.null(computed_file_name)) stop("ABORT: Unknown file type. Can not create filename.")
 
   if (!delay_in_filename) Check_Delay(expected_delay)
 
