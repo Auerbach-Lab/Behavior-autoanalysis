@@ -122,7 +122,7 @@ Import_Matlab <- function() {
         unlist(recursive = TRUE) %>%
         tail (n = 1) %>%
         as.numeric()
-
+      if(rlang::is_empty(r)) stop("ERROR: system filename improper: ", file_to_load)
       return(r)
     }
 
@@ -916,20 +916,28 @@ Check_Multipart_Run <- function () {
 
 Get_Rat_ID = function(check_name) {
   date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
-  rat_ID = rat_archive %>%
-    dplyr::filter(Rat_name == check_name) %>%
-    dplyr::filter(start_date <= date) %>%
-    dplyr::filter(date <= end_date | is.na(end_date)) %>% .$Rat_ID
-  if(length(rat_ID) > 1) stop(paste0("ABORT: Overlapping rats on date ", date, " with name ", check_name, ". Cannot determine Rat ID."))
-  return(rat_ID)
+  rats_with_name <<- rat_archive %>%
+    dplyr::filter(Rat_name == check_name)
+  if(nrow(rats_with_name) == 0) {
+    stop(paste0("ABORT: No rats with name ", check_name, " found in archive."))
+  } else {
+    rat_ID = rats_with_name %>%
+      dplyr::filter(start_date <= date) %>%
+      dplyr::filter(date <= end_date | is.na(end_date)) %>% .$Rat_ID
+    if(length(rat_ID) > 1) stop(paste0("ABORT: Overlapping rats on date ", date, " with name ", check_name, ". Cannot determine Rat ID."))
+    if(length(rat_ID) == 0) stop("ABORT: No rats with name ", check_name, " were active on ", date, ".")
+    return(rat_ID)
+  }
 }
 
 Check_Weight <- function() {
   rat_weights = NULL
   if(!rlang::is_empty(run_archive)) {
+    id = Get_Rat_ID(run_properties$rat_name)
+    if(length(id) == 0) stop("ABORT: Unknown rat ID.")
     rat_weights =
       run_archive %>%
-      dplyr::filter(rat_ID == Get_Rat_ID(run_properties$rat_name)) %>%
+      dplyr::filter(rat_ID == id) %>%
       .$weight
   }
 
@@ -996,10 +1004,11 @@ Add_to_Run_Archive <- function() {
     )
     return(r)
   }
-
   row_to_add = Construct_Run_Entry()
+  if(nrow(row_to_add) != 1) stop("ABORT: Problem building row to add to Run Archive.")
   run_archive <<- rbind(run_archive, row_to_add)
   save(run_archive, file = "run_archive.Rdata", ascii = TRUE, compress = FALSE)
+  cat("Run added to Run Archive.", sep = "\t", fill = TRUE)
 }
 
 # MAIN ---------------------------------------------------------
