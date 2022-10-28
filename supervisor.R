@@ -4,6 +4,7 @@ require(xml2)
 require(zip)
 require(dplyr)
 require(stringr)
+require(Rcpp)
 
 Define_Styles <- function() {
   rat_name_style <<- createStyle(fontSize = 20, textDecoration = "bold")
@@ -18,6 +19,7 @@ Define_Styles <- function() {
 }
 
 Setup_Workbook <- function() {
+
   wb <<- createWorkbook()
 
   options("openxlsx.borderColour" = "#4F80BD")
@@ -33,6 +35,11 @@ Setup_Workbook <- function() {
   setColWidths(wb, 1, cols = 18:27, widths = 5, hidden = FALSE) # hide reserved-for-future columns?
   setColWidths(wb, 1, cols = "AB", widths = 18, hidden = FALSE)
   setColWidths(wb, 1, cols = "AC", widths = 50)
+
+  # add experimental configurations table from external file
+  experiment_config_df = readWorkbook(xlsxFile = "experiment details.xlsx", sheet = 1)
+  max_search_rows <<- nrow(experiment_config_df)
+  writeData(wb, 1, experiment_config_df, startRow = settings$config_row, startCol = settings$config_col, colNames = FALSE, rowNames = FALSE)
 
   return(wb)
 }
@@ -92,7 +99,31 @@ Add_Rat_To_Workbook <- function(row, rat_ID) {
       setRowHeights(wb, 1, rows = row, heights = height_to_set)
     }
 
+    Write_Dynamic_Lists <- function() {
+      # phases list lives at settings$config_col+1 (experiment) and +2 (phase)
+      range_start = getCellRefs(data.frame(settings$config_row, settings$config_col + 2))
+      range_end = getCellRefs(data.frame(settings$config_row + max_search_rows, settings$config_col + 2))
+      output_range = paste0(range_start, ":", range_end)
+
+      range_start = getCellRefs(data.frame(settings$config_row, settings$config_col + 1)) # going to use this when we build formula, so it has to be second
+      range_end = getCellRefs(data.frame(settings$config_row + max_search_rows, settings$config_col + 1))
+      input_range = paste0(range_start, ":", range_end)
+
+      query_cell = getCellRefs(data.frame(row, 5))
+
+      Build_List <- function(i) {
+        #build the excel formula that will display the items from the output range that correspond to the query cell for the input range
+        dynamic_list_formula = paste0("=IFERROR(INDEX(", output_range, ",SMALL(IF(", query_cell, "=", input_range, ",ROW(", input_range, ")-ROW(", range_start, ")+1),ROW(", i, ":", i, "))),\"\")")
+        writeFormula(wb, 1, dynamic_list_formula, startRow = settings$config_row+i, startCol = settings$dynamic_col, array = TRUE)
+      }
+      #dynamic_list_df = sprintf(formula, seq(1:settings$dynamic_list_length), seq(1:settings$dynamic_list_length))
+      sapply(c(1:7), Build_List)
+
+    }
+
     # Header Workflow ---------------------------------------------------------
+
+    Write_Dynamic_Lists()
 
     #Rat Name
     rat_name = run$rat_name %>% stringr::str_to_upper(string = .)
@@ -105,26 +136,43 @@ Add_Rat_To_Workbook <- function(row, rat_ID) {
 
     #Date
     addStyle(wb, 1, date_style, rows = row, cols = 2:3)
-    mergeCells(wb, 1, cols = 2:3, rows = row) # date merge
+    mergeCells(wb, 1, cols = 2:3, rows = row)
     nextrun_text = Calculate_Next_Run_Text()
 
     #Tomorrow's Filename
     conditionalFormatting(wb, 1, type = "contains", rule = "[[", style = mandatory_input_reject_style, rows = row, cols = 4)
     conditionalFormatting(wb, 1, type = "notcontains", rule = "[[", style = mandatory_input_accept_style, rows = row, cols = 4)
 
+    #Experiment
+    range_start = getCellRefs(data.frame(settings$config_row, settings$config_col))
+    range_end = getCellRefs(data.frame(settings$config_row+7, settings$config_col))
+    range_string = paste0(range_start, ":", range_end)
+    dataValidation(wb, 1, rows = row, cols = 5, type = "list", value = range_string, operator = "ignored for lists")
+    mergeCells(wb, 1, cols = 5:7, rows = row)
+    rule_string = paste0("COUNTIF(", range_string, ",E", row, ")>0")
+    conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_accept_style, rows = row, cols = 5)
+    rule_string = paste0("COUNTIF(", range_string, ",E", row, ")<=0")
+    conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_reject_style, rows = row, cols = 5)
+
     #Experimental Phase
-    conditionalFormatting(wb, 1, type = "contains", rule = "[[", style = mandatory_input_reject_style, rows = row, cols = 6)
-    conditionalFormatting(wb, 1, type = "notcontains", rule = "[[", style = mandatory_input_accept_style, rows = row, cols = 6)
+    conditionalFormatting(wb, 1, type = "contains", rule = "[[", style = mandatory_input_reject_style, rows = row, cols = 8)
+    conditionalFormatting(wb, 1, type = "notcontains", rule = "[[", style = mandatory_input_accept_style, rows = row, cols = 8)
 
     addWorksheet(wb, "Sheet 2")
     writeData(wb, sheet = 2, x = c("Base case", "Rotating", "Background", "Catch trials", "Uneven odds"))
-    dataValidation(wb, 1, rows = row, cols = 6, type = "list", value = "'Sheet 2'!$A$1:$A$5", operator = "ignored for lists")
+    dataValidation(wb, 1, rows = row, cols = 8, type = "list", value = "'Sheet 2'!$A$1:$A$5", operator = "ignored for lists")
 
-    mergeCells(wb, 1, cols = 6:7, rows = row) # experimental phase merge
+    mergeCells(wb, 1, cols = 8:10, rows = row)
+
+    #Task
+    mergeCells(wb, 1, cols = 11:13, rows = row)
+
+    #Detail
+    mergeCells(wb, 1, cols = 14:16, rows = row)
 
     #Global Comment Field
-    addStyle(wb, 1, rows = row, cols = 12:27, style = optional_input_style) # center the warning text
-    mergeCells(wb, 1, cols = 12:27, rows = row) # rat global comment merge
+    addStyle(wb, 1, rows = row, cols = 17:27, style = optional_input_style) # center the warning text
+    mergeCells(wb, 1, cols = 17:27, rows = row) # rat global comment merge
 
     #Warnings
     conditionalFormatting(wb, 1, type = "expression", rule = "==\"Warnings: none\"", style = mandatory_input_accept_style, rows = row, cols = 28:29)
@@ -147,15 +195,19 @@ Add_Rat_To_Workbook <- function(row, rat_ID) {
       nextrun_text, #B
       "", #C - merge with previous
       "[[Tomorrow's Filename]]", #D
-      "", #E
-      "[[Experimental Phase]]", #TODO is there any way to make this a dropdown of options? Yes, openxlsx supports data validation
+      "[[Experiment]]", #E
+      "", #F - merge with previous
       "", #G - merge with previous
-      "", #H - merge with previous
+      "[[Phase]]", #H
       "", #I - merge with previous
       "", #J - merge with previous
-      "", #K,
-      "[[Global comment field including e.g. week-ahead informal plan for this rat]]", #L
-      "", "", "", "", "", #M N O P Q
+      "[[Task]]", #K,
+      "", #L - merge with previous
+      "", #M - merge with previous
+      "[[Detail]]", #N,
+      "", #O - merge with previous
+      "", #P - merge with previous
+      "[[Global comment field including e.g. week-ahead informal plan for this rat]]", #Q
       "", "", "", "", "", #R S T U V
       "", "", "", "", "", #W X Y Z AA
       "", #AB
@@ -224,6 +276,8 @@ Add_Rat_To_Workbook <- function(row, rat_ID) {
 # Supervisor Workflow -----------------------------------------------------------
 rat_ID = 80 #TODO more than one rat
 row = 1 #global, index of the next unwritten row
+settings = list(dynamic_list_length = 7, dynamic_col = 48, config_row = 1, config_col = 64)
+
 Define_Styles()
 #df = Build_Row()
 Setup_Workbook()
