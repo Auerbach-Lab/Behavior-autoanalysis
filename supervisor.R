@@ -100,24 +100,44 @@ Add_Rat_To_Workbook <- function(row, rat_ID) {
     }
 
     Write_Dynamic_Lists <- function() {
-      # phases list lives at settings$config_col+1 (experiment) and +2 (phase)
-      range_start = getCellRefs(data.frame(settings$config_row, settings$config_col + 2))
-      range_end = getCellRefs(data.frame(settings$config_row + max_search_rows, settings$config_col + 2))
-      output_range = paste0(range_start, ":", range_end)
-
-      range_start = getCellRefs(data.frame(settings$config_row, settings$config_col + 1)) # going to use this when we build formula, so it has to be second
-      range_end = getCellRefs(data.frame(settings$config_row + max_search_rows, settings$config_col + 1))
-      input_range = paste0(range_start, ":", range_end)
-
-      query_cell = getCellRefs(data.frame(row, 5))
-
       Build_List <- function(i) {
         #build the excel formula that will display the items from the output range that correspond to the query cell for the input range
         dynamic_list_formula = paste0("=IFERROR(INDEX(", output_range, ",SMALL(IF(", query_cell, "=", input_range, ",ROW(", input_range, ")-ROW(", range_start, ")+1),ROW(", i, ":", i, "))),\"\")")
-        writeFormula(wb, 1, dynamic_list_formula, startRow = settings$config_row+i, startCol = settings$dynamic_col, array = TRUE)
+        writeFormula(wb, 1, dynamic_list_formula, startRow = settings$config_row+i, startCol = settings$dynamic_col + col_offset, array = TRUE)
       }
-      #dynamic_list_df = sprintf(formula, seq(1:settings$dynamic_list_length), seq(1:settings$dynamic_list_length))
-      sapply(c(1:7), Build_List)
+
+      # phases list lives at settings$config_col+1 (experiment) and +2 (phase), querying off experiment in F
+      range_start = getCellRefs(data.frame(settings$config_row, settings$config_col + 2))
+      range_end = getCellRefs(data.frame(settings$config_row + max_search_rows, settings$config_col + 2))
+      output_range = paste0(range_start, ":", range_end)
+      range_start = getCellRefs(data.frame(settings$config_row, settings$config_col + 1)) # going to use this when we build formula, so it has to be second
+      range_end = getCellRefs(data.frame(settings$config_row + max_search_rows, settings$config_col + 1))
+      input_range = paste0(range_start, ":", range_end)
+      query_cell = getCellRefs(data.frame(row, 6))
+      col_offset = 0
+      sapply(c(1:settings$dynamic_list_length), Build_List)
+
+      #task list lives at settings$config_col+3 (phase) and +4 (task), querying from phase in I
+      range_start = getCellRefs(data.frame(settings$config_row, settings$config_col + 4))
+      range_end = getCellRefs(data.frame(settings$config_row + max_search_rows, settings$config_col + 4))
+      output_range = paste0(range_start, ":", range_end)
+      range_start = getCellRefs(data.frame(settings$config_row, settings$config_col + 3)) # going to use this when we build formula, so it has to be second
+      range_end = getCellRefs(data.frame(settings$config_row + max_search_rows, settings$config_col + 3))
+      input_range = paste0(range_start, ":", range_end)
+      query_cell = getCellRefs(data.frame(row, 9))
+      col_offset = col_offset + 1
+      sapply(c(1:settings$dynamic_list_length), Build_List)
+
+      #detail list lives at settings$config_col+5 (phase again) and +6 (detail), querying from phase again in I
+      range_start = getCellRefs(data.frame(settings$config_row, settings$config_col + 6))
+      range_end = getCellRefs(data.frame(settings$config_row + max_search_rows, settings$config_col + 6))
+      output_range = paste0(range_start, ":", range_end)
+      range_start = getCellRefs(data.frame(settings$config_row, settings$config_col + 5)) # going to use this when we build formula, so it has to be second
+      range_end = getCellRefs(data.frame(settings$config_row + max_search_rows, settings$config_col + 5))
+      input_range = paste0(range_start, ":", range_end)
+      query_cell = getCellRefs(data.frame(row, 9))
+      col_offset = col_offset + 1
+      sapply(c(1:settings$dynamic_list_length), Build_List)
 
     }
 
@@ -147,44 +167,63 @@ Add_Rat_To_Workbook <- function(row, rat_ID) {
     range_start = getCellRefs(data.frame(settings$config_row, settings$config_col))
     range_end = getCellRefs(data.frame(settings$config_row+7, settings$config_col))
     range_string = paste0(range_start, ":", range_end)
-    dataValidation(wb, 1, rows = row, cols = 5, type = "list", value = range_string, operator = "ignored for lists")
-    mergeCells(wb, 1, cols = 5:7, rows = row)
-    rule_string = paste0("COUNTIF(", range_string, ",E", row, ")>0")
-    conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_accept_style, rows = row, cols = 5)
-    rule_string = paste0("COUNTIF(", range_string, ",E", row, ")<=0")
-    conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_reject_style, rows = row, cols = 5)
+    dataValidation(wb, 1, rows = row, cols = 6, type = "list", value = range_string, operator = "")
+    mergeCells(wb, 1, cols = 6:7, rows = row)
+    rule_string = paste0("COUNTIF(", range_string, ",F", row, ")>0")
+    conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_accept_style, rows = row, cols = 6)
+    rule_string = paste0("COUNTIF(", range_string, ",F", row, ")<=0")
+    conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_reject_style, rows = row, cols = 6)
 
     #Experimental Phase
-    conditionalFormatting(wb, 1, type = "contains", rule = "[[", style = mandatory_input_reject_style, rows = row, cols = 8)
-    conditionalFormatting(wb, 1, type = "notcontains", rule = "[[", style = mandatory_input_accept_style, rows = row, cols = 8)
-
-    addWorksheet(wb, "Sheet 2")
-    writeData(wb, sheet = 2, x = c("Base case", "Rotating", "Background", "Catch trials", "Uneven odds"))
-    dataValidation(wb, 1, rows = row, cols = 8, type = "list", value = "'Sheet 2'!$A$1:$A$5", operator = "ignored for lists")
-
-    mergeCells(wb, 1, cols = 8:10, rows = row)
+    range_start = getCellRefs(data.frame(row + 1, settings$dynamic_col))
+    range_end = getCellRefs(data.frame(row + 1 + settings$dynamic_list_length, settings$dynamic_col))
+    range_string = paste0(range_start, ":", range_end)
+    dataValidation(wb, 1, rows = row, cols = 9, type = "list", value = range_string, operator = "")
+    rule_string = paste0("COUNTIF(", range_string, ",I", row, ")>0")
+    conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_accept_style, rows = row, cols = 9)
+    rule_string = paste0("COUNTIF(", range_string, ",I", row, ")<=0")
+    conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_reject_style, rows = row, cols = 9)
+    mergeCells(wb, 1, cols = 9:10, rows = row)
+    #conditionalFormatting(wb, 1, type = "contains", rule = "[[", style = mandatory_input_reject_style, rows = row, cols = 8)
+    #conditionalFormatting(wb, 1, type = "notcontains", rule = "[[", style = mandatory_input_accept_style, rows = row, cols = 8)
 
     #Task
-    mergeCells(wb, 1, cols = 11:13, rows = row)
+    range_start = getCellRefs(data.frame(row + 1, settings$dynamic_col + 1))
+    range_end = getCellRefs(data.frame(row + 1 + settings$dynamic_list_length, settings$dynamic_col + 1))
+    range_string = paste0(range_start, ":", range_end)
+    dataValidation(wb, 1, rows = row, cols = 12, type = "list", value = range_string, operator = "")
+    rule_string = paste0("COUNTIF(", range_string, ",L", row, ")>0")
+    conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_accept_style, rows = row, cols = 12)
+    rule_string = paste0("COUNTIF(", range_string, ",L", row, ")<=0")
+    conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_reject_style, rows = row, cols = 12)
+    mergeCells(wb, 1, cols = 12:13, rows = row)
 
     #Detail
-    mergeCells(wb, 1, cols = 14:16, rows = row)
+    range_start = getCellRefs(data.frame(row + 1, settings$dynamic_col + 2))
+    range_end = getCellRefs(data.frame(row + 1 + settings$dynamic_list_length, settings$dynamic_col + 2))
+    range_string = paste0(range_start, ":", range_end)
+    dataValidation(wb, 1, rows = row, cols = 15, type = "list", value = range_string, operator = "")
+    rule_string = paste0("COUNTIF(", range_string, ",O", row, ")>0")
+    conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_accept_style, rows = row, cols = 15)
+    rule_string = paste0("COUNTIF(", range_string, ",O", row, ")<=0")
+    conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_reject_style, rows = row, cols = 15)
+    mergeCells(wb, 1, cols = 15:16, rows = row)
 
     #Global Comment Field
-    addStyle(wb, 1, rows = row, cols = 17:27, style = optional_input_style) # center the warning text
-    mergeCells(wb, 1, cols = 17:27, rows = row) # rat global comment merge
+    addStyle(wb, 1, rows = row, cols = 18:27, style = optional_input_style) # center the warning text
+    mergeCells(wb, 1, cols = 18:27, rows = row) # rat global comment merge
 
     #Warnings
-    conditionalFormatting(wb, 1, type = "expression", rule = "==\"Warnings: none\"", style = mandatory_input_accept_style, rows = row, cols = 28:29)
-    conditionalFormatting(wb, 1, type = "expression", rule = "!=\"Warnings: none\"", style = warning_style, rows = row, cols = 28:29)
-    addStyle(wb, 1, rows = row, cols = 28:29, style = halign_center_style, stack = TRUE) # center the warning text
+    conditionalFormatting(wb, 1, type = "expression", rule = "==\"Warnings: none\"", style = mandatory_input_accept_style, rows = row, cols = 29)
+    conditionalFormatting(wb, 1, type = "expression", rule = "!=\"Warnings: none\"", style = warning_style, rows = row, cols = 29)
+    addStyle(wb, 1, rows = row, cols = 29, style = halign_center_style, stack = TRUE) # center the warning text
 
     # openxlsx has trouble writing linebreaks to a single cell
     # so instead, above in Parse_Warnings we write them tab-separated
     # This excel formula then reads the tab-sep cell and formats it with linebreaks, as a workaround
     v = c("IF(LEN(AB3)=0,\"Warnings: none\", SUBSTITUTE(AB3, \"	\", \"\n\"))") #TODO change AB3 hardcoded to tablerow etc
-    writeFormula(wb, 1, x = v, startRow = row, startCol = 28)
-    mergeCells(wb, 1, cols = 28:29, rows = row) # header warning merge
+    writeFormula(wb, 1, x = v, startRow = row, startCol = 29)
+
 
     #Entire Main Row
     addStyle(wb, 1, rows = row, cols = 1:29, style = rat_header_style, stack = TRUE) # vertically center & wrap the main row
@@ -194,23 +233,23 @@ Add_Rat_To_Workbook <- function(row, rat_ID) {
       rat_name, #A
       nextrun_text, #B
       "", #C - merge with previous
-      "[[Tomorrow's Filename]]", #D
-      "[[Experiment]]", #E
-      "", #F - merge with previous
+      "[Tomorrow's Filename]", #D
+      "", #E
+      "[Experiment]", #F
       "", #G - merge with previous
-      "[[Phase]]", #H
-      "", #I - merge with previous
+      "", #H
+      "[Phase]", #I
       "", #J - merge with previous
-      "[[Task]]", #K,
-      "", #L - merge with previous
+      "", #K
+      "[Task]", #L,
       "", #M - merge with previous
-      "[[Detail]]", #N,
-      "", #O - merge with previous
+      "", #N
+      "[Detail]", #O,
       "", #P - merge with previous
-      "[[Global comment field including e.g. week-ahead informal plan for this rat]]", #Q
-      "", "", "", "", "", #R S T U V
-      "", "", "", "", "", #W X Y Z AA
-      "", #AB
+      "", #Q
+      "[Global comment field e.g. week-ahead informal plan for this rat]", #R
+      "", "", "", "", "", #S T U V W
+      "", "", "", "", "", #X Y Z AA AB
       check.names = FALSE, fix.empty.names = FALSE
     )
 
@@ -276,7 +315,7 @@ Add_Rat_To_Workbook <- function(row, rat_ID) {
 # Supervisor Workflow -----------------------------------------------------------
 rat_ID = 80 #TODO more than one rat
 row = 1 #global, index of the next unwritten row
-settings = list(dynamic_list_length = 7, dynamic_col = 48, config_row = 1, config_col = 64)
+settings = list(dynamic_list_length = 7, dynamic_col = 56, config_row = 1, config_col = 64)
 
 Define_Styles()
 #df = Build_Row()
