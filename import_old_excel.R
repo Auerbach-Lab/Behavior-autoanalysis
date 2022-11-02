@@ -2,10 +2,9 @@ require(openxlsx)
 require(dplyr)
 require(stringr)
 
-MainFolder = 'A:/Coding/Behavior-autoanalysis/Fake Project Folder'
-setwd(MainFolder)
-
+mainfolder = "A:/Coding/Behavior-autoanalysis/Fake Project Folder"
 filename = "Noise_TTS_Gp1_Green-Orange.xlsx"
+filename = paste(mainfolder, filename, sep = "/")
 
 # Sheet names are rat names
 # Load TTS spreadsheet (hard coded)
