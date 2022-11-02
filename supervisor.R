@@ -256,6 +256,8 @@ Build_Row <- function(run) {
   df = data.frame(colA_phase, colB_blank, colC_date, colD_filename, colE_trials, colF_hitpercent, colG_FApercent, colH_dprime, colI_react, colJ_thresh,
                   "","","","","","","","","","","","","","","","","",Parse_Warnings(), run$comments,
                   check.names = FALSE, fix.empty.names = FALSE)
+  df = df %>% rbind(df)
+
   return(df)
 }
 
@@ -292,7 +294,7 @@ Build_Table <- function() {
     phase_current = run_today$assignment[[1]]$phase
 
     # Common Columns ----------------------------------------------------------
-    columns = c("task", "detail", "date", "file_name", "weight", "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial") #TODO: rxn
+    columns = c("task", "detail", "date", "file_name", "weight", "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial", "threshold", "reaction")
 
     r = rat_runs %>%
       dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
@@ -303,32 +305,81 @@ Build_Table <- function() {
                                   stringr::str_sub(date, 6, 6), "/",
                                   stringr::str_sub(date, 7, 7) %>% stringr::str_replace(pattern = "0", replacement = ""),
                                   stringr::str_sub(date, 8, 8), "/", stringr::str_sub(date, 1, 4))) %>%
-      group_by(task, detail) %>% #TODO also by detail
+      group_by(task, detail) %>%
       do(
         dplyr::arrange(., dplyr::desc(date)) %>% dplyr::select(columns)
       )
 
     weight_max = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
 
+    # Task-specific RXN column ------------------------------------------------
+
+    if(experiment_current == "Oddball") {
+      #stuff
+    } else {
+      if(phase_current == "Octave") {
+        #stuff
+      } else {
+        duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
+
+        # TH and Rxn refer to the task detail not the column
+        df_TH_BBN = NULL
+        df_TH_tones = NULL
+        df_Rxn = NULL
+
+        df_TH_BBN = r %>% unnest(reaction) %>%
+          dplyr::filter(task == "TH" & `Dur (ms)` == duration & `Freq (kHz)` == 0 & `Inten (dB)` == 40)
+
+        intensity = r %>% unnest(reaction) %>%
+          dplyr::filter(task == "TH" & `Dur (ms)` == duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
+          group_by(date) %>%
+          count(`Inten (dB)`) %>% arrange(desc(`Inten (dB)`)) %>% slice(which.max(n)) %>%
+          rename(desired_dB = `Inten (dB)`) %>% select(-n)
+
+        df_TH_tones = r %>% unnest(reaction) %>%
+          dplyr::filter(task == "TH" & `Dur (ms)` == duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
+          right_join(intensity, by = "date") %>%
+          filter(`Inten (dB)` == desired_dB) %>%
+          group_by(date) %>%
+          mutate(Rxn = mean(Rxn)) %>%
+          select(-desired_dB)
+
+        df_Rxn = r %>% unnest(reaction) %>%
+          dplyr::filter(task != "TH" & `Dur (ms)` == duration & `Inten (dB)` == 60) %>% # not equal TH
+          group_by(date) %>%
+          mutate(Rxn = mean(Rxn))
+
+        df = rbind(df_TH_BBN, df_TH_tones, df_Rxn) %>%
+          select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`) %>%
+          distinct()
+
+
+      }
+
+    }
+
+
+      View
+
+    # Phase-specific Columns --------------------------------------------------------
+    if(phase_current == "Tones") {
+
+    }
+
     averages = r %>%
       # dplyr::group_by(task, detail) %>% #TODO also by detail
-      dplyr::select(-date, -file_name) %>%
+      dplyr::select(-date, -file_name, -threshold, -reaction) %>%
       dplyr::summarise_all(mean) %>%
       dplyr::mutate(date = "Overall", file_name = "Averages") %>%
       dplyr::relocate(date, file_name, .before = weight)
 
     r = r %>% do(
       head(., 3)
-      ) %>%
+    ) %>%
       mutate(date = as.character(date))
 
     r = rbind(averages, r) %>%
       mutate(weight = (weight - weight_max)/weight_max)
-
-
-
-  # Task-specific Columns --------------------------------------------------------
-  # HERE HERE HERE
 
   }
 
@@ -362,7 +413,7 @@ Build_Table <- function() {
 
 
 
-  #df_table = Build_Row(run_archive[1,]) #TODO more than one run, selected by rat_ID
+  df_table = Build_Row(run_archive[1,]) #TODO more than one run, selected by rat_ID
 
 
   df_table = Finalize_Table()
@@ -372,12 +423,15 @@ Build_Table <- function() {
 
 Add_Rat_To_Workbook <- function(row, rat_ID) {
   # NOTE we aren't doing anything special for handling multiple runs in the same day - they have a warning and we display recent run history, that's enough
+  run <<- run_archive[1,]
 
   # write the header
-  Build_Header()
+  Write_Header()
 
   # then write the table
   Build_Table()
+  #df = data.frame(x = "foo", y = "bar") #overwriting into table works fine
+  #writeData(wb, 1, df, startRow = 3, startCol = 5, colNames = FALSE)
 }
 
 
