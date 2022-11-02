@@ -849,6 +849,16 @@ Calculate_Summary_Statistics <- function() {
       check = df %>% filter(Type == 0) %>% count() %>% as.numeric()
       CRnum = (if (check == 1) filter(df, Type == 0) %>% .$CR %>% as.numeric() else check)
       FAnum = (if (check == 1) filter(df, Type == 0) %>% .$FA %>% as.numeric() else check)
+      if(!("Hit" %in% colnames(df))) df = df %>% add_column(Hit = NA)
+      if(!("Miss" %in% colnames(df))) df = df %>% add_column(Miss = NA)
+      if(!("FA" %in% colnames(df))) {
+        df = df %>% add_column(FA = NA)
+        FAnum = 0
+      }
+      if(!("CR" %in% colnames(df))) {
+        df = df %>% add_column(CR = NA)
+        CRnum = 0
+      }
       new_df = df %>% filter(Type == 1) %>%
         mutate(CR = ifelse(is.na(CR), CRnum, CR),
                FA = ifelse(is.na(FA), FAnum, CR),
@@ -859,15 +869,17 @@ Calculate_Summary_Statistics <- function() {
 
     # Signal detection index calculation
     Calculate_dprime <- function(df) {
-      dprime(n_hit = df$Hit,
+      r = dprime(n_hit = df$Hit,
              n_fa = df$FA,
              n_miss = df$Miss,
              n_cr = df$CR,
-             adjusted = TRUE) %>%
-        as_tibble() %>%
+             adjusted = TRUE)
+      r[["bppd"]] = NULL # drop this column always (it can be wrongly dimensioned and break things)
+      r = r %>% as_tibble() %>%
         mutate(dB = df$`Inten (dB)`,
                Freq = df$`Freq (kHz)`,
                Dur = df$`Dur (ms)`)
+      return(r)
     }
 
     # Threshold calculation calculation based on TH_cutoff intercept of fit curve
@@ -884,11 +896,9 @@ Calculate_Summary_Statistics <- function() {
       return(TH)
     }
 
-    writeLines("Calculating Thresholds")
-
     # Calculate d' and save (along with hit/miss/CR/FA table)
     dprime_table <-
-      run_data %>%
+      run_data %>% #TODO add a way to calculate using full trials archive history
       dplyr::filter(Block_number != 1) %>%
       group_by(`Dur (ms)`, Type, `Freq (kHz)`, `Inten (dB)`, Response) %>%
       summarise(count = n(), .groups = "keep") %>%
@@ -896,7 +906,7 @@ Calculate_Summary_Statistics <- function() {
       ungroup()
 
     dprime_table = Format_for_Psycho(dprime_table)
-    dprime_data = Calculate_dprime(TH_data)
+    dprime_data = Calculate_dprime(dprime_table)
 
     r = dprime_data %>%
       select(Freq, Dur, dB, dprime) %>%
@@ -908,10 +918,12 @@ Calculate_Summary_Statistics <- function() {
     return(r)
   }
 
-  Calculate_Reaction_Time <- function() {
+  Calculate_Reaction_Time <- function(audible_only = FALSE, min_time_s = 0.015) {
     Filter_to_Audible <- function(df) { #TODO do we WANT filtered to audible? Probably no for graph, yes for analyses
       ms = unique(df$`Dur (ms)`)
       kHz = unique(df$`Freq (kHz)`)
+
+      #TODO: use overall cutoff rather than daily
       cutoff = TH_by_frequency_and_duration %>% # have to use UQ to force the evaluation of the variable
         filter(Dur == UQ(ms) & Freq == UQ(kHz)) %>% .$TH
 
@@ -919,17 +931,23 @@ Calculate_Summary_Statistics <- function() {
       return(r)
     }
 
-    r = run_data %>%
-      dplyr::filter(Response == "Hit") %>%
-      mutate(Dur = `Dur (ms)`, Freq = `Freq (kHz)`) %>%
-      group_by(Freq, Dur) %>% #print
-      nest() %>%
-      mutate(Rxn = map(.x = data, .f = Filter_to_Audible)) %>%
-      select(-data) %>%
-      unnest(Rxn) %>%
-      group_by(`Dur (ms)`, `Freq (kHz)`, `Inten (dB)`) %>%
-      summarise(Rxn = mean(`Reaction_(s)`, na.rm = T),
-                .groups = "keep")
+    r = run_data %>% dplyr::filter(Response == "Hit")
+
+    r = dplyr::filter(r, `Reaction_(s)` > min_time_s)
+
+    if (audible_only) {
+      r = r %>%
+        mutate(Dur = `Dur (ms)`, Freq = `Freq (kHz)`) %>%
+        group_by(Freq, Dur) %>%
+        nest() %>%
+        mutate(Rxn = map(.x = data, .f = Filter_to_Audible)) %>%
+        select(-data) %>%
+        unnest(Rxn)
+    }
+
+      r = r %>%
+        group_by(`Dur (ms)`, `Freq (kHz)`, `Inten (dB)`) %>%
+        summarise(Rxn = mean(`Reaction_(s)`, na.rm = T), .groups = "keep")
     return(r)
   }
 
@@ -945,7 +963,8 @@ Calculate_Summary_Statistics <- function() {
   FA_percent = FAs / trial_count
   mean_attempts_per_trial = dplyr::summarise_at(run_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
   TH_by_frequency_and_duration = Calculate_Threshold()
-  reaction = Calculate_Reaction_Time()
+  #overall_TH = Calculate_Threshold() #TODO overall calculation using trials archive
+  reaction = Calculate_Reaction_Time() #NOTE this can take audible only (default false) or min time (default 0.015)
   dprime = psycho::dprime(n_hit = hits,
                            n_fa = FAs,
                            n_miss = misses,
@@ -966,6 +985,7 @@ Calculate_Summary_Statistics <- function() {
     reaction = reaction
   )
 
+  writeLines("Calculated run statistics.")
   return(stats)
 }
 
