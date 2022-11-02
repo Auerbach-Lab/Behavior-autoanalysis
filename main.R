@@ -945,7 +945,7 @@ Calculate_Summary_Statistics <- function() {
   FA_percent = FAs / trial_count
   mean_attempts_per_trial = dplyr::summarise_at(run_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
   TH_by_frequency_and_duration = Calculate_Threshold()
-  #reaction = Calculate_Reaction_Time()
+  reaction = Calculate_Reaction_Time()
   dprime = psycho::dprime(n_hit = hits,
                            n_fa = FAs,
                            n_miss = misses,
