@@ -15,8 +15,7 @@ Initialize <- function() {
   }
 
   Load_Packages()
-  source("settings.R")  # hardcoded user variables
-  setwd(user_settings$projects_folder)  # working directory from settings.R
+  source("A:/Coding/Behavior-autoanalysis/settings.R")  # hardcoded user variables
   warnings_list <<- list()
   analysis <<- list()
   rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = "N/A")
@@ -604,8 +603,14 @@ Build_Filename <- function() {
       go_kHz_range = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)` %>% min(), "-",
                             run_properties$summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)` %>% max(), "kHz")
       dB_step_size = unique(run_properties$summary$dB_step_size) %>% as.numeric()
-      if (dB_step_size == 5) go_dB_range = "MIX5stepdB"
-      else if (dB_step_size == 10) go_dB_range = "MIXdB"
+      if (dB_step_size == 5) {
+        go_dB_range = "MIX5stepdB"
+        analysis$prepend_name <<- TRUE
+      }
+      else if (dB_step_size == 10) {
+        go_dB_range = "MIXdB"
+        analysis$prepend_name <<- TRUE
+      }
       else stop("ABORT: Tone (Thresholding): Unrecognized dB_step_size (", dB_step_size,"). Aborting.")
       rat_ID = stringr::str_split(run_properties$stim_filename, "_") %>% unlist() %>% .[1]
       computed_file_name = paste0(rat_ID, "_", go_kHz_range, "_", go_dB_range, "_", run_properties$duration, "ms_", run_properties$lockout, "s")
@@ -780,7 +785,26 @@ Build_Filename <- function() {
 
 Check_Assigned_Filename <- function() {
   r = TRUE
-  analysis$assigned_file_name = analysis$computed_file_name #TODO: actually pluck assigned_filename from excel or whatever
+
+  if(old_file) {
+    # need to fetch from old_excel_archive
+    date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
+    date_asDate = paste0(stringr::str_sub(date, 1, 4), "-", stringr::str_sub(date, 5, 6), "-", stringr::str_sub(date, 7, 8)) %>% as.Date()
+    old_data = old_excel_archive %>% dplyr::filter(Date == date_asDate & rat_name == run_properties$rat_name)
+    analysis$assigned_file_name <<- old_data$Schedule
+    if(rlang::is_empty(analysis$assigned_file_name)) {
+      warn = paste0("No assigned file name found in excel document for ", run_properties$rat_name, " on ", date, ".")
+      warnings_list <<- append(warnings_list, warn)
+    }
+  } else {
+    analysis$assigned_file_name <<- analysis$computed_file_name # TODO read from rat_archive which has been written to from supervisor.xlsx
+  }
+
+  # handle customized individual files
+  if(analysis$prepend_name) {
+    analysis$assigned_file_name = paste0(run_properties$rat_name, "_", analysis$assigned_file_name)
+  }
+
   if (analysis$computed_file_name != analysis$assigned_file_name ) {
     warn = paste0("ACTION REQUIRED: Was rat run on the wrong file?\n",
                   "ERROR: Filename -- ", analysis$computed_file_name, " -- does not match\n",
@@ -816,6 +840,102 @@ Check_UUID <- function() {
 }
 
 Calculate_Summary_Statistics <- function() {
+  Calculate_Threshold <- function() {
+    # Signal detection index calculation by the psycho package. We use d' a sensitivity measure.
+    # https://neuropsychology.github.io/psycho.R/2018/03/29/SDT.html
+
+    # Creates a properly formatted table for psycho by adding the overall CR/FA to each row
+    Format_for_Psycho <- function(df) {
+      check = df %>% filter(Type == 0) %>% count() %>% as.numeric()
+      CRnum = (if (check == 1) filter(df, Type == 0) %>% .$CR %>% as.numeric() else check)
+      FAnum = (if (check == 1) filter(df, Type == 0) %>% .$FA %>% as.numeric() else check)
+      new_df = df %>% filter(Type == 1) %>%
+        mutate(CR = ifelse(is.na(CR), CRnum, CR),
+               FA = ifelse(is.na(FA), FAnum, CR),
+               Hit = as.numeric(Hit),
+               Miss = as.numeric(Miss)) %>% replace(is.na(.), 0)
+      return(new_df)
+    }
+
+    # Signal detection index calculation
+    Calculate_dprime <- function(df) {
+      dprime(n_hit = df$Hit,
+             n_fa = df$FA,
+             n_miss = df$Miss,
+             n_cr = df$CR,
+             adjusted = TRUE) %>%
+        as_tibble() %>%
+        mutate(dB = df$`Inten (dB)`,
+               Freq = df$`Freq (kHz)`,
+               Dur = df$`Dur (ms)`)
+    }
+
+    # Threshold calculation calculation based on TH_cutoff intercept of fit curve
+    # LOESS: Local Regression is a non-parametric approach that fits multiple regressions
+    # see http://r-statistics.co/Loess-Regression-With-R.html
+    Calculate_TH <- function(df) {
+      # Uncomment to see line fitting by a package which shows line
+      # library(drda)
+      # drda(dprime ~ dB, data = df) %>% plot
+      fit = loess(dprime ~ dB, data = df)
+      # plot(fit)
+      TH = approx(x = fit$fitted, y = fit$x, xout = user_settings$TH_cutoff, ties = "ordered")$y
+      # print(TH)
+      return(TH)
+    }
+
+    writeLines("Calculating Thresholds")
+
+    # Calculate d' and save (along with hit/miss/CR/FA table)
+    dprime_table <-
+      run_data %>%
+      dplyr::filter(Block_number != 1) %>%
+      group_by(`Dur (ms)`, Type, `Freq (kHz)`, `Inten (dB)`, Response) %>%
+      summarise(count = n(), .groups = "keep") %>%
+      spread(Response, count) %>% #View
+      ungroup()
+
+    dprime_table = Format_for_Psycho(dprime_table)
+    dprime_data = Calculate_dprime(TH_data)
+
+    r = dprime_data %>%
+      select(Freq, Dur, dB, dprime) %>%
+      group_by(Freq, Dur) %>%
+      nest() %>%
+      mutate(TH = map_dbl(data, Calculate_TH)) %>%
+      select(-data)
+
+    return(r)
+  }
+
+  Calculate_Reaction_Time <- function() {
+    Filter_to_Audible <- function(df) { #TODO do we WANT filtered to audible? Probably no for graph, yes for analyses
+      ms = unique(df$`Dur (ms)`)
+      kHz = unique(df$`Freq (kHz)`)
+      cutoff = TH_by_frequency_and_duration %>% # have to use UQ to force the evaluation of the variable
+        filter(Dur == UQ(ms) & Freq == UQ(kHz)) %>% .$TH
+
+      r = df %>% filter(`Inten (dB)` >= UQ(cutoff))
+      return(r)
+    }
+
+    r = run_data %>%
+      dplyr::filter(Response == "Hit") %>%
+      mutate(Dur = `Dur (ms)`, Freq = `Freq (kHz)`) %>%
+      group_by(Freq, Dur) %>% #print
+      nest() %>%
+      mutate(Rxn = map(.x = data, .f = Filter_to_Audible)) %>%
+      select(-data) %>%
+      unnest(Rxn) %>%
+      group_by(`Dur (ms)`, `Freq (kHz)`, `Inten (dB)`) %>%
+      summarise(Rxn = mean(`Reaction_(s)`, na.rm = T),
+                .groups = "keep")
+    return(r)
+  }
+
+
+  # Statistics Workflow -----------------------------------------------------
+
   trial_count = run_data %>% dplyr::count() %>% as.numeric()
   hits = run_data %>% dplyr::filter(Response == "Hit") %>% dplyr::count() %>% as.numeric()
   misses = run_data %>% dplyr::filter(Response == "Miss") %>% dplyr::count() %>% as.numeric()
@@ -824,8 +944,13 @@ Calculate_Summary_Statistics <- function() {
   hit_percent = hits / trial_count
   FA_percent = FAs / trial_count
   mean_attempts_per_trial = dplyr::summarise_at(run_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
-  #TODO dprime =
-  #TODO threshold =
+  TH_by_frequency_and_duration = Calculate_Threshold()
+  #reaction = Calculate_Reaction_Time()
+  dprime = psycho::dprime(n_hit = hits,
+                           n_fa = FAs,
+                           n_miss = misses,
+                           n_cr = CRs,
+                           adjusted = TRUE) %>% .$dprime
 
   stats = list(
     trial_count = trial_count,
@@ -835,10 +960,10 @@ Calculate_Summary_Statistics <- function() {
     FAs = FAs,
     hit_percent = hit_percent,
     FA_percent = FA_percent,
-    mean_attempts_per_trial = mean_attempts_per_trial
-    #dprime
-    #reaction_time
-    #threshold
+    mean_attempts_per_trial = mean_attempts_per_trial,
+    dprime = dprime,
+    threshold = TH_by_frequency_and_duration,
+    reaction = reaction
   )
 
   return(stats)
@@ -846,7 +971,7 @@ Calculate_Summary_Statistics <- function() {
 
 
 Check_Performance_Cutoffs <- function() {
-  if (analysis$stats$trial_count < analysis$minimum_trials) {
+  if (analysis$stats$trial_count < analysis$minimum_trials) { # this is ANALYSIS$minimum_trials which was set during analysis step, varies by type
     warn = paste0("Low trial count: ", analysis$stats$trial_count, " (cutoff is ", analysis$minimum_trials,")")
     warning(paste0(warn, "\n"))
     warnings_list <<- append(warnings_list, warn)
@@ -938,34 +1063,53 @@ Check_Weight <- function() {
     rat_weights =
       run_archive %>%
       dplyr::filter(rat_ID == id) %>%
-      .$weight
+      dplyr::select(date, weight)
+  }
+
+  date_asNumeric = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
+  date_asDate = paste0(stringr::str_sub(date_asNumeric, 1, 4), "-", stringr::str_sub(date_asNumeric, 5, 6), "-", stringr::str_sub(date_asNumeric, 7, 8)) %>% as.Date()
+
+  if(old_file) {
+    # need to fetch corresponding weight from old_excel_archive
+    analysis$weight <<- old_excel_archive %>% dplyr::filter(Date == date_asDate & rat_name == run_properties$rat_name) %>% .$Weight
+    if(rlang::is_empty(analysis$weight)) {
+      warn = paste0("No weight found in excel document for ", run_properties$rat_name, " on ", date, ".")
+      warnings_list <<- append(warnings_list, warn)
+    }
+  } else {
+    #use the weight from the undergrad file's variable
+    analysis$weight <<- weight
   }
 
   if(rlang::is_empty(rat_weights)) {
-    warn = paste0("No old weights for ", run_properties$rat_name, "(", Get_Rat_ID(run_properties$rat_name), "). Is this rat new?")
+    warn = paste0("No weight data in run archive for ", run_properties$rat_name, "(", Get_Rat_ID(run_properties$rat_name), "). Is this rat new?")
     warning(paste0(warn, "\n"))
     warnings_list <<- append(warnings_list, warn)
-
-    analysis$weight <<- weight
     analysis$weight_change <<- 0
   } else {
-    old_weight = tail(rat_weights, n = 1) # this assumes the most recently-added entry is most recent date, should be generally true
-    max_weight = max(rat_weights)
+    old_weight = rat_weights %>% dplyr::filter(date < date_asNumeric) %>% dplyr::arrange(date) %>% tail(1) %>% .$weight
 
-    analysis$weight <<- weight
-    analysis$weight_change <<- weight - old_weight  # negative if lost weight
-    weight_change_daily_percent = analysis$weight_change / old_weight # negative if lost weight
-    weight_change_overall_percent = (weight - max_weight) / max_weight # negative if lost weight
-
-    if (-1 * weight_change_daily_percent > user_settings$maximum_weight_change_daily_percent) {
-      warn = paste0("ACTION REQUIRED: Weight fell by more than ", 100*user_settings$maximum_weight_change_daily_percent, "% in one day. (", old_weight, " -> ", weight, ").")
+    if(rlang::is_empty(old_weight)) {
+      warn = paste0("No weights for ", run_properties$rat_name, "(", Get_Rat_ID(run_properties$rat_name), ") prior to ", date_asDate, ".")
       warning(paste0(warn, "\n"))
       warnings_list <<- append(warnings_list, warn)
-    }
-    if (-1 * weight_change_overall_percent > user_settings$maximum_weight_change_overall_percent) {
-      warn = paste0("ACTION REQUIRED: Rat has lost more than ", 100*user_settings$maximum_weight_change_overall_percent, "% of maximum body weight. (", max_weight, " -> ", weight, ").")
-      warning(paste0(warn, "\n"))
-      warnings_list <<- append(warnings_list, warn)
+      analysis$weight_change <<- 0
+    } else {
+      max_weight = max(rat_weights$weight) #TODO add a column to rat_archive called e.g. override_weight to use instead of true max weight for chunky bois, or calculate max in past month or something else
+      analysis$weight_change <<- analysis$weight - old_weight  # negative if lost weight
+      weight_change_daily_percent = analysis$weight_change / old_weight # negative if lost weight
+      weight_change_overall_percent = (analysis$weight - max_weight) / max_weight # negative if lost weight
+
+      if (-1 * weight_change_daily_percent > user_settings$maximum_weight_change_daily_percent) {
+        warn = paste0("ACTION REQUIRED: Weight fell by more than ", 100*user_settings$maximum_weight_change_daily_percent, "% in one day. (", old_weight, " -> ", analysis$weight, ").")
+        warning(paste0(warn, "\n"))
+        warnings_list <<- append(warnings_list, warn)
+      }
+      if (-1 * weight_change_overall_percent > user_settings$maximum_weight_change_overall_percent) {
+        warn = paste0("ACTION REQUIRED: Rat has lost more than ", 100*user_settings$maximum_weight_change_overall_percent, "% of maximum body weight. (", max_weight, " -> ", analysis$weight, ").")
+        warning(paste0(warn, "\n"))
+        warnings_list <<- append(warnings_list, warn)
+      }
     }
   }
 }
@@ -975,6 +1119,41 @@ Add_to_Run_Archive <- function() {
     date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
     time = run_properties$creation_time %>% stringr::str_sub(9,15) %>% as.numeric()
 
+    # get excel data for run, if it exists
+    if(old_file) {
+      # need to fetch from old_excel_archive
+      date_asDate = paste0(stringr::str_sub(date, 1, 4), "-", stringr::str_sub(date, 5, 6), "-", stringr::str_sub(date, 7, 8)) %>% as.Date()
+      old_data = old_excel_archive %>% dplyr::filter(Date == date_asDate & rat_name == run_properties$rat_name)
+      if(rlang::is_empty(old_data)) {
+        warn = paste0("No data found in excel document for ", run_properties$rat_name, " on ", date, ".")
+        warnings_list <<- append(warnings_list, warn)
+      }
+      observations = old_data$`Comments/Observations`
+      assignment = list(
+        assigned_file_name = analysis$assigned_file_name,
+        experiment = old_data$Experiment,
+        phase = old_data$Phase,
+        task = old_data$Task,
+        detail = old_data$Detail
+      )
+      if(rlang::is_empty(assignment$experiment) || rlang::is_empty(assignment$phase)) {
+        warn = paste0("No experiment/phase found in excel document for ", run_properties$rat_name, " on ", date, ".")
+        warnings_list <<- append(warnings_list, warn)
+      }
+    } else {
+      #use the comments from the undergrad file's variable
+      observations = observations
+
+      #TODO read from rat_archive which was written to by supervisor.xlsx
+      assignment = list(
+        assigned_file_name = analysis$assigned_file_name,
+        experiment = "",
+        phase = "",
+        task = "",
+        detail = ""
+      )
+    }
+
     # using data.frame instead of tibble automatically can unpack $stats into columns but still need concatenation for warnings_list
     r = tibble(
       date = date,
@@ -983,13 +1162,10 @@ Add_to_Run_Archive <- function() {
       rat_name = run_properties$rat_name,
       rat_ID = Get_Rat_ID(run_properties$rat_name),
       weight = analysis$weight,
-      weight_change = analysis$weight_change,
 
       file_name = analysis$computed_file_name,
-      # assigned_file = assignment$assigned_file_name,    # TODO: actually get this
-      # experiment = assignment$experiment,
-      # phase = assignment$phase,
-      # supervisor_comment = assignment$supervisor_comment?  or is this per .. rat?
+      assignment = list(assignment),
+
       stim_type = run_properties$stim_type,
       analysis_type = analysis$type,
       stats = list(analysis$stats),
@@ -1023,6 +1199,7 @@ analysis = Identify_Analysis_Type()
 analysis$stats = Calculate_Summary_Statistics()
 
 # calculate canonical filename
+analysis$prepend_name = FALSE
 analysis$computed_file_name = Build_Filename()
 Check_Assigned_Filename()
 
@@ -1052,3 +1229,13 @@ Add_to_Run_Archive()
 #   rat uid/name
 #   assigned box
 #   timeslot
+
+
+
+# TODO hearing_loss_induced column in rat_archive that contains date (or list of dates, as necessary) aka "condition"
+
+
+
+
+
+

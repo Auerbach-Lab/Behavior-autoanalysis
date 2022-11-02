@@ -1,5 +1,6 @@
 user_settings = list(
   # The folder where the project subfolders are:
+  # Note that the slashes have to be / (not \)
   projects_folder = 'A:/coding/Behavior-autoanalysis/',
 
   # Minimum number of blocks of trials to keep (vs. discard day) not counting the
@@ -36,7 +37,11 @@ user_settings = list(
     "Oddball (Uneven Odds & Catch)" = 330,
     "Oddball (Catch)" = 330),
 
-  minimum_hit_percent = 0.850,
-  maximum_FA_percent = 0.200,
-  maximum_attempts_per_trial = 1.5
+  minimum_hit_percent = 0.600,
+  maximum_FA_percent = 0.333,
+  maximum_attempts_per_trial = 2.0,
+
+  # weight change as percent of bodyweight
+  maximum_weight_change_daily_percent = 0.05,
+  maximum_weight_change_overall_percent = 0.25
 )
