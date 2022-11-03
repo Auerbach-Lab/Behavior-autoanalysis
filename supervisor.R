@@ -39,7 +39,7 @@ Setup_Workbook <- function() {
   setColWidths(wb, 1, cols = 2:3, widths = 10)
   setColWidths(wb, 1, cols = "D", widths = 25)
   setColWidths(wb, 1, cols = 5:27, widths = 5)
-  setColWidths(wb, 1, cols = 18:27, widths = 5, hidden = FALSE) # hide reserved-for-future columns?
+  setColWidths(wb, 1, cols = 18:27, widths = 5, hidden = FALSE)
   setColWidths(wb, 1, cols = "AB", widths = 16, hidden = FALSE)
   setColWidths(wb, 1, cols = "AC", widths = 50)
 
@@ -142,7 +142,7 @@ Write_Header <- function() {
 
   #Experiment
   range_start = getCellRefs(data.frame(settings$config_row, settings$config_col))
-  range_end = getCellRefs(data.frame(settings$config_row+7, settings$config_col))
+  range_end = getCellRefs(data.frame(settings$config_row + settings$dynamic_list_length, settings$config_col))
   range_string = paste0(range_start, ":", range_end)
   dataValidation(wb, 1, rows = row, cols = 6, type = "list", value = range_string, operator = "")
   mergeCells(wb, 1, cols = 6:7, rows = row)
@@ -192,7 +192,6 @@ Write_Header <- function() {
   conditionalFormatting(wb, 1, type = "expression", rule = "==\"Warnings: none\"", style = mandatory_input_accept_style, rows = row, cols = 29)
   conditionalFormatting(wb, 1, type = "expression", rule = "!=\"Warnings: none\"", style = warning_style, rows = row, cols = 29)
   addStyle(wb, 1, rows = row, cols = 29, style = halign_center_style, stack = TRUE) # center the warning text
-
   # openxlsx has trouble writing linebreaks to a single cell
   # so instead, above in Parse_Warnings we write them tab-separated
   # This excel formula then reads the tab-sep cell and formats it with linebreaks, as a workaround
@@ -227,7 +226,6 @@ Write_Header <- function() {
     "", "", "", "", "", #X Y Z AA AB
     check.names = FALSE, fix.empty.names = FALSE
   )
-
   writeData(wb, 1, x = rat_header_df, startRow = row, colNames = FALSE, rowNames = FALSE)
 }
 
@@ -254,9 +252,6 @@ Write_Table <- function() {
     experiment_current = run_today$assignment[[1]]$experiment
     phase_current = run_today$assignment[[1]]$phase
 
-experiment_current = "HHL" #TODO remove hardcoding
-phase_current = "Tones"
-
     # Common Columns ----------------------------------------------------------
     columns = c("task", "detail", "date", "file_name", "weight", "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial", "threshold", "reaction", "FA_detailed", "warnings_list", "comments")
 
@@ -279,7 +274,6 @@ phase_current = "Tones"
     # Task-specific RXN column ------------------------------------------------
 
     if(experiment_current == "Oddball") {
-      #TODO test this
     r = r %>% mutate(reaction1 = reaction) %>%
         unnest(reaction) %>%
         group_by(date) %>%
@@ -288,7 +282,6 @@ phase_current = "Tones"
         distinct()
     } else {
       if(phase_current == "Octave") {
-        #TODO test this
         r = r %>% unnest(reaction) %>%
           select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
       } else {
@@ -421,22 +414,27 @@ phase_current = "Tones"
       mutate(weight = (weight - weight_max)/weight_max)
 
     extra_columns = 29 - length(r)
-    columnsToAdd <- paste("column", 1:extra_columns, sep="")
+    columnsToAdd <- paste0("column", 1:extra_columns)
     r[,columnsToAdd] = NA
 
     r = r %>% relocate(warnings_list, comments, .after = last_col()) %>%
       arrange(desc(date))
     #TODO warnings and observations
 
-    return(r)
+    return(as.data.frame(r))  #shed the grouping that prevents rbind
   }
 
 
 
-  row = row+1 #now points at table start row
+  row = row + 1 #now points at table start row
   row_table_start = row #save for later
   addStyle(wb, 1, table_header_style, rows = row_table_start, cols = 1:29, gridExpand = TRUE)
   df_table <<- Build_Table()
+
+  df_table = rbind(NA,NA,NA,NA,df_table)
+
+
+
   # the obnoxious blank strings are because every column in a table has to have a unique header,
   # and because we want those headers to be blank for all but column A
   #colnames(df_table) = c("Choose Filter", " ", "  ", "   ", "    ", "     ", "      ", "       ", "        ", "         ", "          ", "           ", "            ", "             ", "              ", "               ", "                ", "                 ", "                  ", "                   ", "                    ", "                     ", "                      ", "                       ", "                        ", "                         ", "                          ", "                           ", "                            ")
