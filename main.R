@@ -27,7 +27,7 @@ Throw_Warning <- function() {
   # We don't do this because it means the warning names this method, rather than the place where the check failed
 }
 
-Import_Matlab <- function() {
+Import_Matlab <- function(file_to_load) {
   Unlist_Matlab_To_Dataframe <- function(li) {
     return(t(apply(li, 1, unlist)) %>% as.data.frame())
   }
@@ -394,7 +394,6 @@ Import_Matlab <- function() {
 
 
 # Import Workflow ---------------------------------------------------------
-  file_to_load = file.choose()
   cat("Loading file...", file_to_load, sep = "\t", fill = TRUE)
   current_mat_file = R.matlab::readMat(file_to_load)
   trial_collection = current_mat_file$stim[,,1] # all (1000) trial configurations, and the parameters specified to generate individual trials
@@ -840,61 +839,85 @@ Check_UUID <- function() {
 }
 
 Calculate_Summary_Statistics <- function() {
+  # Creates a properly formatted table for psycho by adding the overall CR/FA to each row
+  Format_for_Psycho <- function(df) {
+    check = df %>% filter(Type == 0) %>% count() %>% as.numeric()
+    CRnum = (if (check == 1) filter(df, Type == 0) %>% .$CR %>% as.numeric() else check)
+    FAnum = (if (check == 1) filter(df, Type == 0) %>% .$FA %>% as.numeric() else check)
+    if(!("Hit" %in% colnames(df))) df = df %>% add_column(Hit = NA)
+    if(!("Miss" %in% colnames(df))) df = df %>% add_column(Miss = NA)
+    if(!("FA" %in% colnames(df))) {
+      df = df %>% add_column(FA = NA)
+      FAnum = 0
+    }
+    if(!("CR" %in% colnames(df))) {
+      df = df %>% add_column(CR = NA)
+      CRnum = 0
+    }
+
+    new_df = df %>% filter(Type == 1) %>%
+      mutate(CR = ifelse(is.na(CR), CRnum, CR),
+             FA = ifelse(is.na(FA), FAnum, CR),
+             Hit = as.numeric(Hit),
+             Miss = as.numeric(Miss)) %>% replace(is.na(.), 0)
+    return(new_df)
+  }
+
+  Format_for_Psycho_Octave <- function(df) {
+    check = df %>% filter(Type == 1) %>% count() %>% as.numeric()
+    Hitnum = (if (check == 1) filter(df, Type == 1) %>% .$Hit %>% as.numeric() else check)
+    Missnum = (if (check == 1) filter(df, Type == 1) %>% .$Miss %>% as.numeric() else check)
+    if(!("CR" %in% colnames(df))) df = df %>% add_column(CR = NA)
+    if(!("FA" %in% colnames(df))) df = df %>% add_column(FA = NA)
+    if(!("Hit" %in% colnames(df))) {
+      df = df %>% add_column(Hit = NA)
+      Hitnum = 0
+    }
+    if(!("Miss" %in% colnames(df))) {
+      df = df %>% add_column(Miss = NA)
+      Missnum = 0
+    }
+
+    new_df = df %>% filter(Type == 0) %>%
+      mutate(CR = as.numeric(CR),
+             FA = as.numeric(FA),
+             Hit = ifelse(is.na(Hit), Hitnum, Hit),
+             Miss = ifelse(is.na(Miss), Missnum, Miss)) %>% replace(is.na(.), 0)
+    return(new_df)
+  }
+
+  # Signal detection index calculation
+  Calculate_dprime <- function(df) {
+    r = dprime(n_hit = df$Hit,
+               n_fa = df$FA,
+               n_miss = df$Miss,
+               n_cr = df$CR,
+               adjusted = TRUE)
+    r[["bppd"]] = NULL # drop this column always (it can be wrongly dimensioned and break things)
+    r = r %>% as_tibble() %>%
+      mutate(dB = df$`Inten (dB)`,
+             Freq = df$`Freq (kHz)`,
+             Dur = df$`Dur (ms)`)
+    return(r)
+  }
+
+  # Threshold calculation calculation based on TH_cutoff intercept of fit curve
+  # LOESS: Local Regression is a non-parametric approach that fits multiple regressions
+  # see http://r-statistics.co/Loess-Regression-With-R.html
+  Calculate_TH <- function(df) {
+    # Uncomment to see line fitting by a package which shows line
+    # library(drda)
+    # drda(dprime ~ dB, data = df) %>% plot
+    fit = loess(dprime ~ dB, data = df)
+    # plot(fit)
+    TH = approx(x = fit$fitted, y = fit$x, xout = user_settings$TH_cutoff, ties = "ordered")$y
+    # print(TH)
+    return(TH)
+  }
+
   Calculate_Threshold <- function() {
     # Signal detection index calculation by the psycho package. We use d' a sensitivity measure.
     # https://neuropsychology.github.io/psycho.R/2018/03/29/SDT.html
-
-    # Creates a properly formatted table for psycho by adding the overall CR/FA to each row
-    Format_for_Psycho <- function(df) {
-      check = df %>% filter(Type == 0) %>% count() %>% as.numeric()
-      CRnum = (if (check == 1) filter(df, Type == 0) %>% .$CR %>% as.numeric() else check)
-      FAnum = (if (check == 1) filter(df, Type == 0) %>% .$FA %>% as.numeric() else check)
-      if(!("Hit" %in% colnames(df))) df = df %>% add_column(Hit = NA)
-      if(!("Miss" %in% colnames(df))) df = df %>% add_column(Miss = NA)
-      if(!("FA" %in% colnames(df))) {
-        df = df %>% add_column(FA = NA)
-        FAnum = 0
-      }
-      if(!("CR" %in% colnames(df))) {
-        df = df %>% add_column(CR = NA)
-        CRnum = 0
-      }
-      new_df = df %>% filter(Type == 1) %>%
-        mutate(CR = ifelse(is.na(CR), CRnum, CR),
-               FA = ifelse(is.na(FA), FAnum, CR),
-               Hit = as.numeric(Hit),
-               Miss = as.numeric(Miss)) %>% replace(is.na(.), 0)
-      return(new_df)
-    }
-
-    # Signal detection index calculation
-    Calculate_dprime <- function(df) {
-      r = dprime(n_hit = df$Hit,
-             n_fa = df$FA,
-             n_miss = df$Miss,
-             n_cr = df$CR,
-             adjusted = TRUE)
-      r[["bppd"]] = NULL # drop this column always (it can be wrongly dimensioned and break things)
-      r = r %>% as_tibble() %>%
-        mutate(dB = df$`Inten (dB)`,
-               Freq = df$`Freq (kHz)`,
-               Dur = df$`Dur (ms)`)
-      return(r)
-    }
-
-    # Threshold calculation calculation based on TH_cutoff intercept of fit curve
-    # LOESS: Local Regression is a non-parametric approach that fits multiple regressions
-    # see http://r-statistics.co/Loess-Regression-With-R.html
-    Calculate_TH <- function(df) {
-      # Uncomment to see line fitting by a package which shows line
-      # library(drda)
-      # drda(dprime ~ dB, data = df) %>% plot
-      fit = loess(dprime ~ dB, data = df)
-      # plot(fit)
-      TH = approx(x = fit$fitted, y = fit$x, xout = user_settings$TH_cutoff, ties = "ordered")$y
-      # print(TH)
-      return(TH)
-    }
 
     # Calculate d' and save (along with hit/miss/CR/FA table)
     dprime_table <-
@@ -951,6 +974,42 @@ Calculate_Summary_Statistics <- function() {
     return(r)
   }
 
+  Calculate_FA_Detailed_Oddball <- function() {
+    r = run_data %>%
+      filter(Trial_type != 0) %>% # rule out catch trials
+      rename(position = `Inten (dB)`) %>%
+      group_by(position) %>%
+      summarise(FA = sum(Response == 'FA'),
+                trials = n(),
+                FA_percent_detailed = FA/trials)
+
+    return(r)
+  }
+
+  Calculate_FA_Detailed_Octave <- function() {
+    dprime_table <-
+      run_data %>%
+      dplyr::filter(Block_number != 1) %>%
+      group_by(`Dur (ms)`, Type, `Freq (kHz)`, `Inten (dB)`, Response) %>%
+      summarise(count = n(), .groups = "keep") %>%
+      spread(Response, count) %>% #View
+      ungroup()
+
+    dprime_table = Format_for_Psycho_Octave(dprime_table) # type = 0 for inverted (no-go) d'
+    dprime_data = Calculate_dprime(dprime_table) %>%
+      rename(`Freq (kHz)` = Freq)
+
+    r = run_data %>%
+      filter(Trial_type == 0) %>% # select no-go trials
+      group_by(`Freq (kHz)`) %>%
+      summarise(FA = sum(Response == 'FA'),
+                trials = n(),
+                FA_percent_detailed = FA/trials) %>%
+      left_join(dprime_data %>% select(`Freq (kHz)`, dprime), by = "Freq (kHz)")
+
+    return(r)
+  }
+
 
   # Statistics Workflow -----------------------------------------------------
 
@@ -962,7 +1021,18 @@ Calculate_Summary_Statistics <- function() {
   hit_percent = hits / trial_count
   FA_percent = FAs / trial_count
   mean_attempts_per_trial = dplyr::summarise_at(run_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
-  TH_by_frequency_and_duration = Calculate_Threshold()
+  if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
+    TH_by_frequency_and_duration = NA
+  } else {
+    TH_by_frequency_and_duration = Calculate_Threshold()
+  }
+  if(analysis$type == "Octave") {
+    FA_detailed = Calculate_FA_Detailed_Octave()
+  } else if(analysis$type %in% c("Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
+    FA_detailed = Calculate_FA_Detailed_Oddball()
+  } else {
+    FA_detailed = NA
+  }
   #overall_TH = Calculate_Threshold() #TODO overall calculation using trials archive
   reaction = Calculate_Reaction_Time() #NOTE this can take audible only (default false) or min time (default 0.015)
   dprime = psycho::dprime(n_hit = hits,
@@ -982,7 +1052,8 @@ Calculate_Summary_Statistics <- function() {
     mean_attempts_per_trial = mean_attempts_per_trial,
     dprime = dprime,
     threshold = TH_by_frequency_and_duration,
-    reaction = reaction
+    reaction = reaction,
+    FA_detailed = FA_detailed
   )
 
   writeLines("Calculated run statistics.")
@@ -1185,6 +1256,7 @@ Add_to_Run_Archive <- function() {
 
       file_name = analysis$computed_file_name,
       assignment = list(assignment),
+      summary = list(run_properties$summary),
 
       stim_type = run_properties$stim_type,
       analysis_type = analysis$type,
@@ -1208,52 +1280,63 @@ Add_to_Run_Archive <- function() {
 }
 
 # MAIN ---------------------------------------------------------
+
+Process_File <- function(file_to_load) {
+  # load run's .mat file
+  Import_Matlab(file_to_load)
+
+  # identify analysis type and get summary stats
+  analysis <<- Identify_Analysis_Type()
+  analysis$stats <<- Calculate_Summary_Statistics()
+
+  # calculate canonical filename
+  analysis$prepend_name <<- FALSE
+  analysis$computed_file_name <<- Build_Filename()
+  Check_Assigned_Filename()
+
+  # generate UUID for run
+  Check_UUID()
+
+  # handle weight
+  Check_Weight()
+
+
+  # check run performance against user-settings cutoffs
+  Check_Performance_Cutoffs()
+  # check run performance against past performance for this rat in this experimental phase
+  # Check_Performance_Consistency
+
+  # commit to folding in - display warnings and get user input to override them (and submit to master dataframe), or give option to commit to invalid/storage-only dataframe
+  # curate data prior to folding in, adding disqualifier flags etc (but omitted trials are always totally gone)
+  # Report_Warnings_and_Confirm()
+  Add_to_Run_Archive()
+  # Add_to_Trial_Archive() actually fold run_data -> trial_archive
+
+  # do analyses
+  # pop up charts and stuff for undergrads to sign off on (where do the comments they provide on 'no' get saved? text file alongside individual exported graph image? dedicated df? master df in one long appended cell for all comments to graphs?)
+
+
+  # # plus a 48-line dataframe of box+time combos that represents the current 'schedule'
+  #   rat uid/name
+  #   assigned box
+  #   timeslot
+
+
+
+  # TODO hearing_loss_induced column in rat_archive that contains date (or list of dates, as necessary) aka "condition"
+  writeLines("") #TODO change all cats to writelines
+  return(invisible(NULL))
+}
+
 # set up environment
 Initialize()
 
-# load run's .mat file
-Import_Matlab()
+# Process_File(file.choose())
 
-# identify analysis type and get summary stats
-analysis = Identify_Analysis_Type()
-analysis$stats = Calculate_Summary_Statistics()
-
-# calculate canonical filename
-analysis$prepend_name = FALSE
-analysis$computed_file_name = Build_Filename()
-Check_Assigned_Filename()
-
-# generate UUID for run
-Check_UUID()
-
-# handle weight
-Check_Weight()
-
-
-# check run performance against user-settings cutoffs
-Check_Performance_Cutoffs()
-# check run performance against past performance for this rat in this experimental phase
-# Check_Performance_Consistency
-
-# commit to folding in - display warnings and get user input to override them (and submit to master dataframe), or give option to commit to invalid/storage-only dataframe
-# curate data prior to folding in, adding disqualifier flags etc (but omitted trials are always totally gone)
-# Report_Warnings_and_Confirm()
-Add_to_Run_Archive()
-# Add_to_Trial_Archive() actually fold run_data -> trial_archive
-
-# do analyses
-# pop up charts and stuff for undergrads to sign off on (where do the comments they provide on 'no' get saved? text file alongside individual exported graph image? dedicated df? master df in one long appended cell for all comments to graphs?)
-
-
-# # plus a 48-line dataframe of box+time combos that represents the current 'schedule'
-#   rat uid/name
-#   assigned box
-#   timeslot
-
-
-
-# TODO hearing_loss_induced column in rat_archive that contains date (or list of dates, as necessary) aka "condition"
-
+directory = "A:\\Coding\\Behavior-autoanalysis\\Fake Project Folder"
+files <- list.files("A:/Coding/Behavior-autoanalysis/Fake Project Folder")
+files = paste0(directory, "\\", files)
+lapply(files, Process_File)
 
 
 

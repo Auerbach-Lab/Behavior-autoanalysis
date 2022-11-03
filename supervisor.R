@@ -231,51 +231,7 @@ Write_Header <- function() {
   writeData(wb, 1, x = rat_header_df, startRow = row, colNames = FALSE, rowNames = FALSE)
 }
 
-Build_Row <- function(run) {
-  Parse_Warnings <- function () {
-    r = run$warnings_list[[1]] %>% unlist() %>% stringr::str_c(collapse = "\t")
-    return(r)
-  }
-
-  colA_phase = "Some Trial Phase Name" #TODO
-  colB_blank = ""
-  colC_date = paste0(substr(run$date, 5, 6), "/", substr(run$date, 7, 8), "/",substr(run$date, 1, 4))
-  today = Sys.Date() %>% format("%m/%d/%Y")
-  if(colC_date == today) {
-    colC_date = "Today"
-  }
-  colD_filename = run$file_name
-  colE_trials = run$stats[[1]]$trial_count
-  colF_hitpercent = run$stats[[1]]$hit_percent
-  colG_FApercent = run$stats[[1]]$FA_percent
-  colH_dprime = "" #run$stats[[1]]$dprime
-  colI_react = "" #run$stats[[1]]$reaction_time
-  colJ_thresh = "" #run$stats[[1]]$threshold
-  #then cols L-Q depending on task, right? I think NG FA% x Freq is only for particular experiment/phase
-
-  df = data.frame(colA_phase, colB_blank, colC_date, colD_filename, colE_trials, colF_hitpercent, colG_FApercent, colH_dprime, colI_react, colJ_thresh,
-                  "","","","","","","","","","","","","","","","","",Parse_Warnings(), run$comments,
-                  check.names = FALSE, fix.empty.names = FALSE)
-  df = df %>% rbind(df)
-
-  return(df)
-}
-
-Build_Table <- function() {
-  Define_Table <- function() {
-    df = data.frame(matrix(ncol = 29, nrow =0))
-    colnames(df) = c(LETTERS, "AA", "AB", "AC")
-    addStyle(wb, 1, table_header_style, rows = row, cols = 1:29, gridExpand = TRUE)
-    return(df)
-  }
-
-  Finalize_Table <- function () {
-    # the obnoxious blank strings are because every column in a table has to have a unique header,
-    # and because we want those headers to be blank for all but column A
-    colnames(df_table) = c("Choose Filter", " ", "  ", "   ", "    ", "     ", "      ", "       ", "        ", "         ", "          ", "           ", "            ", "             ", "              ", "               ", "                ", "                 ", "                  ", "                   ", "                    ", "                     ", "                      ", "                       ", "                        ", "                         ", "                          ", "                           ", "                            ")
-    return(df_table)
-  }
-
+Write_Table <- function() {
   Get_Task_List <- function() {
     run_today = rat_runs %>% dplyr::arrange(date) %>% tail(1)
     experiment_current = run_today$assignment[[1]]$experiment
@@ -287,24 +243,29 @@ Build_Table <- function() {
     return(r)
   }
 
-  foo <- function() {
+  Parse_Warnings <- function () {
+    r = run$warnings_list[[1]] %>% unlist() %>% stringr::str_c(collapse = "\t")
+    return(r)
+  }
+
+  Build_Table <- function() {
     rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID)
     run_today = rat_runs %>% dplyr::arrange(date) %>% tail(1)
     experiment_current = run_today$assignment[[1]]$experiment
     phase_current = run_today$assignment[[1]]$phase
 
+experiment_current = "HHL" #TODO remove hardcoding
+phase_current = "Tones"
+
     # Common Columns ----------------------------------------------------------
-    columns = c("task", "detail", "date", "file_name", "weight", "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial", "threshold", "reaction")
+    columns = c("task", "detail", "date", "file_name", "weight", "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial", "threshold", "reaction", "FA_detailed", "warnings_list", "comments")
 
     r = rat_runs %>%
       dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
       dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
       tidyr::unnest_wider(assignment) %>%
       tidyr::unnest_wider(stats) %>%
-      dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 5) %>% stringr::str_replace(pattern = "0", replacement = ""),
-                                  stringr::str_sub(date, 6, 6), "/",
-                                  stringr::str_sub(date, 7, 7) %>% stringr::str_replace(pattern = "0", replacement = ""),
-                                  stringr::str_sub(date, 8, 8), "/", stringr::str_sub(date, 1, 4))) %>%
+      dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
       group_by(task, detail) %>%
       do(
         dplyr::arrange(., dplyr::desc(date)) %>% dplyr::select(columns)
@@ -312,32 +273,41 @@ Build_Table <- function() {
 
     weight_max = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
 
+    min_duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
+
+
     # Task-specific RXN column ------------------------------------------------
 
     if(experiment_current == "Oddball") {
-      #stuff
+      #TODO test this
+    r = r %>% mutate(reaction1 = reaction) %>%
+        unnest(reaction) %>%
+        group_by(date) %>%
+        mutate(Rxn = mean(Rxn)) %>%
+        select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`) %>% #TODO check that Frequency is actually go tone postional data
+        distinct()
     } else {
       if(phase_current == "Octave") {
-        #stuff
+        #TODO test this
+        r = r %>% unnest(reaction) %>%
+          select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
       } else {
-        duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
-
         # TH and Rxn refer to the task detail not the column
         df_TH_BBN = NULL
         df_TH_tones = NULL
         df_Rxn = NULL
 
         df_TH_BBN = r %>% unnest(reaction) %>%
-          dplyr::filter(task == "TH" & `Dur (ms)` == duration & `Freq (kHz)` == 0 & `Inten (dB)` == 40)
+          dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` == 0 & `Inten (dB)` == 40)
 
         intensity = r %>% unnest(reaction) %>%
-          dplyr::filter(task == "TH" & `Dur (ms)` == duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
+          dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
           group_by(date) %>%
           count(`Inten (dB)`) %>% arrange(desc(`Inten (dB)`)) %>% slice(which.max(n)) %>%
           rename(desired_dB = `Inten (dB)`) %>% select(-n)
 
         df_TH_tones = r %>% unnest(reaction) %>%
-          dplyr::filter(task == "TH" & `Dur (ms)` == duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
+          dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
           right_join(intensity, by = "date") %>%
           filter(`Inten (dB)` == desired_dB) %>%
           group_by(date) %>%
@@ -345,32 +315,101 @@ Build_Table <- function() {
           select(-desired_dB)
 
         df_Rxn = r %>% unnest(reaction) %>%
-          dplyr::filter(task != "TH" & `Dur (ms)` == duration & `Inten (dB)` == 60) %>% # not equal TH
+          dplyr::filter(task != "TH" & `Dur (ms)` == min_duration & `Inten (dB)` == 60) %>% # not equal TH
           group_by(date) %>%
           mutate(Rxn = mean(Rxn))
 
-        df = rbind(df_TH_BBN, df_TH_tones, df_Rxn) %>%
+        r = rbind(df_TH_BBN, df_TH_tones, df_Rxn) %>%
           select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`) %>%
           distinct()
-
-
       }
-
     }
 
-
-      View
+    r = r %>% relocate(Rxn, .before = mean_attempts_per_trial) %>%
+      mutate(Spacer1 = NA)
 
     # Phase-specific Columns --------------------------------------------------------
-    if(phase_current == "Tones") {
+    if(phase_current == "BBN") {
+      r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>% select(-Freq, -Dur) %>%
+        group_by(task, detail) %>%
+        mutate(Spacer2 = NA,
+               THrange = paste0(min(TH) %>% round(digits = 0), "-", max(TH) %>% round(digits = 0))) %>%
+        relocate(Spacer2:THrange, .after = TH) %>%
+        relocate(Spacer1, .after = mean_attempts_per_trial) %>%
+        select(-FA_detailed)
+    } else if (phase_current == "Tones") {
+      r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>%
+        group_by(task, detail, Freq) %>%
+        mutate(THrange = paste0(min(TH) %>% round(digits = 0), "-", max(TH) %>% round(digits = 0))) %>%
+        relocate(THrange, .after = TH) %>%
+        gather(variable, value, (TH:THrange)) %>%
+        unite(temp, variable, Freq) %>%
+        pivot_wider(names_from = temp, values_from = value) %>%
+        mutate(Spacer2 = NA) %>%
+        relocate(Spacer2, .after = TH_32) %>%
+        mutate_at(vars(starts_with("TH_")), as.numeric)
 
+      x = rat_runs %>%
+        dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
+        dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
+        tidyr::unnest_wider(assignment) %>%
+        tidyr::unnest(summary) %>%
+        select(task, detail, date, `Freq (kHz)`, dB_min, dB_max) %>%
+        dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
+        group_by(date, task, detail, `Freq (kHz)`) %>% #do(print(.))
+        mutate(Spacer3 = NA,
+               Stimrange = paste0(unique(dB_min), "-", unique(dB_max))) %>%
+        select(task, detail, date, Spacer3, `Freq (kHz)`, Stimrange)
+
+      s = left_join(r, x, by = c("task", "detail", "date")) %>%
+        pivot_wider(names_from = `Freq (kHz)`, values_from = Stimrange)
+
+
+    } else if (phase_current == "Octave") {
+      r = r %>% select(-threshold)
+
+      #TODO NOT MVP convert to 1/12 of octaves based on summary kHz range
+      df_discrimination = r %>% filter(task != "Training") %>%
+        unnest(FA_detailed) %>%
+        group_by(date) %>%
+        do(mutate(., Oct = c(1:6), dprime = max(dprime))) %>% # mutate(Oct_position = c(1:6)) %>% print) %>%
+        select(-FA, -trials, -`Freq (kHz)`) %>%
+        pivot_wider(names_from = Oct, values_from = FA_percent_detailed)
+
+      df_training = r %>% filter(task == "Training") %>% select(-FA_detailed)
+
+      x = rat_runs %>%
+        dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
+        dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
+        tidyr::unnest_wider(assignment) %>%
+        tidyr::unnest_wider(stats) %>%
+        select(task, detail, date, dprime) %>%
+        dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4)))
+
+      df_training = left_join(df_training, x, by = c("task", "detail", "date"))
+
+      r = rbind(df_discrimination, df_training) %>%
+        relocate(dprime, .after = Spacer1) %>%
+        mutate(Spacer2 = NA) %>% relocate(Spacer2, .after = dprime)
+
+    } else if (experiment_current == "Oddball") {
+      r = r %>%
+        select(-threshold) %>%
+        rename(Rxn_avg = Rxn) %>%
+        unnest(c(reaction1, FA_detailed)) %>%
+        group_by(date) %>%
+        do(filter(., `Inten (dB)` %in% c(min(`Inten (dB)`), median(`Inten (dB)`), max(`Inten (dB)`))) %>%
+             mutate(position = c("early", "mid", "late"))) %>%
+        select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`, -FA, -trials) %>%
+        pivot_wider(names_from = position, values_from = c(Rxn, FA_percent_detailed)) %>%
+        mutate(Spacer2 = NA) %>% relocate(Spacer2, .after = Rxn_late)
     }
 
+
     averages = r %>%
-      # dplyr::group_by(task, detail) %>% #TODO also by detail
-      dplyr::select(-date, -file_name, -threshold, -reaction) %>%
-      dplyr::summarise_all(mean) %>%
-      dplyr::mutate(date = "Overall", file_name = "Averages") %>%
+      dplyr::group_by(task, detail) %>%
+      dplyr::summarise_if(.predicate = is.numeric, .funs = mean) %>%
+      dplyr::mutate(date = "Overall", file_name = "Averages", warnings_list = NA, comments = NA) %>%
       dplyr::relocate(date, file_name, .before = weight)
 
     r = r %>% do(
@@ -378,45 +417,29 @@ Build_Table <- function() {
     ) %>%
       mutate(date = as.character(date))
 
-    r = rbind(averages, r) %>%
+    r = rbind(r, averages) %>%
       mutate(weight = (weight - weight_max)/weight_max)
 
+    extra_columns = 29 - length(r)
+    columnsToAdd <- paste("column", 1:extra_columns, sep="")
+    r[,columnsToAdd] = NA
+
+    r = r %>% relocate(warnings_list, comments, .after = last_col()) %>%
+      arrange(desc(date))
+    #TODO warnings and observations
+
+    return(r)
   }
 
-  Build_Counts <- function() {
-    # NOELLE
-    # get all phases (slice run_archive by rat_ID and rat_archive$rat_ID$current_experiment? OR grab experiment and then associated phases from some experiment_archive)
-    # then get obs counts per phase
-    # then append most recent date of phase
-    # then grab today's observations and put them in place
-    # then fold into df_table
 
-
-  }
-
-
-
-  Add_Task_to_Table <- function(task) {
-    # NOELLE grab first phase, either from df_table or as above
-    #...more steps needed, this isn't finished
-
-    # BRIAN left off here, gonna be like.. write the header and then the rows and update row counter
-    # probably dplyr from a premade df of the headers, complete with phase name in the first column, simply filter and paste intact
-    # eh.. while that's great for the header it doesn't do the hard part which is the calculating, and hides the labels of what we're calculating, so maybe not.
-    # we still have to case statement to do the calculated parts, so it doesn't even save that. nevermind.
-  }
 
   row = row+1 #now points at table start row
   row_table_start = row #save for later
-  df_table = Define_Table()
-
-
-
-
-  df_table = Build_Row(run_archive[1,]) #TODO more than one run, selected by rat_ID
-
-
-  df_table = Finalize_Table()
+  addStyle(wb, 1, table_header_style, rows = row_table_start, cols = 1:29, gridExpand = TRUE)
+  df_table <<- Build_Table()
+  # the obnoxious blank strings are because every column in a table has to have a unique header,
+  # and because we want those headers to be blank for all but column A
+  #colnames(df_table) = c("Choose Filter", " ", "  ", "   ", "    ", "     ", "      ", "       ", "        ", "         ", "          ", "           ", "            ", "             ", "              ", "               ", "                ", "                 ", "                  ", "                   ", "                    ", "                     ", "                      ", "                       ", "                        ", "                         ", "                          ", "                           ", "                            ")
   writeDataTable(wb, 1, x = df_table, startRow = row_table_start, colNames = TRUE, rowNames = FALSE, bandedRows = FALSE, tableStyle = "TableStyleMedium18")
 
 }
@@ -429,7 +452,7 @@ Add_Rat_To_Workbook <- function(row, rat_ID) {
   Write_Header()
 
   # then write the table
-  Build_Table()
+  Write_Table()
   #df = data.frame(x = "foo", y = "bar") #overwriting into table works fine
   #writeData(wb, 1, df, startRow = 3, startCol = 5, colNames = FALSE)
 }
