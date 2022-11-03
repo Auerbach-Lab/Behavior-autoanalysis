@@ -230,16 +230,16 @@ Write_Header <- function() {
 }
 
 Write_Table <- function() {
-  Get_Task_List <- function() {
-    run_today = rat_runs %>% dplyr::arrange(date) %>% tail(1)
-    experiment_current = run_today$assignment[[1]]$experiment
-    phase_current = run_today$assignment[[1]]$phase
-    r = rat_runs %>%
-      filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
-      filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
-      .$assignment %>% bind_rows() %>% .$task %>% unique()
-    return(r)
-  }
+  # Get_Task_List <- function() {
+  #   run_today = rat_runs %>% dplyr::arrange(date) %>% tail(1)
+  #   experiment_current = run_today$assignment[[1]]$experiment
+  #   phase_current = run_today$assignment[[1]]$phase
+  #   r = rat_runs %>%
+  #     filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
+  #     filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
+  #     .$assignment %>% bind_rows() %>% .$task %>% unique()
+  #   return(r)
+  # }
 
   Parse_Warnings <- function () {
     r = run$warnings_list[[1]] %>% unlist() %>% stringr::str_c(collapse = "\t")
@@ -249,8 +249,8 @@ Write_Table <- function() {
   Build_Table <- function() {
     rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID)
     run_today = rat_runs %>% dplyr::arrange(date) %>% tail(1)
-    experiment_current = run_today$assignment[[1]]$experiment
-    phase_current = run_today$assignment[[1]]$phase
+    experiment_current <<- run_today$assignment[[1]]$experiment
+    phase_current <<- run_today$assignment[[1]]$phase
 
     # Common Columns ----------------------------------------------------------
     columns = c("task", "detail", "date", "file_name", "weight", "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial", "threshold", "reaction", "FA_detailed", "warnings_list", "comments")
@@ -413,32 +413,85 @@ Write_Table <- function() {
     r = rbind(r, averages) %>%
       mutate(weight = (weight - weight_max)/weight_max)
 
-    extra_columns = 29 - length(r)
-    columnsToAdd <- paste0("column", 1:extra_columns)
-    r[,columnsToAdd] = NA
+    r[, length(r):29] = NA # add columns to reach 29
 
     r = r %>% relocate(warnings_list, comments, .after = last_col()) %>%
       arrange(desc(date))
     #TODO warnings and observations
 
-    return(as.data.frame(r))  #shed the grouping that prevents rbind
+    return(r)  #shed the grouping that prevents rbind
+  }
+
+  Build_Table_Key <- function() {
+    r = c("", "", "    ", "        ", "     ", "      ", "     ", "    ", "___", "_____")
+    r = rbind(r, c("", "", "Date", "Filename", "Wt d%", "Trials", "Hit %", "FA %", "Rxn", "Atmpt")) %>% as.data.frame()
+    r = cbind(r, NA) #spacer
+
+    if (phase_current == "BBN") {
+      r = cbind(r, c("", "TH"))
+      r = cbind(r, c("", "{TH}"))
+    }
+    else if (phase_current == "Tones") {
+      r = cbind(r, c("TH", "4"))
+      r = cbind(r, c("TH", "8"))
+      r = cbind(r, c("TH", "16"))
+      r = cbind(r, c("TH", "32"))
+      r = cbind(r, NA)
+      r = cbind(r, c("{TH} Range", "4"))
+      r = cbind(r, c("{TH} Range", "8"))
+      r = cbind(r, c("{TH} Range", "16"))
+      r = cbind(r, c("{TH} Range", "32"))
+      r = cbind(r, NA)
+      r = cbind(r, c("{Stim} Range", "4"))
+      r = cbind(r, c("{Stim} Range", "8"))
+      r = cbind(r, c("{Stim} Range", "16"))
+      r = cbind(r, c("{Stim} Range", "32"))
+    }
+    else if (phase_current == "Octave") {
+      r = cbind(r, c("", "d'"))
+      r = cbind(r, NA)
+      r = cbind(r, t(data.frame(c("No-Go False Alarm % (by octave steps)") %>% rep_len(12), c(1:12))))
+    }
+    else if (phase_current == "Tone-BBN" || phase_current == "Tone-Tone") {
+      r = cbind(r, c("Rxn Time", "Early"))
+      r = cbind(r, c("Rxn Time", "Mid"))
+      r = cbind(r, c("Rxn Time", "Late"))
+      r = cbind(r, NA)
+      r = cbind(r, c("False Alarm %", "Early"))
+      r = cbind(r, c("False Alarm %", "Mid"))
+      r = cbind(r, c("False Alarm %", "Late"))
+      r = cbind(r, NA)
+    }
+    else {
+      stop("ERROR: unrecognized phase: ", phase_current)
+    }
+
+    r[, length(r):29] = NA # add columns to reach 29
+    return(r)
   }
 
 
 
+
+  # Write Table Workflow ----------------------------------------------------
   row = row + 1 #now points at table start row
   row_table_start = row #save for later
   addStyle(wb, 1, table_header_style, rows = row_table_start, cols = 1:29, gridExpand = TRUE)
-  df_table <<- Build_Table()
+  df_table = Build_Table()
+  df_key = Build_Table_Key()
 
-  df_table = rbind(NA,NA,NA,NA,df_table)
-
-
+  # need blank rows inserted into df_table to give space for df_key
+  df_blank <- data.frame(matrix(ncol = 29 , nrow = nrow(df_key)))
 
   # the obnoxious blank strings are because every column in a table has to have a unique header,
   # and because we want those headers to be blank for all but column A
-  #colnames(df_table) = c("Choose Filter", " ", "  ", "   ", "    ", "     ", "      ", "       ", "        ", "         ", "          ", "           ", "            ", "             ", "              ", "               ", "                ", "                 ", "                  ", "                   ", "                    ", "                     ", "                      ", "                       ", "                        ", "                         ", "                          ", "                           ", "                            ")
-  writeDataTable(wb, 1, x = df_table, startRow = row_table_start, colNames = TRUE, rowNames = FALSE, bandedRows = FALSE, tableStyle = "TableStyleMedium18")
+  names = c("Task (Filter)", "Detail (Filter)", "  ", "   ", "    ", "     ", "      ", "       ", "        ", "         ", "          ", "           ", "            ", "             ", "              ", "               ", "                ", "                 ", "                  ", "                   ", "                    ", "                     ", "                      ", "                       ", "                        ", "                         ", "                          ", "                           ", "                            ")
+  #colnames(df_table) = names
+  colnames(df_blank) = names
+  #df_table = rbind(df_blank, df_table)
+
+  writeDataTable(wb, 1, x = df_table, startRow = row_table_start, colNames = TRUE, rowNames = FALSE, bandedRows = FALSE, tableStyle = "TableStyleMedium18", na.string = "")
+  #writeData(wb, 1, x = df_key, startRow = row_table_start + 1, colNames = FALSE, rowNames = FALSE)
 
 }
 
