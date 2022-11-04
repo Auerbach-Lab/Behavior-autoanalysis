@@ -274,7 +274,7 @@ Write_Table <- function() {
     # Task-specific RXN column ------------------------------------------------
 
     if(experiment_current == "Oddball") {
-    r = r %>% mutate(reaction1 = reaction) %>%
+      r = r %>% mutate(reaction1 = reaction) %>%
         unnest(reaction) %>%
         group_by(date) %>%
         mutate(Rxn = mean(Rxn)) %>%
@@ -413,13 +413,12 @@ Write_Table <- function() {
     r = rbind(r, averages) %>%
       mutate(weight = (weight - weight_max)/weight_max)
 
-    r[, length(r):29] = NA # add columns to reach 29
+    r[, (length(r) + 1):29] = NA # add columns to reach 29
 
     r = r %>% relocate(warnings_list, comments, .after = last_col()) %>%
       arrange(desc(date))
-    #TODO warnings and observations
 
-    return(r)  #shed the grouping that prevents rbind
+    return(as.data.frame(r))  #shed the grouping that prevents rbind
   }
 
   Build_Table_Key <- function() {
@@ -466,7 +465,7 @@ Write_Table <- function() {
       stop("ERROR: unrecognized phase: ", phase_current)
     }
 
-    r[, length(r):29] = NA # add columns to reach 29
+    r[, (length(r) + 1):29] = NA # add columns to reach 29
     return(r)
   }
 
@@ -486,12 +485,12 @@ Write_Table <- function() {
   # the obnoxious blank strings are because every column in a table has to have a unique header,
   # and because we want those headers to be blank for all but column A
   names = c("Task (Filter)", "Detail (Filter)", "  ", "   ", "    ", "     ", "      ", "       ", "        ", "         ", "          ", "           ", "            ", "             ", "              ", "               ", "                ", "                 ", "                  ", "                   ", "                    ", "                     ", "                      ", "                       ", "                        ", "                         ", "                          ", "                           ", "                            ")
-  #colnames(df_table) = names
+  colnames(df_table) = names
   colnames(df_blank) = names
-  #df_table = rbind(df_blank, df_table)
+  df_table = rbind(df_blank, df_table)
 
   writeDataTable(wb, 1, x = df_table, startRow = row_table_start, colNames = TRUE, rowNames = FALSE, bandedRows = FALSE, tableStyle = "TableStyleMedium18", na.string = "")
-  #writeData(wb, 1, x = df_key, startRow = row_table_start + 1, colNames = FALSE, rowNames = FALSE)
+  writeData(wb, 1, x = df_key, startRow = row_table_start + 1, colNames = FALSE, rowNames = FALSE)
 
 }
 
