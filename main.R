@@ -2,21 +2,17 @@
 Initialize <- function() {
    Load_Packages <- function() {
     # data loading external file formats
-    library(R.matlab); library(readxl);
+    library(R.matlab);
 
     # data manipulation
-    library(tidyverse); library(dplyr); library(tidyr); library(rlang);
+    library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr);
 
-    # analysis
-    library(psych); library(psycho);
-
-    # data visualization
-    library(ggplot2); library(forcats);
+    # analysis & visualization
+    library(psycho); library(ggplot2);
   }
 
   Load_Packages()
-  source("settings.R")  # hardcoded user variables
-  setwd(user_settings$projects_folder)  # working directory from settings.R
+  source("A:/Coding/Behavior-autoanalysis/settings.R")  # hardcoded user variables
   warnings_list <<- list()
   analysis <<- list()
   rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = "N/A")
@@ -24,7 +20,11 @@ Initialize <- function() {
   #load("run_Archive.Rdata")
 }
 
-Import_Matlab <- function() {
+Throw_Warning <- function() {
+  # We don't do this because it means the warning names this method, rather than the place where the check failed
+}
+
+Import_Matlab <- function(file_to_load) {
   Unlist_Matlab_To_Dataframe <- function(li) {
     return(t(apply(li, 1, unlist)) %>% as.data.frame())
   }
@@ -118,7 +118,7 @@ Import_Matlab <- function() {
         unlist(recursive = TRUE) %>%
         tail (n = 1) %>%
         as.numeric()
-
+      if(rlang::is_empty(r)) stop("ERROR: system filename improper: ", file_to_load)
       return(r)
     }
 
@@ -163,7 +163,7 @@ Import_Matlab <- function() {
       if ("train" %in% stim_type$`Stim Source`) {
         stim_type = "train"
       }
-      else stop(paste0("Multiple non-oddball stim types: ", stim_type))
+      else stop(paste0("ABORT: Multiple non-oddball stim types: ", stim_type))
     } else {
       stim_type = stim_type %>% as.character()
     }
@@ -226,7 +226,7 @@ Import_Matlab <- function() {
       warnings_list <<- append(warnings_list, warn)
       r$stim_filename = newname
     }
-    if (length(r$response_window) > 1) stop("Multiple response windows:", r$response_window,". Aborting.")
+    if (length(r$response_window) > 1) stop("ABORT: Multiple response windows:", r$response_window,". Aborting.")
 
 
     return(r)
@@ -263,11 +263,11 @@ Import_Matlab <- function() {
       }
       else {
         # Check calculated stats against MATLAB summary stats
-        if (total_trials != results_total_trials) stop(paste0("Trial count summary (", results_total_trials, ") does not match Data (", total_trials, ")."))
-        if (hits_calc != results_hits) stop(paste0("Hit count summary (", results_hits, ") does not match Data (", hits_calc, ")."))
-        if (misses_calc != results_misses) stop(paste0("Miss count summary (", results_misses, ") does not match Data (", misses_calc, ")."))
-        if (CRs_calc != results_CR) stop(paste0("Correct rejection count summary (", results_CR, ") does not match Data (", CRs_calc, ")."))
-        if (FAs_calc != results_FA) stop(paste0("False alarm count summary (", results_FA, ") does not match Data (", FAs_calc, ")."))
+        if (total_trials != results_total_trials) stop(paste0("ABORT: Trial count summary (", results_total_trials, ") does not match Data (", total_trials, ")."))
+        if (hits_calc != results_hits) stop(paste0("ABORT: Hit count summary (", results_hits, ") does not match Data (", hits_calc, ")."))
+        if (misses_calc != results_misses) stop(paste0("ABORT: Miss count summary (", results_misses, ") does not match Data (", misses_calc, ")."))
+        if (CRs_calc != results_CR) stop(paste0("ABORT: Correct rejection count summary (", results_CR, ") does not match Data (", CRs_calc, ")."))
+        if (FAs_calc != results_FA) stop(paste0("ABORT: False alarm count summary (", results_FA, ") does not match Data (", FAs_calc, ")."))
       }
     }
 
@@ -276,7 +276,7 @@ Import_Matlab <- function() {
 
     # The MATLAB file has 2 extra columns for some unknown reason
     if (all(run_data_encoded[7:8] != "0")) {
-      stop("What are these columns storing?")
+      stop("ABORT: Two extra columns. What are these columns storing?")
     } else {
       run_data_encoded = run_data_encoded[1:6]
     }
@@ -361,7 +361,7 @@ Import_Matlab <- function() {
       # Calculate # of kept trials
       Trials = dplyr::count(r) %>% as.numeric()
       # check
-      if (Trials != Trials_expected) stop("Expected kept count does not match")
+      if (Trials != Trials_expected) stop("ABORT: Expected kept count does not match.")
 
       return(r)
     }
@@ -391,7 +391,6 @@ Import_Matlab <- function() {
 
 
 # Import Workflow ---------------------------------------------------------
-  file_to_load = file.choose()
   cat("Loading file...", file_to_load, sep = "\t", fill = TRUE)
   current_mat_file = R.matlab::readMat(file_to_load)
   trial_collection = current_mat_file$stim[,,1] # all (1000) trial configurations, and the parameters specified to generate individual trials
@@ -508,7 +507,7 @@ Identify_Analysis_Type <- function() {
     else if (has_audible_NoGo & !has_more_than_one_NoGo) r = "Training - Octave"
     else if (!has_audible_NoGo & has_only_one_frequency ) r = "Tone (Single)"
     else if (!has_audible_NoGo) r =  "Tone (Standard)"
-    else (stop("Unknown tonal file type."))
+    else (stop("ABORT: Unknown tonal file type."))
 
     return(r)
   }
@@ -539,7 +538,7 @@ Identify_Analysis_Type <- function() {
     else if (has_uneven_trial_odds) r = "Oddball (Uneven Odds)"
     else if (has_catch_trials) r = "Oddball (Catch)"
     else if (!has_catch_trials & !has_uneven_trial_odds) r = "Oddball (Standard)"
-    else stop("Unknown Oddball file type.")
+    else stop("ABORT: Unknown Oddball file type.")
     return(r)
   }
 
@@ -553,14 +552,14 @@ Identify_Analysis_Type <- function() {
 
   if (run_properties$stim_type == "BBN" | run_properties$stim_type == "tone") run_properties <<- append(run_properties, list(summary = Get_File_Summary_BBN_Tone()))
   else if (run_properties$stim_type == "train") run_properties <<- append(run_properties, list(summary = Get_File_Summary_Oddball()))
-  else stop(paste0("Unknown stim type: ", run_properties$stim_type))
+  else stop(paste0("ABORT: Unknown stim type: ", run_properties$stim_type))
 
   r = NULL
   if (run_properties$stim_type == "tone") r = ID_Tonal()
   if (run_properties$stim_type == "BBN") r = ID_BBN()
   if (run_properties$stim_type == "train") r = ID_Oddball()
 
-  if (is.null("r")) stop("\nUnknown file type. Can not proceed with analysis")
+  if (is.null("r")) stop("ABORT: Unknown file type. Can not proceed with analysis")
   else (cat("Analysis type:", r, sep = "\t", fill = TRUE))
 
   r = list(type = r,
@@ -600,9 +599,15 @@ Build_Filename <- function() {
       go_kHz_range = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)` %>% min(), "-",
                             run_properties$summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)` %>% max(), "kHz")
       dB_step_size = unique(run_properties$summary$dB_step_size) %>% as.numeric()
-      if (dB_step_size == 5) go_dB_range = "MIX5stepdB"
-      else if (dB_step_size == 10) go_dB_range = "MIXdB"
-      else stop("Tone (Thresholding): Unrecognized dB_step_size (", dB_step_size,"). Aborting.")
+      if (dB_step_size == 5) {
+        go_dB_range = "MIX5stepdB"
+        analysis$prepend_name <<- TRUE
+      }
+      else if (dB_step_size == 10) {
+        go_dB_range = "MIXdB"
+        analysis$prepend_name <<- TRUE
+      }
+      else stop("ABORT: Tone (Thresholding): Unrecognized dB_step_size (", dB_step_size,"). Aborting.")
       rat_ID = stringr::str_split(run_properties$stim_filename, "_") %>% unlist() %>% .[1]
       computed_file_name = paste0(rat_ID, "_", go_kHz_range, "_", go_dB_range, "_", run_properties$duration, "ms_", run_properties$lockout, "s")
     }
@@ -746,7 +751,7 @@ Build_Filename <- function() {
                               "tone" = Tonal_Filename(),
                               "BBN" = BBN_Filename(),
                               "train" = Oddball_Filename())
-  if (is.null(computed_file_name)) stop("Unknown file type. Can not create filename.")
+  if (is.null(computed_file_name)) stop("ABORT: Unknown file type. Can not create filename.")
 
   if (!delay_in_filename) Check_Delay(expected_delay)
 
@@ -776,7 +781,26 @@ Build_Filename <- function() {
 
 Check_Assigned_Filename <- function() {
   r = TRUE
-  analysis$assigned_file_name = analysis$computed_file_name #TODO: actually pluck assigned_filename from excel or whatever
+
+  if(old_file) {
+    # need to fetch from old_excel_archive
+    date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
+    date_asDate = paste0(stringr::str_sub(date, 1, 4), "-", stringr::str_sub(date, 5, 6), "-", stringr::str_sub(date, 7, 8)) %>% as.Date()
+    old_data = old_excel_archive %>% dplyr::filter(Date == date_asDate & rat_name == run_properties$rat_name)
+    analysis$assigned_file_name <<- old_data$Schedule
+    if(rlang::is_empty(analysis$assigned_file_name)) {
+      warn = paste0("No assigned file name found in excel document for ", run_properties$rat_name, " on ", date, ".")
+      warnings_list <<- append(warnings_list, warn)
+    }
+  } else {
+    analysis$assigned_file_name <<- analysis$computed_file_name # TODO read from rat_archive which has been written to from supervisor.xlsx
+  }
+
+  # handle customized individual files
+  if(analysis$prepend_name) {
+    analysis$assigned_file_name = paste0(run_properties$rat_name, "_", analysis$assigned_file_name)
+  }
+
   if (analysis$computed_file_name != analysis$assigned_file_name ) {
     warn = paste0("ACTION REQUIRED: Was rat run on the wrong file?\n",
                   "ERROR: Filename -- ", analysis$computed_file_name, " -- does not match\n",
@@ -811,21 +835,231 @@ Check_UUID <- function() {
   return(Is_New_UUID(run_properties$UUID))
 }
 
+Calculate_Summary_Statistics <- function() {
+  # Creates a properly formatted table for psycho by adding the overall CR/FA to each row
+  Format_for_Psycho <- function(df) {
+    check = df %>% filter(Type == 0) %>% count() %>% as.numeric()
+    CRnum = (if (check == 1) filter(df, Type == 0) %>% .$CR %>% as.numeric() else check)
+    FAnum = (if (check == 1) filter(df, Type == 0) %>% .$FA %>% as.numeric() else check)
+    if(!("Hit" %in% colnames(df))) df = df %>% add_column(Hit = NA)
+    if(!("Miss" %in% colnames(df))) df = df %>% add_column(Miss = NA)
+    if(!("FA" %in% colnames(df))) {
+      df = df %>% add_column(FA = NA)
+      FAnum = 0
+    }
+    if(!("CR" %in% colnames(df))) {
+      df = df %>% add_column(CR = NA)
+      CRnum = 0
+    }
 
-Check_Performance_Cutoffs <- function() {
-  Calculate_Summary_Statistics <- function() {
-    analysis$stats$trial_count <<- run_data %>% dplyr::count() %>% as.numeric()
-    analysis$stats$hits <<- run_data %>% dplyr::filter(Response == "Hit") %>% dplyr::count() %>% as.numeric()
-    analysis$stats$misses <<- run_data %>% dplyr::filter(Response == "Miss") %>% dplyr::count() %>% as.numeric()
-    analysis$stats$CRs <<- run_data %>% dplyr::filter(Response == "CR") %>% dplyr::count() %>% as.numeric()
-    analysis$stats$FAs <<- run_data %>% dplyr::filter(Response == "FA") %>% dplyr::count() %>% as.numeric()
-    analysis$stats$hit_percent <<- analysis$stats$hits / analysis$stats$trial_count
-    analysis$stats$FA_percent <<- analysis$stats$FAs / analysis$stats$trial_count
-    analysis$stats$mean_attempts_per_trial <<- dplyr::summarise_at(run_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
+    new_df = df %>% filter(Type == 1) %>%
+      mutate(CR = ifelse(is.na(CR), CRnum, CR),
+             FA = ifelse(is.na(FA), FAnum, CR),
+             Hit = as.numeric(Hit),
+             Miss = as.numeric(Miss)) %>% replace(is.na(.), 0)
+    return(new_df)
   }
 
-  Calculate_Summary_Statistics()
-  if (analysis$stats$trial_count < analysis$minimum_trials) {
+  Format_for_Psycho_Octave <- function(df) {
+    check = df %>% filter(Type == 1) %>% count() %>% as.numeric()
+    Hitnum = (if (check == 1) filter(df, Type == 1) %>% .$Hit %>% as.numeric() else check)
+    Missnum = (if (check == 1) filter(df, Type == 1) %>% .$Miss %>% as.numeric() else check)
+    if(!("CR" %in% colnames(df))) df = df %>% add_column(CR = NA)
+    if(!("FA" %in% colnames(df))) df = df %>% add_column(FA = NA)
+    if(!("Hit" %in% colnames(df))) {
+      df = df %>% add_column(Hit = NA)
+      Hitnum = 0
+    }
+    if(!("Miss" %in% colnames(df))) {
+      df = df %>% add_column(Miss = NA)
+      Missnum = 0
+    }
+
+    new_df = df %>% filter(Type == 0) %>%
+      mutate(CR = as.numeric(CR),
+             FA = as.numeric(FA),
+             Hit = ifelse(is.na(Hit), Hitnum, Hit),
+             Miss = ifelse(is.na(Miss), Missnum, Miss)) %>% replace(is.na(.), 0)
+    return(new_df)
+  }
+
+  # Signal detection index calculation
+  Calculate_dprime <- function(df) {
+    r = dprime(n_hit = df$Hit,
+               n_fa = df$FA,
+               n_miss = df$Miss,
+               n_cr = df$CR,
+               adjusted = TRUE)
+    r[["bppd"]] = NULL # drop this column always (it can be wrongly dimensioned and break things)
+    r = r %>% as_tibble() %>%
+      mutate(dB = df$`Inten (dB)`,
+             Freq = df$`Freq (kHz)`,
+             Dur = df$`Dur (ms)`)
+    return(r)
+  }
+
+  # Threshold calculation calculation based on TH_cutoff intercept of fit curve
+  # LOESS: Local Regression is a non-parametric approach that fits multiple regressions
+  # see http://r-statistics.co/Loess-Regression-With-R.html
+  Calculate_TH <- function(df) {
+    # Uncomment to see line fitting by a package which shows line
+    # library(drda)
+    # drda(dprime ~ dB, data = df) %>% plot
+    fit = loess(dprime ~ dB, data = df)
+    # plot(fit)
+    TH = approx(x = fit$fitted, y = fit$x, xout = user_settings$TH_cutoff, ties = "ordered")$y
+    # print(TH)
+    return(TH)
+  }
+
+  Calculate_Threshold <- function() {
+    # Signal detection index calculation by the psycho package. We use d' a sensitivity measure.
+    # https://neuropsychology.github.io/psycho.R/2018/03/29/SDT.html
+
+    # Calculate d' and save (along with hit/miss/CR/FA table)
+    dprime_table <-
+      run_data %>% #TODO add a way to calculate using full trials archive history
+      dplyr::filter(Block_number != 1) %>%
+      group_by(`Dur (ms)`, Type, `Freq (kHz)`, `Inten (dB)`, Response) %>%
+      summarise(count = n(), .groups = "keep") %>%
+      spread(Response, count) %>% #View
+      ungroup()
+
+    dprime_table = Format_for_Psycho(dprime_table)
+    dprime_data = Calculate_dprime(dprime_table)
+
+    r = dprime_data %>%
+      select(Freq, Dur, dB, dprime) %>%
+      group_by(Freq, Dur) %>%
+      nest() %>%
+      mutate(TH = map_dbl(data, Calculate_TH)) %>%
+      select(-data)
+
+    return(r)
+  }
+
+  Calculate_Reaction_Time <- function(audible_only = FALSE, min_time_s = 0.015) {
+    Filter_to_Audible <- function(df) { #TODO do we WANT filtered to audible? Probably no for graph, yes for analyses
+      ms = unique(df$`Dur (ms)`)
+      kHz = unique(df$`Freq (kHz)`)
+
+      #TODO: use overall cutoff rather than daily
+      cutoff = TH_by_frequency_and_duration %>% # have to use UQ to force the evaluation of the variable
+        filter(Dur == UQ(ms) & Freq == UQ(kHz)) %>% .$TH
+
+      r = df %>% filter(`Inten (dB)` >= UQ(cutoff))
+      return(r)
+    }
+
+    r = run_data %>% dplyr::filter(Response == "Hit")
+
+    r = dplyr::filter(r, `Reaction_(s)` > min_time_s)
+
+    if (audible_only) {
+      r = r %>%
+        mutate(Dur = `Dur (ms)`, Freq = `Freq (kHz)`) %>%
+        group_by(Freq, Dur) %>%
+        nest() %>%
+        mutate(Rxn = map(.x = data, .f = Filter_to_Audible)) %>%
+        select(-data) %>%
+        unnest(Rxn)
+    }
+
+      r = r %>%
+        group_by(`Dur (ms)`, `Freq (kHz)`, `Inten (dB)`) %>%
+        summarise(Rxn = mean(`Reaction_(s)`, na.rm = T), .groups = "keep")
+    return(r)
+  }
+
+  Calculate_FA_Detailed_Oddball <- function() {
+    r = run_data %>%
+      filter(Trial_type != 0) %>% # rule out catch trials
+      rename(position = `Inten (dB)`) %>%
+      group_by(position) %>%
+      summarise(FA = sum(Response == 'FA'),
+                trials = n(),
+                FA_percent_detailed = FA/trials)
+
+    return(r)
+  }
+
+  Calculate_FA_Detailed_Octave <- function() {
+    dprime_table <-
+      run_data %>%
+      dplyr::filter(Block_number != 1) %>%
+      group_by(`Dur (ms)`, Type, `Freq (kHz)`, `Inten (dB)`, Response) %>%
+      summarise(count = n(), .groups = "keep") %>%
+      spread(Response, count) %>% #View
+      ungroup()
+
+    dprime_table = Format_for_Psycho_Octave(dprime_table) # type = 0 for inverted (no-go) d'
+    dprime_data = Calculate_dprime(dprime_table) %>%
+      rename(`Freq (kHz)` = Freq)
+
+    r = run_data %>%
+      filter(Trial_type == 0) %>% # select no-go trials
+      group_by(`Freq (kHz)`) %>%
+      summarise(FA = sum(Response == 'FA'),
+                trials = n(),
+                FA_percent_detailed = FA/trials) %>%
+      left_join(dprime_data %>% select(`Freq (kHz)`, dprime), by = "Freq (kHz)")
+
+    return(r)
+  }
+
+
+  # Statistics Workflow -----------------------------------------------------
+
+  trial_count = run_data %>% dplyr::count() %>% as.numeric()
+  hits = run_data %>% dplyr::filter(Response == "Hit") %>% dplyr::count() %>% as.numeric()
+  misses = run_data %>% dplyr::filter(Response == "Miss") %>% dplyr::count() %>% as.numeric()
+  CRs = run_data %>% dplyr::filter(Response == "CR") %>% dplyr::count() %>% as.numeric()
+  FAs = run_data %>% dplyr::filter(Response == "FA") %>% dplyr::count() %>% as.numeric()
+  hit_percent = hits / trial_count
+  FA_percent = FAs / trial_count
+  mean_attempts_per_trial = dplyr::summarise_at(run_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
+  if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
+    TH_by_frequency_and_duration = NA
+  } else {
+    TH_by_frequency_and_duration = Calculate_Threshold()
+  }
+  if(analysis$type == "Octave") {
+    FA_detailed = Calculate_FA_Detailed_Octave()
+  } else if(analysis$type %in% c("Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
+    FA_detailed = Calculate_FA_Detailed_Oddball()
+  } else {
+    FA_detailed = NA
+  }
+  #overall_TH = Calculate_Threshold() #TODO overall calculation using trials archive
+  reaction = Calculate_Reaction_Time() #NOTE this can take audible only (default false) or min time (default 0.015)
+  dprime = psycho::dprime(n_hit = hits,
+                           n_fa = FAs,
+                           n_miss = misses,
+                           n_cr = CRs,
+                           adjusted = TRUE) %>% .$dprime
+
+  stats = list(
+    trial_count = trial_count,
+    hits = hits,
+    misses = misses,
+    CRs = CRs,
+    FAs = FAs,
+    hit_percent = hit_percent,
+    FA_percent = FA_percent,
+    mean_attempts_per_trial = mean_attempts_per_trial,
+    dprime = dprime,
+    threshold = TH_by_frequency_and_duration,
+    reaction = reaction,
+    FA_detailed = FA_detailed
+  )
+
+  writeLines("Calculated run statistics.")
+  return(stats)
+}
+
+
+Check_Performance_Cutoffs <- function() {
+  if (analysis$stats$trial_count < analysis$minimum_trials) { # this is ANALYSIS$minimum_trials which was set during analysis step, varies by type
     warn = paste0("Low trial count: ", analysis$stats$trial_count, " (cutoff is ", analysis$minimum_trials,")")
     warning(paste0(warn, "\n"))
     warnings_list <<- append(warnings_list, warn)
@@ -888,169 +1122,220 @@ Check_Multipart_Run <- function () {
                   "\n  Renumbering complete blocks.")
     warning(paste0(warn, "\n"))
     warnings_list <<- append(warnings_list, warn)
+
+    #TODO: handle duplicating file assignment to extra runs
   }
 }
 
 Get_Rat_ID = function(check_name) {
   date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
-  rat_ID = rat_archive %>%
-    dplyr::filter(Rat_name == check_name) %>%
-    dplyr::filter(start_date <= date) %>%
-    dplyr::filter(date <= end_date | is.na(end_date)) %>% .$Rat_ID
-  return(rat_ID)
+  rats_with_name <<- rat_archive %>%
+    dplyr::filter(Rat_name == check_name)
+  if(nrow(rats_with_name) == 0) {
+    stop(paste0("ABORT: No rats with name ", check_name, " found in archive."))
+  } else {
+    rat_ID = rats_with_name %>%
+      dplyr::filter(start_date <= date) %>%
+      dplyr::filter(date <= end_date | is.na(end_date)) %>% .$Rat_ID
+    if(length(rat_ID) > 1) stop(paste0("ABORT: Overlapping rats on date ", date, " with name ", check_name, ". Cannot determine Rat ID."))
+    if(length(rat_ID) == 0) stop("ABORT: No rats with name ", check_name, " were active on ", date, ".")
+    return(rat_ID)
+  }
 }
 
 Check_Weight <- function() {
   rat_weights = NULL
   if(!rlang::is_empty(run_archive)) {
+    id = Get_Rat_ID(run_properties$rat_name)
+    if(length(id) == 0) stop("ABORT: Unknown rat ID.")
     rat_weights =
       run_archive %>%
-      dplyr::filter(rat_ID == Get_Rat_ID(run_properties$rat_name)) %>%
-      .$weight
+      dplyr::filter(rat_ID == id) %>%
+      dplyr::select(date, weight)
+  }
+
+  date_asNumeric = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
+  date_asDate = paste0(stringr::str_sub(date_asNumeric, 1, 4), "-", stringr::str_sub(date_asNumeric, 5, 6), "-", stringr::str_sub(date_asNumeric, 7, 8)) %>% as.Date()
+
+  if(old_file) {
+    # need to fetch corresponding weight from old_excel_archive
+    analysis$weight <<- old_excel_archive %>% dplyr::filter(Date == date_asDate & rat_name == run_properties$rat_name) %>% .$Weight
+    if(rlang::is_empty(analysis$weight)) {
+      warn = paste0("No weight found in excel document for ", run_properties$rat_name, " on ", date, ".")
+      warnings_list <<- append(warnings_list, warn)
+    }
+  } else {
+    #use the weight from the undergrad file's variable
+    analysis$weight <<- weight
   }
 
   if(rlang::is_empty(rat_weights)) {
-    warn = paste0("No old weights for ", run_properties$rat_name, "(", Get_Rat_ID(run_properties$rat_name), "). Is this rat new?")
+    warn = paste0("No weight data in run archive for ", run_properties$rat_name, "(", Get_Rat_ID(run_properties$rat_name), "). Is this rat new?")
     warning(paste0(warn, "\n"))
     warnings_list <<- append(warnings_list, warn)
-
-    analysis$weight <<- weight
     analysis$weight_change <<- 0
   } else {
-    old_weight = tail(rat_weights, n = 1) # this assumes the most recently-added entry is most recent date, should be generally true
-    max_weight = max(rat_weights)
+    old_weight = rat_weights %>% dplyr::filter(date < date_asNumeric) %>% dplyr::arrange(date) %>% tail(1) %>% .$weight
 
-    analysis$weight <<- weight
-    analysis$weight_change <<- weight - old_weight  # negative if lost weight
-
-    weight_change_daily_percent = analysis$weight_change / old_weight # negative if lost weight
-    weight_change_overall_percent = (weight - max_weight) / max_weight # negative if lost weight
-
-    if (-1 * weight_change_daily_percent > user_settings$maximum_weight_change_daily_percent) {
-      warn = paste0("ACTION REQUIRED: Weight fell by more than ", 100*user_settings$maximum_weight_change_daily_percent, "% in one day. (", old_weight, " -> ", weight, ").")
+    if(rlang::is_empty(old_weight)) {
+      warn = paste0("No weights for ", run_properties$rat_name, "(", Get_Rat_ID(run_properties$rat_name), ") prior to ", date_asDate, ".")
       warning(paste0(warn, "\n"))
       warnings_list <<- append(warnings_list, warn)
-    }
-    if (-1 * weight_change_overall_percent > user_settings$maximum_weight_change_overall_percent) {
-      warn = paste0("ACTION REQUIRED: Rat has lost more than ", 100*user_settings$maximum_weight_change_overall_percent, "% of maximum body weight. (", max_weight, " -> ", weight, ").")
-      warning(paste0(warn, "\n"))
-      warnings_list <<- append(warnings_list, warn)
+      analysis$weight_change <<- 0
+    } else {
+      max_weight = max(rat_weights$weight) #TODO add a column to rat_archive called e.g. override_weight to use instead of true max weight for chunky bois, or calculate max in past month or something else
+      analysis$weight_change <<- analysis$weight - old_weight  # negative if lost weight
+      weight_change_daily_percent = analysis$weight_change / old_weight # negative if lost weight
+      weight_change_overall_percent = (analysis$weight - max_weight) / max_weight # negative if lost weight
+
+      if (-1 * weight_change_daily_percent > user_settings$maximum_weight_change_daily_percent) {
+        warn = paste0("ACTION REQUIRED: Weight fell by more than ", 100*user_settings$maximum_weight_change_daily_percent, "% in one day. (", old_weight, " -> ", analysis$weight, ").")
+        warning(paste0(warn, "\n"))
+        warnings_list <<- append(warnings_list, warn)
+      }
+      if (-1 * weight_change_overall_percent > user_settings$maximum_weight_change_overall_percent) {
+        warn = paste0("ACTION REQUIRED: Rat has lost more than ", 100*user_settings$maximum_weight_change_overall_percent, "% of maximum body weight. (", max_weight, " -> ", analysis$weight, ").")
+        warning(paste0(warn, "\n"))
+        warnings_list <<- append(warnings_list, warn)
+      }
     }
   }
 }
 
-Construct_Run_Entry <- function() {
-  date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
-  time = run_properties$creation_time %>% stringr::str_sub(9,15) %>% as.numeric()
+Add_to_Run_Archive <- function() {
+  Construct_Run_Entry <- function() {
+    date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
+    time = run_properties$creation_time %>% stringr::str_sub(9,15) %>% as.numeric()
 
-  # using data.frame instead of tibble automatically can unpack run_stats into columns but still need concatenation for warnings_list
-  r = tibble(
-    date = date,
-    time = time,
-    box = run_properties$box,    # TODO: calculated box from MAT file not external FOO.mat filename
-    rat_name = run_properties$rat_name,
-    rat_ID = Get_Rat_ID(run_properties$rat_name),
-    weight = analysis$weight,
-    weight_change = analysis$weight_change,
+    # get excel data for run, if it exists
+    if(old_file) {
+      # need to fetch from old_excel_archive
+      date_asDate = paste0(stringr::str_sub(date, 1, 4), "-", stringr::str_sub(date, 5, 6), "-", stringr::str_sub(date, 7, 8)) %>% as.Date()
+      old_data = old_excel_archive %>% dplyr::filter(Date == date_asDate & rat_name == run_properties$rat_name)
+      if(rlang::is_empty(old_data)) {
+        warn = paste0("No data found in excel document for ", run_properties$rat_name, " on ", date, ".")
+        warnings_list <<- append(warnings_list, warn)
+      }
+      observations = old_data$`Comments/Observations`
+      assignment = list(
+        assigned_file_name = analysis$assigned_file_name,
+        experiment = old_data$Experiment,
+        phase = old_data$Phase,
+        task = old_data$Task,
+        detail = old_data$Detail
+      )
+      if(rlang::is_empty(assignment$experiment) || rlang::is_empty(assignment$phase)) {
+        warn = paste0("No experiment/phase found in excel document for ", run_properties$rat_name, " on ", date, ".")
+        warnings_list <<- append(warnings_list, warn)
+      }
+    } else {
+      #use the comments from the undergrad file's variable
+      observations = observations
 
-    file_name = analysis$computed_file_name,
-    # assigned_file = assignment$assigned_file_name,    # TODO: actually get this
-    # experiment = assignment$experiment,
-    # phase = assignment$phase,
-    stim_type = run_properties$stim_type,
-    analysis_type = analysis$type,
-    run_stats = list(analysis$stats),
-    block_size = run_properties$stim_block_size,
-    complete_block_count = run_data$complete_block_number %>% max(na.rm = TRUE),
+      #TODO read from rat_archive which was written to by supervisor.xlsx
+      assignment = list(
+        assigned_file_name = analysis$assigned_file_name,
+        experiment = "",
+        phase = "",
+        task = "",
+        detail = ""
+      )
+    }
 
-    invalid = "",    # supervisor can manually mark runs as invalid, putting reasoning here
-    run_comments = observations,    #   undergrad comments
-    warnings_list = list(warnings_list),    #   warnings list
-    omit_list = run_properties$omit_list,    #   omit list?
-    UUID = run_properties$UUID    #   uuid
-  )
-  return(r)
+    # using data.frame instead of tibble automatically can unpack $stats into columns but still need concatenation for warnings_list
+    r = tibble(
+      date = date,
+      time = time,
+      box = run_properties$box,    # TODO: calculated box from MAT file not external FOO.mat filename
+      rat_name = run_properties$rat_name,
+      rat_ID = Get_Rat_ID(run_properties$rat_name),
+      weight = analysis$weight,
 
+      file_name = analysis$computed_file_name,
+      assignment = list(assignment),
+      summary = list(run_properties$summary),
+
+      stim_type = run_properties$stim_type,
+      analysis_type = analysis$type,
+      stats = list(analysis$stats),
+      block_size = run_properties$stim_block_size,
+      complete_block_count = run_data$complete_block_number %>% max(na.rm = TRUE),
+
+      invalid = "",    # supervisor can manually mark runs as invalid, putting reasoning here
+      comments = observations,    #   undergrad comments
+      warnings_list = list(warnings_list),    #   warnings list
+      omit_list = run_properties$omit_list,    #   omit list?
+      UUID = run_properties$UUID    #   uuid
+    )
+    return(r)
+  }
+  row_to_add = Construct_Run_Entry()
+  if(nrow(row_to_add) != 1) stop("ABORT: Problem building row to add to Run Archive.")
+  run_archive <<- rbind(run_archive, row_to_add)
+  save(run_archive, file = "run_archive.Rdata", ascii = TRUE, compress = FALSE)
+  cat("Run added to Run Archive.", sep = "\t", fill = TRUE)
 }
 
 # MAIN ---------------------------------------------------------
+
+Process_File <- function(file_to_load) {
+  # load run's .mat file
+  Import_Matlab(file_to_load)
+
+  # identify analysis type and get summary stats
+  analysis <<- Identify_Analysis_Type()
+  analysis$stats <<- Calculate_Summary_Statistics()
+
+  # calculate canonical filename
+  analysis$prepend_name <<- FALSE
+  analysis$computed_file_name <<- Build_Filename()
+  Check_Assigned_Filename()
+
+  # generate UUID for run
+  Check_UUID()
+
+  # handle weight
+  Check_Weight()
+
+
+  # check run performance against user-settings cutoffs
+  Check_Performance_Cutoffs()
+  # check run performance against past performance for this rat in this experimental phase
+  # Check_Performance_Consistency
+
+  # commit to folding in - display warnings and get user input to override them (and submit to master dataframe), or give option to commit to invalid/storage-only dataframe
+  # curate data prior to folding in, adding disqualifier flags etc (but omitted trials are always totally gone)
+  # Report_Warnings_and_Confirm()
+  Add_to_Run_Archive()
+  # Add_to_Trial_Archive() actually fold run_data -> trial_archive
+
+  # do analyses
+  # pop up charts and stuff for undergrads to sign off on (where do the comments they provide on 'no' get saved? text file alongside individual exported graph image? dedicated df? master df in one long appended cell for all comments to graphs?)
+
+
+  # # plus a 48-line dataframe of box+time combos that represents the current 'schedule'
+  #   rat uid/name
+  #   assigned box
+  #   timeslot
+
+
+
+  # TODO hearing_loss_induced column in rat_archive that contains date (or list of dates, as necessary) aka "condition"
+  writeLines("") #TODO change all cats to writelines
+  return(invisible(NULL))
+}
+
 # set up environment
 Initialize()
 
-# load run's .mat file
-Import_Matlab()
+# Process_File(file.choose())
 
-# identify analysis type
-analysis = Identify_Analysis_Type()
-
-# calculate canonical filename
-analysis$computed_file_name = Build_Filename()
-Check_Assigned_Filename()
-
-# generate UUID for run
-Check_UUID()
-
-# handle weight
-Check_Weight()
-
-# check run performance against user-settings cutoffs
-Check_Performance_Cutoffs()
-
-# check consistency
-
-# commit to folding in - display warnings and get user input to override them (and submit to master dataframe), or give option to commit to invalid/storage-only dataframe
-# curate data prior to folding in, adding disqualifier flags etc (but omitted trials are always totally gone)
+directory = "A:\\Coding\\Behavior-autoanalysis\\Fake Project Folder"
+files <- list.files("A:/Coding/Behavior-autoanalysis/Fake Project Folder")
+files = paste0(directory, "\\", files)
+lapply(files, Process_File)
 
 
 
-# # get run comments and weight -> run_archive
-#   uuid
-#   rat name/id
-#   calculated box
-#   date
-#   time
-#   calculated file name
-#   assigned file name
-#   experiment
-#   experimental phase
-#   stim type
-#   analysis type
-#   omit list?
-#   undergrad comments
-#   weight
-#   weight delta %
-#   run statistics not as list
-#   warnings list
-#   invalid column that is blank
-#   block size
-#   complete blocks
-row_to_add = Construct_Run_Entry()
-run_archive = rbind(run_archive, row_to_add)
-
-save(run_archive, file = "run_archive.Rdata", ascii = TRUE, compress = FALSE)
-#write.csv(run_archive, file = "run_archive.csv")
-
-#run_archive$warnings_list %>% head(n = 1) %>% unlist() %>% stringr::str_c(sep="\n") %>% str()
-  #unlist() %>% paste(collapse='\n') %>% print()
 
 
-# # actually fold run_data -> trial_archive
-
-
-# # TODO: we probably need a rat_archive lookup at some point for analyses
-#   rat uid
-#   rat name color number
-#   date of birth
-#   genotype
-#   sex
-#
-# # plus a 48-line dataframe of box+time combos that represents the current 'schedule'
-#   rat uid/name
-#   assigned box
-#   timeslot
-
-
-# do analyses
-# pop up charts and stuff for undergrads to sign off on (where do the comments they provide on 'no' get saved? text file alongside individual exported graph image? dedicated df? master df in one long appended cell for all comments to graphs?)
-
-# TODO: need to be able to export df->.csv but we want to store as tibble->.Rdata
