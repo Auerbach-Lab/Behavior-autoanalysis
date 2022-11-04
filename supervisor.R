@@ -1,10 +1,9 @@
-require(ggplot2)
-require(openxlsx)
-require(xml2)
-require(zip)
-require(dplyr)
-require(stringr)
-require(Rcpp)
+# data loading external file formats
+library(R.matlab); library(openxlsx); library(xml2); library(zip);
+
+# data manipulation
+library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr);
+
 
 Read_Filled_Sheet <- function() {
   #TODO check to make sure sheet looks filled in! or at least check resulting data should be easy
