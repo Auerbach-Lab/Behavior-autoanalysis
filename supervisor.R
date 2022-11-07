@@ -245,6 +245,88 @@ Write_Table <- function() {
     return(r)
   }
 
+  Build_Counts <- function() {
+    experiment_current <<- run_today$assignment[[1]]$experiment
+    phase_current <<- run_today$assignment[[1]]$phase
+    task_current <<- run_today$assignment[[1]]$task
+    detail_current <<- run_today$assignment[[1]]$detail
+
+    # if experiment_current != Oddball
+    # get current date and compare to rat_archive 'HL induced' column's date to determine post-HL or not
+    # post-HL = ... (boolean)
+
+    # BBN Rxn/TH PreHL Alone
+    #   BBN Rxn PreHL Alone
+    #   BBN Th PreHL Alonea
+    #
+    # BBN Rxn/TH PreHL Mixed
+    #   BBN Rxn PreHL Mixed
+    #   BBN Th PreHL Mixed
+    #
+    # BBN Training/Reset PreHL Alone
+    #   BBN Rxn PreHL Alone
+    #   BBN TH PreHL Alone
+    #   BBN Training PreHL Alone
+    #   BBN Reset PreHL Alone
+    #
+    # BBN Training/Reset PreHL Mixed
+    #   BBN Rxn PreHL Mixed
+    #   BBN TH PreHL Mixed
+    #   BBN Training PreHL Mixed
+    #   BBN Reset PreHL Mixed
+    #
+    # Tones Rxn/TH PreHL
+    #   Tones Rxn PreHL 50dB-PKN
+    #   Tones Rxn PreHL 30dB-PKN
+    #   Tones Rxn PreHL 50dB-WN
+    #   Tones TH PreHL None
+    #
+    # Tones Training/Reset PreHL
+    #   Tones Rxn PreHL
+    #   Tones TH PreHL
+    #   Tones Training PreHL
+    #   Tones Reset PreHL
+    #
+    # BBN/Tones Rxn/TH PostHL
+    #   BBN TH PreHL Alone
+    #   BBN Rxn PostHL Alone
+    #   BBN TH PostHL Alone
+    #   Tones Rxn PostHL 50dB-PKN
+    #   Tones Rxn PostHL 30dB-PKN
+    #   Tones Rxn PostHL 50dB-WN
+    #   Tones TH PostHL None
+    #   Tones Rxn PreHL 50dB-PKN
+    #   Tones Rxn PreHL 30dB-PKN
+    #   Tones Rxn PreHL 50dB-WN
+    #   Tones TH PreHL None
+    #
+    # BBN Training/Reset PostHL
+    #   BBN Rxn PostHL
+    #   BBN TH PostHL
+    #   BBN Training PostHL
+    #   BBN Reset PostHL
+    #
+    # Tones Training/Reset PostHL
+    #   Tones Rxn PostHL
+    #   Tones TH PostHL
+    #   Tones TraiostHL PostHL
+    #   Tones Reset PostHL
+    #
+    # Octave
+    #   Discrimination Normal currentcondition
+    #   Discrimination Reversed currentcondition
+    #   Training Normal currentcondition
+    #   Training Reversed currentcondition
+    #
+    # Oddball
+    #   BaseCase "of the most recent consecutive days" (current streak)
+    #   currenttask currentdetail
+
+  }
+
+
+
+
   Build_Table <- function() {
     rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID)
     run_today = rat_runs %>% dplyr::arrange(date) %>% tail(1)
