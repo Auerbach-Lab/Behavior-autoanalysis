@@ -248,6 +248,7 @@ Write_Table <- function() {
   Build_Counts <- function() {
     rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID)
     run_today = rat_runs %>% dplyr::arrange(date) %>% tail(1)
+    run_today = rat_runs %>% arrange(date) %>% .[11,]
     experiment_current <<- run_today$assignment[[1]]$experiment
     phase_current <<- run_today$assignment[[1]]$phase
     task_current <<- run_today$assignment[[1]]$task
@@ -258,9 +259,18 @@ Write_Table <- function() {
     post_HL = is.na(dplyr::filter(rat_archive, Rat_ID == ratID)$HL_date) #(boolean)
 
     # BBN Rxn/TH PreHL Alone
-    #   BBN Rxn PreHL Alone
-    #   BBN Th PreHL Alonea
-    #
+    if(phase_current == "BBN" & task_current %in% c("Rxn", "TH") & !post_HL & detail_current == "Alone"){
+      rat_runs %>%
+        tidyr::unnest_wider(assignment) %>%
+        dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Alone") %>%
+        group_by(task) %>%
+        summarise(task = unique(task), detail = unique(detail),
+                  date = tail(date, 1), n = n(),
+                  place_holder5 = NA,
+                  condition = "Baseline",
+                  place_holder7 = NA)
+    }
+
     # BBN Rxn/TH PreHL Mixed
     #   BBN Rxn PreHL Mixed
     #   BBN Th PreHL Mixed
