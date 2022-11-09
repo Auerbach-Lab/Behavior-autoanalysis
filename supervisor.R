@@ -323,11 +323,18 @@ Write_Table <- function() {
     }
 
     # Tones Training/Reset PreHL
-    #   Tones Rxn PreHL
-    #   Tones TH PreHL
-    #   Tones Training PreHL
-    #   Tones Reset PreHL
-    #
+    #TODO Untested as not in current dataset
+    if (phase_current == "Tones" & task_current %in% c("Training", "Reset") & !post_HL) {
+      count_df = rat_runs %>%
+        tidyr::unnest_wider(assignment) %>%
+        dplyr::filter(phase == "Tones") %>% # keeping all tasks
+        group_by(task) %>%
+        summarise(task = unique(task), detail = NA,
+                  date = tail(date, 1), n = n(),
+                  condition = "Baseline",
+                  .groups = "drop")
+    }
+
     # BBN/Tones Rxn/TH PostHL
     #   BBN TH PreHL Alone
     #   BBN Rxn PostHL Alone
