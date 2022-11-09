@@ -248,7 +248,7 @@ Write_Table <- function() {
   Build_Counts <- function() {
     rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID) %>% dplyr::arrange(date)
     run_today = rat_runs %>% dplyr::arrange(date) %>% tail(1)
-    run_today = rat_runs %>% arrange(date) %>% .[11,]
+    run_today = rat_runs %>% arrange(date) %>% .[7,]
     experiment_current <<- run_today$assignment[[1]]$experiment
     phase_current <<- run_today$assignment[[1]]$phase
     task_current <<- run_today$assignment[[1]]$task
@@ -260,7 +260,7 @@ Write_Table <- function() {
 
     # BBN Rxn/TH PreHL Alone
     if (phase_current == "BBN" & task_current %in% c("Rxn", "TH") & !post_HL & detail_current == "Alone") {
-      rat_runs %>%
+      counts = rat_runs %>%
         tidyr::unnest_wider(assignment) %>%
         dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Alone") %>%
         group_by(task) %>%
@@ -274,7 +274,7 @@ Write_Table <- function() {
     # BBN Rxn/TH PreHL Mixed
     #TODO Untested as not in current dataset
     if (phase_current == "BBN" & task_current %in% c("Rxn", "TH") & !post_HL & detail_current == "Mixed") {
-      rat_runs %>%
+      counts = rat_runs %>%
         tidyr::unnest_wider(assignment) %>%
         dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Mixed") %>%
         group_by(task) %>%
@@ -288,7 +288,7 @@ Write_Table <- function() {
     # BBN Training/Reset PreHL Alone
     #TODO Untested as not in current dataset
     if (phase_current == "BBN" & task_current %in% c("Training", "Reset") & !post_HL & detail_current == "Alone") {
-      rat_runs %>%
+      counts = rat_runs %>%
         tidyr::unnest_wider(assignment) %>%
         dplyr::filter(phase == "BBN" & detail == "Alone") %>%
         group_by(task) %>%
@@ -302,7 +302,7 @@ Write_Table <- function() {
     # BBN Training/Reset PreHL Mixed
     #TODO Untested as not in current dataset
     if (phase_current == "BBN" & task_current %in% c("Training", "Reset") & !post_HL & detail_current == "Mixed") {
-      rat_runs %>%
+      counts = rat_runs %>%
         tidyr::unnest_wider(assignment) %>%
         dplyr::filter(phase == "BBN" & detail == "Mixed") %>%
         group_by(task) %>%
