@@ -246,6 +246,8 @@ Write_Table <- function() {
   }
 
   Build_Counts <- function() {
+    rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID)
+    run_today = rat_runs %>% dplyr::arrange(date) %>% tail(1)
     experiment_current <<- run_today$assignment[[1]]$experiment
     phase_current <<- run_today$assignment[[1]]$phase
     task_current <<- run_today$assignment[[1]]$task
