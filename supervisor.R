@@ -259,7 +259,7 @@ Write_Table <- function() {
     post_HL = is.na(dplyr::filter(rat_archive, Rat_ID == ratID)$HL_date) #(boolean)
 
     # BBN Rxn/TH PreHL Alone
-    if(phase_current == "BBN" & task_current %in% c("Rxn", "TH") & !post_HL & detail_current == "Alone"){
+    if (phase_current == "BBN" & task_current %in% c("Rxn", "TH") & !post_HL & detail_current == "Alone") {
       rat_runs %>%
         tidyr::unnest_wider(assignment) %>%
         dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Alone") %>%
@@ -272,9 +272,19 @@ Write_Table <- function() {
     }
 
     # BBN Rxn/TH PreHL Mixed
-    #   BBN Rxn PreHL Mixed
-    #   BBN Th PreHL Mixed
-    #
+    #TODO Untested as not in current dataset
+    if (phase_current == "BBN" & task_current %in% c("Rxn", "TH") & !post_HL & detail_current == "Mixed") {
+      rat_runs %>%
+        tidyr::unnest_wider(assignment) %>%
+        dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Mixed") %>%
+        group_by(task) %>%
+        summarise(task = unique(task), detail = unique(detail),
+                  date = tail(date, 1), n = n(),
+                  place_holder5 = NA,
+                  condition = "Baseline",
+                  place_holder7 = NA)
+    }
+
     # BBN Training/Reset PreHL Alone
     #   BBN Rxn PreHL Alone
     #   BBN TH PreHL Alone
