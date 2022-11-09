@@ -248,7 +248,7 @@ Write_Table <- function() {
   Build_Counts <- function() {
     rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID) %>% dplyr::arrange(date)
     run_today = rat_runs %>% dplyr::arrange(date) %>% tail(1)
-    run_today = rat_runs %>% arrange(date) %>% .[7,]
+    run_today = rat_runs %>% arrange(date) %>% .[12,]
     experiment_current <<- run_today$assignment[[1]]$experiment
     phase_current <<- run_today$assignment[[1]]$phase
     task_current <<- run_today$assignment[[1]]$task
@@ -256,10 +256,11 @@ Write_Table <- function() {
 
     # if experiment_current != Oddball
     # get current date and compare to rat_archive 'HL induced' column's date to determine post-HL or not
-    post_HL = is.na(dplyr::filter(rat_archive, Rat_ID == ratID)$HL_date) #(boolean)
+    pre_HL = is.na(dplyr::filter(rat_archive, Rat_ID == ratID)$HL_date) #(boolean)
+    if (pre_HL) HL_date = dplyr::filter(rat_archive, Rat_ID == ratID)$HL_date
 
     # BBN Rxn/TH PreHL Alone
-    if (phase_current == "BBN" & task_current %in% c("Rxn", "TH") & !post_HL & detail_current == "Alone") {
+    if (phase_current == "BBN" & task_current %in% c("Rxn", "TH") & pre_HL & detail_current == "Alone") {
       count_df = rat_runs %>%
         tidyr::unnest_wider(assignment) %>%
         dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Alone") %>%
@@ -272,7 +273,7 @@ Write_Table <- function() {
 
     # BBN Rxn/TH PreHL Mixed
     #TODO Untested as not in current dataset
-    if (phase_current == "BBN" & task_current %in% c("Rxn", "TH") & !post_HL & detail_current == "Mixed") {
+    if (phase_current == "BBN" & task_current %in% c("Rxn", "TH") & pre_HL & detail_current == "Mixed") {
       count_df = rat_runs %>%
         tidyr::unnest_wider(assignment) %>%
         dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Mixed") %>%
@@ -285,7 +286,7 @@ Write_Table <- function() {
 
     # BBN Training/Reset PreHL Alone
     #TODO Untested as not in current dataset
-    if (phase_current == "BBN" & task_current %in% c("Training", "Reset") & !post_HL & detail_current == "Alone") {
+    if (phase_current == "BBN" & task_current %in% c("Training", "Reset") & pre_HL & detail_current == "Alone") {
       count_df = rat_runs %>%
         tidyr::unnest_wider(assignment) %>%
         dplyr::filter(phase == "BBN" & detail == "Alone") %>%
@@ -298,7 +299,7 @@ Write_Table <- function() {
 
     # BBN Training/Reset PreHL Mixed
     #TODO Untested as not in current dataset
-    if (phase_current == "BBN" & task_current %in% c("Training", "Reset") & !post_HL & detail_current == "Mixed") {
+    if (phase_current == "BBN" & task_current %in% c("Training", "Reset") & pre_HL & detail_current == "Mixed") {
       count_df = rat_runs %>%
         tidyr::unnest_wider(assignment) %>%
         dplyr::filter(phase == "BBN" & detail == "Mixed") %>%
@@ -310,7 +311,7 @@ Write_Table <- function() {
     }
 
     # Tones Rxn/TH PreHL
-    if (phase_current == "Tones" & task_current %in% c("Rxn", "TH") & !post_HL) {
+    if (phase_current == "Tones" & task_current %in% c("Rxn", "TH") & pre_HL) {
       count_df = rat_runs %>%
         tidyr::unnest_wider(assignment) %>%
         dplyr::filter(phase == "Tones" & task_current %in% c("Rxn", "TH")) %>%
@@ -324,7 +325,7 @@ Write_Table <- function() {
 
     # Tones Training/Reset PreHL
     #TODO Untested as not in current dataset
-    if (phase_current == "Tones" & task_current %in% c("Training", "Reset") & !post_HL) {
+    if (phase_current == "Tones" & task_current %in% c("Training", "Reset") & !pre_HL) {
       count_df = rat_runs %>%
         tidyr::unnest_wider(assignment) %>%
         dplyr::filter(phase == "Tones") %>% # keeping all tasks
