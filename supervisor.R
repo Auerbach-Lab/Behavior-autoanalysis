@@ -253,7 +253,7 @@ Write_Table <- function() {
 
     # if experiment_current != Oddball
     # get current date and compare to rat_archive 'HL induced' column's date to determine post-HL or not
-    # post-HL = ... (boolean)
+    post_HL = is.na(dplyr::filter(rat_archive, Rat_ID == ratID)$HL_date) #(boolean)
 
     # BBN Rxn/TH PreHL Alone
     #   BBN Rxn PreHL Alone
