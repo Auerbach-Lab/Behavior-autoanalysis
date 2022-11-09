@@ -257,7 +257,7 @@ Write_Table <- function() {
     # if experiment_current != Oddball
     # get current date and compare to rat_archive 'HL induced' column's date to determine post-HL or not
     pre_HL = is.na(dplyr::filter(rat_archive, Rat_ID == ratID)$HL_date) #(boolean)
-    if (pre_HL) HL_date = dplyr::filter(rat_archive, Rat_ID == ratID)$HL_date
+    if (!pre_HL) HL_date = dplyr::filter(rat_archive, Rat_ID == ratID)$HL_date
 
     # BBN Rxn/TH PreHL Alone
     if (phase_current == "BBN" & task_current %in% c("Rxn", "TH") & pre_HL & detail_current == "Alone") {
@@ -267,7 +267,7 @@ Write_Table <- function() {
         group_by(task) %>%
         summarise(task = unique(task), detail = unique(detail),
                   date = tail(date, 1), n = n(),
-                  condition = "Baseline",
+                  condition = "baseline",
                   .groups = "drop")
     }
 
@@ -280,7 +280,7 @@ Write_Table <- function() {
         group_by(task) %>%
         summarise(task = unique(task), detail = unique(detail),
                   date = tail(date, 1), n = n(),
-                  condition = "Baseline",
+                  condition = "baseline",
                   .groups = "drop")
     }
 
@@ -293,7 +293,7 @@ Write_Table <- function() {
         group_by(task) %>%
         summarise(task = unique(task), detail = unique(detail),
                   date = tail(date, 1), n = n(),
-                  condition = "Baseline",
+                  condition = "baseline",
                   .groups = "drop")
     }
 
@@ -306,7 +306,7 @@ Write_Table <- function() {
         group_by(task) %>%
         summarise(task = unique(task), detail = unique(detail),
                   date = tail(date, 1), n = n(),
-                  condition = "Baseline",
+                  condition = "baseline",
                   .groups = "drop")
     }
 
@@ -318,7 +318,7 @@ Write_Table <- function() {
         group_by(task) %>%
         summarise(task = unique(task), detail = unique(detail),
                   date = tail(date, 1), n = n(),
-                  condition = "Baseline",
+                  condition = "baseline",
                   .groups = "drop") %>%
         dplyr::arrange(dplyr::desc(detail), task)
     }
@@ -332,23 +332,40 @@ Write_Table <- function() {
         group_by(task) %>%
         summarise(task = unique(task), detail = NA,
                   date = tail(date, 1), n = n(),
-                  condition = "Baseline",
+                  condition = "baseline",
                   .groups = "drop")
     }
 
     # BBN/Tones Rxn/TH PostHL
-    #   BBN TH PreHL Alone
-    #   BBN Rxn PostHL Alone
-    #   BBN TH PostHL Alone
-    #   Tones Rxn PostHL 50dB-PKN
-    #   Tones Rxn PostHL 30dB-PKN
-    #   Tones Rxn PostHL 50dB-WN
-    #   Tones TH PostHL None
-    #   Tones Rxn PreHL 50dB-PKN
-    #   Tones Rxn PreHL 30dB-PKN
-    #   Tones Rxn PreHL 50dB-WN
-    #   Tones TH PreHL None
-    #
+    if (phase_current %in% c("BBN", "Tones") & task_current %in% c("Rxn", "TH") & !pre_HL) {
+     df = rat_runs %>%
+        mutate(condition = dplyr::if_else(date <= HL_date, "baseline", "post-HL")) %>%
+        tidyr::unnest_wider(assignment)
+
+     BBN_counts = df %>%
+        dplyr::filter(phase == "BBN") %>%
+        dplyr::filter((task == "TH" & condition == "baseline" & detail == "Alone") #TODO need to limit to current duration/50ms
+                      | (condition == "post-HL" & detail == "Alone")) %>%
+        group_by(task, condition) %>%
+        summarise(task = paste("BBN", unique(task)), detail = unique(detail),
+                  date = tail(date, 1), n = n(),
+                  condition = unique(condition),
+                  .groups = "drop") %>%
+        dplyr::arrange(condition, task)
+
+     Tones_counts = df %>%
+       dplyr::filter(phase == "Tones") %>%
+       dplyr::filter(task %in% c("Rxn", "TH")) %>%
+       group_by(task, condition) %>%
+       summarise(task = paste("Tones", unique(task)), detail = unique(detail),
+                 date = tail(date, 1), n = n(),
+                 condition = unique(condition),
+                 .groups = "drop") %>%
+       dplyr::arrange(condition, task)
+
+     count_df = rbind(BBN_counts, Tones_counts)
+    }
+
     # BBN Training/Reset PostHL
     #   BBN Rxn PostHL
     #   BBN TH PostHL
