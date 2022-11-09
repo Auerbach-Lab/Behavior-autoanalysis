@@ -286,17 +286,33 @@ Write_Table <- function() {
     }
 
     # BBN Training/Reset PreHL Alone
-    #   BBN Rxn PreHL Alone
-    #   BBN TH PreHL Alone
-    #   BBN Training PreHL Alone
-    #   BBN Reset PreHL Alone
-    #
+    #TODO Untested as not in current dataset
+    if (phase_current == "BBN" & task_current %in% c("Training", "Reset") & !post_HL & detail_current == "Alone") {
+      rat_runs %>%
+        tidyr::unnest_wider(assignment) %>%
+        dplyr::filter(phase == "BBN" & detail == "Alone") %>%
+        group_by(task) %>%
+        summarise(task = unique(task), detail = unique(detail),
+                  date = tail(date, 1), n = n(),
+                  place_holder5 = NA,
+                  condition = "Baseline",
+                  place_holder7 = NA)
+    }
+
     # BBN Training/Reset PreHL Mixed
-    #   BBN Rxn PreHL Mixed
-    #   BBN TH PreHL Mixed
-    #   BBN Training PreHL Mixed
-    #   BBN Reset PreHL Mixed
-    #
+    #TODO Untested as not in current dataset
+    if (phase_current == "BBN" & task_current %in% c("Training", "Reset") & !post_HL & detail_current == "Mixed") {
+      rat_runs %>%
+        tidyr::unnest_wider(assignment) %>%
+        dplyr::filter(phase == "BBN" & detail == "Mixed") %>%
+        group_by(task) %>%
+        summarise(task = unique(task), detail = unique(detail),
+                  date = tail(date, 1), n = n(),
+                  place_holder5 = NA,
+                  condition = "Baseline",
+                  place_holder7 = NA)
+    }
+
     # Tones Rxn/TH PreHL
     #   Tones Rxn PreHL 50dB-PKN
     #   Tones Rxn PreHL 30dB-PKN
