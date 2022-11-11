@@ -325,7 +325,7 @@ Write_Table <- function() {
 
     # Tones Training/Reset PreHL
     #TODO Untested as not in current dataset
-    if (phase_current == "Tones" & task_current %in% c("Training", "Reset") & !pre_HL) {
+    if (phase_current == "Tones" & task_current %in% c("Training", "Reset") & pre_HL) {
       count_df = rat_runs %>%
         tidyr::unnest_wider(assignment) %>%
         dplyr::filter(phase == "Tones") %>% # keeping all tasks
@@ -338,11 +338,11 @@ Write_Table <- function() {
 
     # BBN/Tones Rxn/TH PostHL
     if (phase_current %in% c("BBN", "Tones") & task_current %in% c("Rxn", "TH") & !pre_HL) {
-     df = rat_runs %>%
+      df = rat_runs %>%
         mutate(condition = dplyr::if_else(date <= HL_date, "baseline", "post-HL")) %>%
         tidyr::unnest_wider(assignment)
 
-     BBN_counts = df %>%
+      BBN_counts = df %>%
         dplyr::filter(phase == "BBN") %>%
         dplyr::filter((task == "TH" & condition == "baseline" & detail == "Alone") #TODO need to limit to current duration/50ms
                       | (condition == "post-HL" & detail == "Alone")) %>%
@@ -353,31 +353,45 @@ Write_Table <- function() {
                   .groups = "drop") %>%
         dplyr::arrange(condition, task)
 
-     Tones_counts = df %>%
-       dplyr::filter(phase == "Tones") %>%
-       dplyr::filter(task %in% c("Rxn", "TH")) %>%
-       group_by(task, condition) %>%
-       summarise(task = paste("Tones", unique(task)), detail = unique(detail),
-                 date = tail(date, 1), n = n(),
-                 condition = unique(condition),
-                 .groups = "drop") %>%
-       dplyr::arrange(condition, task)
+      Tones_counts = df %>%
+        dplyr::filter(phase == "Tones") %>%
+        dplyr::filter(task %in% c("Rxn", "TH")) %>%
+        group_by(task, condition) %>%
+        summarise(task = paste("Tones", unique(task)), detail = unique(detail),
+                  date = tail(date, 1), n = n(),
+                  condition = unique(condition),
+                  .groups = "drop") %>%
+        dplyr::arrange(condition, task)
 
-     count_df = rbind(BBN_counts, Tones_counts)
+      count_df = rbind(BBN_counts, Tones_counts)
     }
 
     # BBN Training/Reset PostHL
-    #   BBN Rxn PostHL
-    #   BBN TH PostHL
-    #   BBN Training PostHL
-    #   BBN Reset PostHL
-    #
+    #TODO Partially tested as not in current dataset
+    if (phase_current == "BBN" & task_current %in% c("Training", "Reset") & !pre_HL) {
+      count_df = rat_runs %>%
+        tidyr::unnest_wider(assignment) %>%
+        dplyr::filter(phase == "BBN" & date <= HL_date) %>%
+        group_by(task) %>%
+        summarise(task = unique(task), detail = NA,
+                  date = tail(date, 1), n = n(),
+                  condition = "post-HL",
+                  .groups = "drop")
+    }
+
     # Tones Training/Reset PostHL
-    #   Tones Rxn PostHL
-    #   Tones TH PostHL
-    #   Tones TraiostHL PostHL
-    #   Tones Reset PostHL
-    #
+    #TODO Partially tested as not in current dataset
+    if (phase_current == "Tones" & task_current %in% c("Training", "Reset") & !pre_HL) {
+      count_df = rat_runs %>%
+        tidyr::unnest_wider(assignment) %>%
+        dplyr::filter(phase == "Tones") %>% # keeping all tasks
+        group_by(task) %>%
+        summarise(task = unique(task), detail = NA,
+                  date = tail(date, 1), n = n(),
+                  condition = "post-HL",
+                  .groups = "drop")
+    }
+
     # Octave
     #   Discrimination Normal currentcondition
     #   Discrimination Reversed currentcondition
