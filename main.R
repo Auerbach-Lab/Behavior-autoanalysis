@@ -1243,6 +1243,7 @@ Add_to_Run_Archive <- function() {
     }
 
     # using data.frame instead of tibble automatically can unpack $stats into columns but still need concatenation for warnings_list
+    #TODO: add duration probably to summary - if yes then handle it in supervisor as well, if no put it as big column?
     r = tibble(
       date = date,
       time = time,

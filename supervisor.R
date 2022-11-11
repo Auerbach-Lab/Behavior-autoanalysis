@@ -493,7 +493,7 @@ Write_Table <- function() {
         dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
         dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
         tidyr::unnest_wider(assignment) %>%
-        tidyr::unnest(summary) %>%
+        tidyr::unnest(summary) %>% #TODO need to handle new 'duation' column
         select(task, detail, date, `Freq (kHz)`, dB_min, dB_max) %>%
         dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
         group_by(date, task, detail, `Freq (kHz)`) %>% #do(print(.))
