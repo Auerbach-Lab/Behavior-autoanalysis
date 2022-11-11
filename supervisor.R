@@ -248,7 +248,7 @@ Write_Table <- function() {
   Build_Counts <- function() {
     rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID) %>% dplyr::arrange(date)
     run_today = rat_runs %>% dplyr::arrange(date) %>% tail(1)
-    run_today = rat_runs %>% arrange(date) %>% .[12,]
+    run_today = rat_runs %>% arrange(date) %>% .[16,]
     experiment_current <<- run_today$assignment[[1]]$experiment
     phase_current <<- run_today$assignment[[1]]$phase
     task_current <<- run_today$assignment[[1]]$task
@@ -393,11 +393,28 @@ Write_Table <- function() {
     }
 
     # Octave
-    #   Discrimination Normal currentcondition
-    #   Discrimination Reversed currentcondition
-    #   Training Normal currentcondition
-    #   Training Reversed currentcondition
-    #
+    if (phase_current == "Octave") {
+      if(pre_HL) {
+        count_df = rat_runs %>%
+          tidyr::unnest_wider(assignment) %>%
+          dplyr::filter(phase == "Octave") %>% # keeping all tasks
+          group_by(task, detail) %>%
+          summarise(task = unique(task), detail = unique(detail),
+                    date = tail(date, 1), n = n(),
+                    condition = "baseline",
+                    .groups = "drop")
+      } else {
+        count_df = rat_runs %>%
+          tidyr::unnest_wider(assignment) %>%
+          dplyr::filter(phase == "Octave" & date >= HL_date) %>% # keeping all tasks
+          group_by(task, detail) %>%
+          summarise(task = unique(task), detail = unique(detail),
+                    date = tail(date, 1), n = n(),
+                    condition = "post-HL",
+                    .groups = "drop")
+      }
+    }
+
     # Oddball
     #   BaseCase "of the most recent consecutive days" (current streak)
     #   currenttask currentdetail
