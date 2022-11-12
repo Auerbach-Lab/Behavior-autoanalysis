@@ -2,7 +2,7 @@
 library(R.matlab); library(openxlsx); library(xml2); library(zip);
 
 # data manipulation
-library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr);
+library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr); library(data.table)
 
 
 Read_Filled_Sheet <- function() {
@@ -248,7 +248,6 @@ Write_Table <- function() {
   Build_Counts <- function() {
     rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID) %>% dplyr::arrange(date)
     run_today = rat_runs %>% dplyr::arrange(date) %>% tail(1)
-    run_today = rat_runs %>% arrange(date) %>% .[16,]
     experiment_current <<- run_today$assignment[[1]]$experiment
     phase_current <<- run_today$assignment[[1]]$phase
     task_current <<- run_today$assignment[[1]]$task
@@ -416,8 +415,30 @@ Write_Table <- function() {
     }
 
     # Oddball
-    #   BaseCase "of the most recent consecutive days" (current streak)
-    #   currenttask currentdetail
+    if (experiment_current == "Oddball") {
+      df_basecase = rat_runs %>%
+        tidyr::unnest_wider(assignment) %>%
+        dplyr::filter(phase == phase_current & task == "Base case") %>% # note that this is agnostic of the most recent detail and will return any recent base case streak
+        mutate( groupid = data.table::rleid(task, detail) ) %>%
+        filter(groupid == max(groupid)) %>%
+        summarise(task = unique(task), detail = unique(detail),
+                  date = tail(date, 1), n = n(),
+                  condition = NA,
+                  .groups = "drop")
+
+      if (task_current != "Base case") {
+        df_task = rat_runs %>%
+          tidyr::unnest_wider(assignment) %>%
+          dplyr::filter(phase == phase_current & task == task_current) %>%
+          summarise(task = unique(task), detail = unique(detail),
+                    date = tail(date, 1), n = n(),
+                    condition = NA,
+                    .groups = "drop")
+
+        # This ensures that the Base case is always at the top
+        count_df = rbind(df_basecase, df_task)
+      } else count_df = df_basecase
+    }
 
   }
 
