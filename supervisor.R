@@ -339,11 +339,12 @@ Write_Table <- function() {
     if (phase_current %in% c("BBN", "Tones") & task_current %in% c("Rxn", "TH") & !pre_HL) {
       df = rat_runs %>%
         mutate(condition = dplyr::if_else(date <= HL_date, "baseline", "post-HL")) %>%
-        tidyr::unnest_wider(assignment)
+        tidyr::unnest_wider(assignment) %>%
+        dplyr::mutate(duration = dplyr::if_else(length(summary$duration) == 1, unlist(summary$duration), "Mixed")) # TODO: Test
 
       BBN_counts = df %>%
         dplyr::filter(phase == "BBN") %>%
-        dplyr::filter((task == "TH" & condition == "baseline" & detail == "Alone") #TODO need to limit to current duration/50ms
+        dplyr::filter((task == "TH" & condition == "baseline" & detail == "Alone" & duration == 50) #TODO need to limit to current duration/50ms test
                       | (condition == "post-HL" & detail == "Alone")) %>%
         group_by(task, condition) %>%
         summarise(task = paste("BBN", unique(task)), detail = unique(detail),
@@ -545,7 +546,7 @@ Write_Table <- function() {
         dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
         dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
         tidyr::unnest_wider(assignment) %>%
-        tidyr::unnest(summary) %>% #TODO need to handle new 'duation' column
+        tidyr::unnest(summary) %>%
         select(task, detail, date, `Freq (kHz)`, dB_min, dB_max) %>%
         dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
         group_by(date, task, detail, `Freq (kHz)`) %>% #do(print(.))

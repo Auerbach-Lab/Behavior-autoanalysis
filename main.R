@@ -411,6 +411,7 @@ Identify_Analysis_Type <- function() {
       dplyr::summarise(dB_min = min(dB),
                        dB_max = max(dB),
                        dB_step_size = dB - lag(dB, default = first(dB)),
+                       duration = run_properties$duration,  #TODO: TEST
                        .groups = 'keep')
     # still grouped following this step, which is needed to remove the 1st row of each table that has a 0 step_size that is wrong for files with actual step_sizes
 
