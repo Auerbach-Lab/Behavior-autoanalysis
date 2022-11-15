@@ -1265,6 +1265,7 @@ Add_to_Run_Archive <- function() {
 
       invalid = "",    # supervisor can manually mark runs as invalid, putting reasoning here
       comments = observations,    #   undergrad comments
+      # check = list(check), # TODO: graphs and UG sign offs will go here
       warnings_list = list(warnings_list),    #   warnings list
       omit_list = run_properties$omit_list,    #   omit list?
       UUID = run_properties$UUID    #   uuid
