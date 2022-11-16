@@ -125,7 +125,7 @@ Write_Header <- function() {
   Write_Dynamic_Lists()
 
   #Rat Name
-  rat_name = run$rat_name %>% stringr::str_to_upper(string = .)
+  rat_name = run_today$rat_name %>% stringr::str_to_upper(string = .)
   digit_index = str_locate(string = rat_name, pattern = "[:digit:]")[1]
   rat_name = paste0(stringr::str_sub(rat_name, 1, digit_index - 1),
                     " ",
@@ -199,7 +199,7 @@ Write_Header <- function() {
 
   #Entire Main Row
   addStyle(wb, 1, rows = row, cols = 1:29, style = rat_header_style, stack = TRUE) # vertically center & wrap the main row
-  Set_Height_Main_Row()
+  #Set_Height_Main_Row()
 
   rat_header_df = data.frame(
     rat_name, #A
@@ -228,11 +228,6 @@ Write_Header <- function() {
 }
 
 Write_Table <- function() {
-  Parse_Warnings <- function () {
-    r = run$warnings_list[[1]] %>% unlist() %>% stringr::str_c(collapse = "\t")
-    return(r)
-  }
-
   Build_Counts <- function() {
     # if experiment_current != Oddball
     # get current date and compare to rat_archive 'HL induced' column's date to determine post-HL or not
@@ -693,7 +688,8 @@ Write_Table <- function() {
   addStyle(wb, 1, today_style, rows = row_today, cols = 1:29)
 
   # copy today's warnings
-  writeData (wb, 1, x = df_table[today_offset, 28], startRow = row, startCol = 29)
+  warns = df_table[today_offset, 28] %>% unlist() %>% stringr::str_c(collapse = "\n")
+  writeData (wb, 1, x = warns, startRow = row, startCol = 29)
 
   # style the key
   addStyle(wb, 1, key_style, rows = row_key_start:row_key_end, cols = 1:29, gridExpand = TRUE)
