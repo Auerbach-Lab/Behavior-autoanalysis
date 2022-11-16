@@ -1,6 +1,6 @@
 
 Initialize <- function() {
-   Load_Packages <- function() {
+  Load_Packages <- function() {
     # data loading external file formats
     library(R.matlab);
 
@@ -37,7 +37,8 @@ Import_Matlab <- function(file_to_load) {
       # Warning
       if (nrow(stim_not_unique) != 0) {
         warn = paste0("ACTION REQUIRED: Multiple (", nrow(stim_not_unique), ") identical stims.")
-        warning(paste0(warn, "\n"))
+        warn = paste0(warn, "\n")
+        warning(warn)
         warnings_list <<- append(warnings_list, warn)
       }
 
@@ -49,7 +50,8 @@ Import_Matlab <- function(file_to_load) {
 
         if (xor(freq_current == 0, source_current == "BBN")) {
           warn = paste0("ACTION REQUIRED: Source (", source_current, ") does not match single Frequency (", freq_current, " kHz).")
-          warning(paste0(warn, "\n"))
+          warn = paste0(warn, "\n")
+          warning(warn)
           warnings_list <<- append(warnings_list, warn)
 
           if (freq_current == 0) source_corrected = "BBN"
@@ -57,7 +59,8 @@ Import_Matlab <- function(file_to_load) {
           stim_encoding_table <<- stim_encoding_table %>%
             dplyr::mutate(`Stim Source` = stringr::str_replace(`Stim Source`, source_current, source_corrected))
           warn = paste0("Overriding Stim Source: Old (", source_current, ") to New (", source_corrected, ") based on single Frequency (", freq_current, " kHz).")
-          warning(paste0(warn, "\n"))
+          warn = paste0(warn, "\n")
+          warning(warn)
           warnings_list <<- append(warnings_list, warn)
         }
       }
@@ -72,8 +75,8 @@ Import_Matlab <- function(file_to_load) {
     names(stim_encoding_table) = append(unlist(trial_collection$stim.tag.list), "Repeat_number", after = 0)
     # fix column types to reflect contents (i.e. character -> numeric)
     stim_encoding_table = stim_encoding_table %>% dplyr::mutate_at(
-        vars(Repeat_number, Type, `Freq (kHz)`, `Inten (dB)`, `Dur (ms)`, `Nose Out TL (s)`, `Time Out (s)`),
-        ~as.numeric(.))
+      vars(Repeat_number, Type, `Freq (kHz)`, `Inten (dB)`, `Dur (ms)`, `Nose Out TL (s)`, `Time Out (s)`),
+      ~as.numeric(.))
     # Add identifying number (for decoding)
     stim_encoding_table = dplyr::mutate(stim_encoding_table, "Stim_ID" = row_number())
 
@@ -94,9 +97,9 @@ Import_Matlab <- function(file_to_load) {
     Get_Rat_Name <- function() {
       # greedy group: (.*) to strip off as much as possible
       # then the main capture group which contains
-        # lookbehind for a \ escaped once because R, and then again cause regex, to \\\\: (?<=\\\\)
-        # capture of the rat name, lazy to avoid underscores: .+?
-        # lookahead for a _: (?=_)
+      # lookbehind for a \ escaped once because R, and then again cause regex, to \\\\: (?<=\\\\)
+      # capture of the rat name, lazy to avoid underscores: .+?
+      # lookahead for a _: (?=_)
       r = stringr::str_match_all(file_to_load, pattern="(.*)((?<=\\\\).+?(?=_))") %>%
         unlist(recursive = TRUE) %>%
         tail (n = 1)
@@ -129,7 +132,8 @@ Import_Matlab <- function(file_to_load) {
       }
       if (length(r)>1) {
         warn = paste0("ACTION REQUIRED: Multiple delay windows (", r, ").")
-        warning(paste0(warn, "\n"))
+        warn = paste0(warn, "\n")
+        warning(warn)
         warnings_list <<- append(warnings_list, warn)
       }
       return(r)
@@ -209,7 +213,8 @@ Import_Matlab <- function(file_to_load) {
     filename_TR = stringr::str_extract(r$stim_filename,"_TR[:digit:]+ms") %>% str_extract("[:digit:]+") %>% as.numeric()
     if (!is.na(filename_TR)) if (filename_TR != r$trigger_sensitivity) {
       warn = paste0("ACTION REQUIRED: Mismatched trigger window in filename (", filename_TR, ") and user_settings (", r$trigger_sensitivity, ").")
-      warning(paste0(warn, "\n"))
+      warn = paste0(warn, "\n")
+      warning(warn)
       warnings_list <<- append(warnings_list, warn)
 
       if (r$trigger_sensitivity != 200) {
@@ -220,7 +225,8 @@ Import_Matlab <- function(file_to_load) {
       }
 
       warn = paste0("Overriding File Name: Old (", r$stim_filename, ") to New (", newname, ") based on trigger_sensitivity.")
-      warning(paste0(warn, "\n"))
+      warn = paste0(warn, "\n")
+      warning(warn)
       warnings_list <<- append(warnings_list, warn)
       r$stim_filename = newname
     }
@@ -314,34 +320,34 @@ Import_Matlab <- function(file_to_load) {
           dplyr::filter(...1 != "")
       })
 
-     whole_numbers = omit_list %>%
+      whole_numbers = omit_list %>%
         dplyr::filter(!str_detect(string = ...1, pattern = "-")) %>%
         as.list() %>% unlist(recursive = TRUE) %>% as.numeric()
 
-     ranges = omit_list %>%
-       dplyr::filter(str_detect(string = ...1, pattern = "-"))
+      ranges = omit_list %>%
+        dplyr::filter(str_detect(string = ...1, pattern = "-"))
 
-     if(nrow(ranges)) {
-       ranges = ranges %>%
-         rowwise() %>%
-         mutate(min = stringr::str_extract(string = ...1, pattern = "[:digit:]+(?=-)") %>% as.numeric(),
-                max = stringr::str_extract(string = ...1, pattern = "(?<=-)[:digit:]+") %>% as.numeric(),
-                s = list(seq(min,max))) %>%
-         .$s %>% as.list() %>% unlist(recursive = TRUE)
-       omit_list = c(whole_numbers, ranges)
-     } else {
-       omit_list = whole_numbers
-     }
+      if(nrow(ranges)) {
+        ranges = ranges %>%
+          rowwise() %>%
+          mutate(min = stringr::str_extract(string = ...1, pattern = "[:digit:]+(?=-)") %>% as.numeric(),
+                 max = stringr::str_extract(string = ...1, pattern = "(?<=-)[:digit:]+") %>% as.numeric(),
+                 s = list(seq(min,max))) %>%
+          .$s %>% as.list() %>% unlist(recursive = TRUE)
+        omit_list = c(whole_numbers, ranges)
+      } else {
+        omit_list = whole_numbers
+      }
 
       omit_list = sort(omit_list)
       old_omit_list = unlist(tail(run_archive$omit_list, n = 1), recursive = TRUE)
 
       if (identical(omit_list, old_omit_list)) stop(paste0("ERROR: Stale exclude/omit list detected.\nPrior ",
-                                                    tail(run_archive$rat_name, n = 1), " omitted trials: ",
-                                                    paste(old_omit_list, collapse = " "), "\n",
-                                                    "Current file ", run_properties$rat_name, " omitting: ",
-                                                    paste(omit_list, collapse = " "), "\n",
-                                                    "Please correct omit list and try again."))
+                                                           tail(run_archive$rat_name, n = 1), " omitted trials: ",
+                                                           paste(old_omit_list, collapse = " "), "\n",
+                                                           "Current file ", run_properties$rat_name, " omitting: ",
+                                                           paste(omit_list, collapse = " "), "\n",
+                                                           "Please correct omit list and try again."))
 
       return(omit_list)
     }
@@ -388,7 +394,7 @@ Import_Matlab <- function(file_to_load) {
 
 
 
-# Import Workflow ---------------------------------------------------------
+  # Import Workflow ---------------------------------------------------------
   cat("Loading file...", file_to_load, sep = "\t", fill = TRUE)
   current_mat_file = R.matlab::readMat(file_to_load)
   trial_collection = current_mat_file$stim[,,1] # all (1000) trial configurations, and the parameters specified to generate individual trials
@@ -422,7 +428,8 @@ Identify_Analysis_Type <- function() {
     # Check for mismatched step size
     if (length(unique(run_properties$summary$dB_step_size)) != 1) {
       warn = paste0("ACTION REQUIRED: Mismatched step size (", unique(run_properties$summary$dB_step_size), ").")
-      warning(paste0(warn, "\n"))
+      warn = paste0(warn, "\n")
+      warning(warn)
       warnings_list <<- append(warnings_list, warn)
     }
     return(run_properties$summary)
@@ -571,7 +578,8 @@ Build_Filename <- function() {
   Check_Delay <- function(expected_delay) {
     if (run_properties$delay != expected_delay) {
       warn = paste0("ACTION REQUIRED: wrong delay window (", run_properties$delay, ") does not match expectation (", expected_delay, ")")
-      warning(paste0(warn, "\n"))
+      warn = paste0(warn, "\n")
+      warning(warn)
       warnings_list <<- append(warnings_list, warn)
     }
   }
@@ -743,7 +751,7 @@ Build_Filename <- function() {
 
 
 
-# Build Filename Workflow -------------------------------------------------
+  # Build Filename Workflow -------------------------------------------------
   delay_in_filename = FALSE
   expected_delay = user_settings$delay_default
   computed_file_name = switch(run_properties$stim_type,
@@ -758,7 +766,8 @@ Build_Filename <- function() {
     if (!(run_properties$stim_filename %in% computed_file_name)) {
       warn = paste0("\nCaution: mismatch in provided filename: ", run_properties$stim_filename, "\n",
                     "       potentially acceptable filename: ", computed_file_name, "")
-      warning(paste0(warn, "\n"))
+      warn = paste0(warn, "\n")
+      warning(warn)
       warnings_list <<- append(warnings_list, warn)
       computed_file_name = "BAD_FILENAME" #TODO: User input to choose which of the computed filenames to use
     }
@@ -769,7 +778,8 @@ Build_Filename <- function() {
     if (run_properties$stim_filename != computed_file_name) {
       warn = paste0("Caution: mismatch in provided filename: ", run_properties$stim_filename, "\n  ",
                     "       calculated filename by contents: ", computed_file_name)
-      warning(paste0(warn, "\n"))
+      warn = paste0(warn, "\n")
+      warning(warn)
       warnings_list <<- append(warnings_list, warn)
     }
   }
@@ -804,7 +814,8 @@ Check_Assigned_Filename <- function() {
     warn = paste0("ACTION REQUIRED: Was rat run on the wrong file?\n",
                   "ERROR: Filename -- ", analysis$computed_file_name, " -- does not match\n",
                   "     Assignment -- ", analysis$assigned_file_name, "")
-    warning(paste0(warn, "\n"))
+    warn = paste0(warn, "\n")
+    warning(warn)
     warnings_list <<- append(warnings_list, warn)
     r = FALSE
   }
@@ -964,9 +975,9 @@ Calculate_Summary_Statistics <- function() {
         unnest(Rxn)
     }
 
-      r = r %>%
-        group_by(`Dur (ms)`, `Freq (kHz)`, `Inten (dB)`) %>%
-        summarise(Rxn = mean(`Reaction_(s)`, na.rm = T), .groups = "keep")
+    r = r %>%
+      group_by(`Dur (ms)`, `Freq (kHz)`, `Inten (dB)`) %>%
+      summarise(Rxn = mean(`Reaction_(s)`, na.rm = T), .groups = "keep")
     return(r)
   }
 
@@ -1032,10 +1043,10 @@ Calculate_Summary_Statistics <- function() {
   #overall_TH = Calculate_Threshold() #TODO overall calculation using trials archive
   reaction = Calculate_Reaction_Time() #NOTE this can take audible only (default false) or min time (default 0.015)
   dprime = psycho::dprime(n_hit = hits,
-                           n_fa = FAs,
-                           n_miss = misses,
-                           n_cr = CRs,
-                           adjusted = TRUE) %>% .$dprime
+                          n_fa = FAs,
+                          n_miss = misses,
+                          n_cr = CRs,
+                          adjusted = TRUE) %>% .$dprime
 
   stats = list(
     trial_count = trial_count,
@@ -1060,25 +1071,29 @@ Calculate_Summary_Statistics <- function() {
 Check_Performance_Cutoffs <- function() {
   if (analysis$stats$trial_count < analysis$minimum_trials) { # this is ANALYSIS$minimum_trials which was set during analysis step, varies by type
     warn = paste0("Low trial count: ", analysis$stats$trial_count, " (cutoff is ", analysis$minimum_trials,")")
-    warning(paste0(warn, "\n"))
+    warn = paste0(warn, "\n")
+    warning(warn)
     warnings_list <<- append(warnings_list, warn)
   }
 
   if (analysis$stats$hit_percent < user_settings$minimum_hit_percent) {
     warn = paste0("Low hit rate: ", round(analysis$stats$hit_percent * 100, digits = 1), "%")
-    warning(paste0(warn, "\n"))
+    warn = paste0(warn, "\n")
+    warning(warn)
     warnings_list <<- append(warnings_list, warn)
   }
 
   if (analysis$stats$FA_percent > user_settings$maximum_FA_percent) {
     warn = paste0("High false alarm (FA) rate: ", round(analysis$stats$FA_percent * 100, digits = 1), "%")
-    warning(paste0(warn, "\n"))
+    warn = paste0(warn, "\n")
+    warning(warn)
     warnings_list <<- append(warnings_list, warn)
   }
 
   if (analysis$stats$mean_attempts_per_trial > user_settings$maximum_attempts_per_trial) {
     warn = paste0("High mean attempts per trial: ", round(analysis$stats$mean_attempts_per_trial, digits = 2))
-    warning(paste0(warn, "\n"))
+    warn = paste0(warn, "\n")
+    warning(warn)
     warnings_list <<- append(warnings_list, warn)
   }
 }
@@ -1119,7 +1134,8 @@ Check_Multipart_Run <- function () {
     Renumber_Complete_Blocks()
     warn = paste0("Multiple runs detected for rat (", run_properties$rat_name, ") on this date (", analysis$date, ").",
                   "\n  Renumbering complete blocks.")
-    warning(paste0(warn, "\n"))
+    warn = paste0(warn, "\n")
+    warning(warn)
     warnings_list <<- append(warnings_list, warn)
 
     #TODO: handle duplicating file assignment to extra runs
@@ -1170,7 +1186,8 @@ Check_Weight <- function() {
 
   if(rlang::is_empty(rat_weights)) {
     warn = paste0("No weight data in run archive for ", run_properties$rat_name, "(", Get_Rat_ID(run_properties$rat_name), "). Is this rat new?")
-    warning(paste0(warn, "\n"))
+    warn = paste0(warn, "\n")
+    warning(warn)
     warnings_list <<- append(warnings_list, warn)
     analysis$weight_change <<- 0
   } else {
@@ -1178,7 +1195,8 @@ Check_Weight <- function() {
 
     if(rlang::is_empty(old_weight)) {
       warn = paste0("No weights for ", run_properties$rat_name, "(", Get_Rat_ID(run_properties$rat_name), ") prior to ", date_asDate, ".")
-      warning(paste0(warn, "\n"))
+      warn = paste0(warn, "\n")
+      warning(warn)
       warnings_list <<- append(warnings_list, warn)
       analysis$weight_change <<- 0
     } else {
@@ -1189,12 +1207,14 @@ Check_Weight <- function() {
 
       if (-1 * weight_change_daily_percent > user_settings$maximum_weight_change_daily_percent) {
         warn = paste0("ACTION REQUIRED: Weight fell by more than ", 100*user_settings$maximum_weight_change_daily_percent, "% in one day. (", old_weight, " -> ", analysis$weight, ").")
-        warning(paste0(warn, "\n"))
+        warn = paste0(warn, "\n")
+        warning(warn)
         warnings_list <<- append(warnings_list, warn)
       }
       if (-1 * weight_change_overall_percent > user_settings$maximum_weight_change_overall_percent) {
         warn = paste0("ACTION REQUIRED: Rat has lost more than ", 100*user_settings$maximum_weight_change_overall_percent, "% of maximum body weight. (", max_weight, " -> ", analysis$weight, ").")
-        warning(paste0(warn, "\n"))
+        warn = paste0(warn, "\n")
+        warning(warn)
         warnings_list <<- append(warnings_list, warn)
       }
     }
@@ -1339,8 +1359,3 @@ files = paste0(directory, "\\", files)
 options(warn=1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
 lapply(files, Process_File)
 writeLines(paste("", "", "", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))
-
-
-
-
-
