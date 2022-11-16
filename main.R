@@ -1323,7 +1323,6 @@ Process_File <- function(file_to_load) {
 
 
 
-  # TODO hearing_loss_induced column in rat_archive that contains date (or list of dates, as necessary) aka "condition"
   writeLines("") #TODO change all cats to writelines
   return(invisible(NULL))
 }
@@ -1334,9 +1333,11 @@ Initialize()
 # Process_File(file.choose())
 
 directory = "A:\\Coding\\Behavior-autoanalysis\\Fake Project Folder"
-files <- list.files("A:/Coding/Behavior-autoanalysis/Fake Project Folder")
+files = list.files(directory)
 files = paste0(directory, "\\", files)
+options(warn=1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
 lapply(files, Process_File)
+writeLines(paste("", "", "", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))
 
 
 
