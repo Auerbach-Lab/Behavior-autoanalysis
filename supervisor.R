@@ -29,7 +29,6 @@ Define_Styles <- function() {
 }
 
 Setup_Workbook <- function() {
-
   wb <<- createWorkbook()
 
   options("openxlsx.borderColour" = "#4F80BD")
@@ -68,14 +67,6 @@ Write_Header <- function() {
     }
     nextrun_text = paste0(nextrun_text, " - ", nextrun %>% format("%m/%d/%Y"))
     return(nextrun_text)
-  }
-
-  Set_Height_Main_Row <- function() {
-    warning_count = length(run$warnings_list[[1]])
-    height_by_count = 13*warning_count+2
-    min_height = 28
-    height_to_set = max(min_height, height_by_count)
-    setRowHeights(wb, 1, rows = row, heights = height_to_set)
   }
 
   Write_Dynamic_Lists <- function() {
@@ -616,25 +607,25 @@ Write_Table <- function() {
       r = cbind(r, c("", "{TH}"))
     }
     else if (phase_current == "Tones") {
-      r = cbind(r, c("TH", "4"))
-      r = cbind(r, c("TH", "8"))
-      r = cbind(r, c("TH", "16"))
-      r = cbind(r, c("TH", "32"))
+      r = cbind(r, c("                       TH", "4"))
+      r = cbind(r, c("                       TH", "8"))
+      r = cbind(r, c("                       TH", "16"))
+      r = cbind(r, c("                       TH", "32"))
       r = cbind(r, NA)
-      r = cbind(r, c("{TH} Range", "4"))
-      r = cbind(r, c("{TH} Range", "8"))
-      r = cbind(r, c("{TH} Range", "16"))
-      r = cbind(r, c("{TH} Range", "32"))
+      r = cbind(r, c("                {TH} Range", "4"))
+      r = cbind(r, c("                {TH} Range", "8"))
+      r = cbind(r, c("                {TH} Range", "16"))
+      r = cbind(r, c("                {TH} Range", "32"))
       r = cbind(r, NA)
-      r = cbind(r, c("{Stim} Range", "4"))
-      r = cbind(r, c("{Stim} Range", "8"))
-      r = cbind(r, c("{Stim} Range", "16"))
-      r = cbind(r, c("{Stim} Range", "32"))
+      r = cbind(r, c("              {Stim} Range", "4"))
+      r = cbind(r, c("              {Stim} Range", "8"))
+      r = cbind(r, c("              {Stim} Range", "16"))
+      r = cbind(r, c("              {Stim} Range", "32"))
     }
     else if (phase_current == "Octave") {
       r = cbind(r, c("", "d'"))
       r = cbind(r, NA)
-      r = cbind(r, t(data.frame(c("No-Go False Alarm % (by octave steps)") %>% rep_len(12), c(1:12))))
+      r = cbind(r, t(data.frame(c("                                             No-Go False Alarm % (by octave steps)") %>% rep_len(12), c(1:12))))
     }
     else if (phase_current == "Tone-BBN" || phase_current == "Tone-Tone") {
       r = cbind(r, c("           Rxn Time", "Early"))
@@ -653,8 +644,6 @@ Write_Table <- function() {
     r[, (length(r) + 1):29] = NA # add columns to reach 29
     return(r)
   }
-
-
 
 
   # Write Table Workflow ----------------------------------------------------
@@ -695,16 +684,44 @@ Write_Table <- function() {
   addStyle(wb, 1, key_style, rows = row_key_start:row_key_end, cols = 1:29, gridExpand = TRUE)
   addStyle(wb, 1, key_center, rows = row_key_start:row_key_end, cols = 5:29, gridExpand = TRUE)
 
-  # detect and merge common header cells -- nope, merges can't be done inside a table object, so we fake it
-  if (df_key[1,12] == df_key[1,13] && df_key[1,13] == df_key[1,14]) { # Rxn Time
+  # detect and merge common header cells -- nope, merges can't be done inside a table object, so just style it
+  matching_cells = (df_key[1,12] == df_key[1,13] && df_key[1,13] == df_key[1,14])
+  if (!is.na(matching_cells) && matching_cells) { # Rxn Time
     deleteData(wb, 1, rows = row_key_start, cols = 13:14, gridExpand = TRUE) # delete all but first
     addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 12:14)
   }
-  if (df_key[1,16] == df_key[1,17] && df_key[1,17] == df_key[1,18]) { # FA %
+
+  matching_cells = (df_key[1,12] == df_key[1,15])
+  if (!is.na(matching_cells) && matching_cells) { # TH; rxn above will also fire but we just overwrite what it does
+    deleteData(wb, 1, rows = row_key_start, cols = 15)
+    addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 12:15)
+  }
+
+  matching_cells = (df_key[1,17] == df_key[1,18] && df_key[1,17] == df_key[1,19] && df_key[1,17] == df_key[1,20])
+  if (!is.na(matching_cells) && matching_cells) { # TH Range
+    deleteData(wb, 1, rows = row_key_start, cols = 18:20, gridExpand = TRUE)
+    addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 17:20)
+  }
+
+  matching_cells = (df_key[1,22] == df_key[1,23] && df_key[1,22] == df_key[1,24] && df_key[1,22] == df_key[1,25])
+  if (!is.na(matching_cells) && matching_cells) {  # Stim range
+    deleteData(wb, 1, rows = row_key_start, cols = 23:25, gridExpand = TRUE)
+    addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 22:25)
+  }
+
+  matching_cells = (df_key[1,16] == df_key[1,17] && df_key[1,17] == df_key[1,18])
+  if (!is.na(matching_cells) && matching_cells) {  # FA %
     deleteData(wb, 1, rows = row_key_start, cols = 17:18, gridExpand = TRUE)
     addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 16:18)
   }
 
+  matching_cells = (df_key[1,14] == df_key[1,25]) # No Go False Alarm % (by octave steps)
+  if (!is.na(matching_cells) && matching_cells) {
+    deleteData(wb, 1, rows = row_key_start, cols = 15:25, gridExpand = TRUE)
+    addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 14:25)
+  }
+
+  writeLines(paste0("Done with ", run_today$rat_name, "."))
 }
 
 Add_Rat_To_Workbook <- function(row, rat_ID) {
@@ -732,8 +749,20 @@ row = 1 #global, index of the next unwritten row
 settings = list(dynamic_list_length = 7, dynamic_col = 56, config_row = 1, config_col = 64)
 
 Define_Styles()
-#df = Build_Row()
 Setup_Workbook()
 Add_Rat_To_Workbook(row, rat_ID)
 openXL(wb)
 #saveWorkbook(wb, "supervisor.xlsx", overwrite = TRUE)
+
+
+
+
+
+
+
+
+
+#TODO
+#iterate over all rats -- testing this will need proper run_archive with at least 5 days of history for all 48 rats, with annotations in excel sheet for assignments for those days
+#global comment field in rat archive
+#read sheet in again and set filename, assignment, and comment field
