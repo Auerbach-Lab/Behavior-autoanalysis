@@ -21,7 +21,11 @@ Define_Styles <- function() {
   optional_input_style <<- createStyle(fgFill = "#FFFFCC", fontColour = "#9C5700")          #regular uses fg
   warning_style <<- createStyle(bgFill = "#FFC7CE", fontColour = "#9C0006")                 #conditional uses bg
   halign_center_style <<- createStyle(halign = "center")
-  table_header_style <<- createStyle(fgFill = "darkgray", fontColour = "white", textDecoration = "bold")
+  table_header_style <<- createStyle(fgFill = "darkgray", fontColour = "white", textDecoration = "bold") #regular uses fg
+  key_style <<- createStyle(textDecoration = "bold")
+  key_center <<- createStyle (textDecoration = "bold", halign = "center")
+  key_merged_style <<- createStyle(fgFill = "#D9D9D9", textDecoration = "bold", halign = "left") #regular uses fg
+  today_style <<-createStyle(fontColour = "#ED7D31")
 }
 
 Setup_Workbook <- function() {
@@ -136,8 +140,8 @@ Write_Header <- function() {
   nextrun_text = Calculate_Next_Run_Text()
 
   #Tomorrow's Filename
-  conditionalFormatting(wb, 1, type = "contains", rule = "[[", style = mandatory_input_reject_style, rows = row, cols = 4)
-  conditionalFormatting(wb, 1, type = "notcontains", rule = "[[", style = mandatory_input_accept_style, rows = row, cols = 4)
+  conditionalFormatting(wb, 1, type = "contains", rule = "[", style = mandatory_input_reject_style, rows = row, cols = 4)
+  conditionalFormatting(wb, 1, type = "notcontains", rule = "[", style = mandatory_input_accept_style, rows = row, cols = 4)
 
   #Experiment
   range_start = getCellRefs(data.frame(settings$config_row, settings$config_col))
@@ -191,11 +195,6 @@ Write_Header <- function() {
   conditionalFormatting(wb, 1, type = "expression", rule = "==\"Warnings: none\"", style = mandatory_input_accept_style, rows = row, cols = 29)
   conditionalFormatting(wb, 1, type = "expression", rule = "!=\"Warnings: none\"", style = warning_style, rows = row, cols = 29)
   addStyle(wb, 1, rows = row, cols = 29, style = halign_center_style, stack = TRUE) # center the warning text
-  # openxlsx has trouble writing linebreaks to a single cell
-  # so instead, above in Parse_Warnings we write them tab-separated
-  # This excel formula then reads the tab-sep cell and formats it with linebreaks, as a workaround
-  v = c("IF(LEN(AB3)=0,\"Warnings: none\", SUBSTITUTE(AB3, \"	\", \"\n\"))") #TODO change AB3 hardcoded to tablerow etc
-  writeFormula(wb, 1, x = v, startRow = row, startCol = 29)
 
 
   #Entire Main Row
@@ -208,10 +207,10 @@ Write_Header <- function() {
     "", #C - merge with previous
     "[Tomorrow's Filename]", #D
     "", #E
-    "[Experiment]", #F
+    experiment_current, #F
     "", #G - merge with previous
     "", #H
-    "[Phase]", #I
+    phase_current, #I
     "", #J - merge with previous
     "", #K
     "[Task]", #L,
@@ -229,30 +228,12 @@ Write_Header <- function() {
 }
 
 Write_Table <- function() {
-  # Get_Task_List <- function() {
-  #   run_today = rat_runs %>% dplyr::arrange(date) %>% tail(1)
-  #   experiment_current = run_today$assignment[[1]]$experiment
-  #   phase_current = run_today$assignment[[1]]$phase
-  #   r = rat_runs %>%
-  #     filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
-  #     filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
-  #     .$assignment %>% bind_rows() %>% .$task %>% unique()
-  #   return(r)
-  # }
-
   Parse_Warnings <- function () {
     r = run$warnings_list[[1]] %>% unlist() %>% stringr::str_c(collapse = "\t")
     return(r)
   }
 
   Build_Counts <- function() {
-    rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID) %>% dplyr::arrange(date)
-    run_today = rat_runs %>% dplyr::arrange(date) %>% tail(1)
-    experiment_current <<- run_today$assignment[[1]]$experiment
-    phase_current <<- run_today$assignment[[1]]$phase
-    task_current <<- run_today$assignment[[1]]$task
-    detail_current <<- run_today$assignment[[1]]$detail
-
     # if experiment_current != Oddball
     # get current date and compare to rat_archive 'HL induced' column's date to determine post-HL or not
     pre_HL = is.na(dplyr::filter(rat_archive, Rat_ID == ratID)$HL_date) #(boolean)
@@ -441,6 +422,15 @@ Write_Table <- function() {
       } else count_df = df_basecase
     }
 
+    #format date correctly
+    date = count_df$date
+    date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))
+    count_df$date = date
+
+    count_df = count_df %>% add_column(blank = NA, .after = "n") # col 5 should be blank
+    count_df[, (length(count_df) + 1):29] = NA # add columns to reach 29
+
+    return(count_df)
   }
 
 
@@ -618,7 +608,7 @@ Write_Table <- function() {
     r = r %>% relocate(warnings_list, comments, .after = last_col()) %>%
       arrange(desc(date))
 
-    return(as.data.frame(r))  #shed the grouping that prevents rbind
+    return(as.data.frame(r))  #shed the grouping that prevents rbinding later on
   }
 
   Build_Table_Key <- function() {
@@ -652,13 +642,13 @@ Write_Table <- function() {
       r = cbind(r, t(data.frame(c("No-Go False Alarm % (by octave steps)") %>% rep_len(12), c(1:12))))
     }
     else if (phase_current == "Tone-BBN" || phase_current == "Tone-Tone") {
-      r = cbind(r, c("Rxn Time", "Early"))
-      r = cbind(r, c("Rxn Time", "Mid"))
-      r = cbind(r, c("Rxn Time", "Late"))
+      r = cbind(r, c("           Rxn Time", "Early"))
+      r = cbind(r, c("           Rxn Time", "Mid"))
+      r = cbind(r, c("           Rxn Time", "Late"))
       r = cbind(r, NA)
-      r = cbind(r, c("False Alarm %", "Early"))
-      r = cbind(r, c("False Alarm %", "Mid"))
-      r = cbind(r, c("False Alarm %", "Late"))
+      r = cbind(r, c("       False Alarm %", "Early"))
+      r = cbind(r, c("       False Alarm %", "Mid"))
+      r = cbind(r, c("       False Alarm %", "Late"))
       r = cbind(r, NA)
     }
     else {
@@ -673,14 +663,14 @@ Write_Table <- function() {
 
 
   # Write Table Workflow ----------------------------------------------------
-  row = row + 1 #now points at table start row
-  row_table_start = row #save for later
+  row_table_start = row + 1 #save for later
   addStyle(wb, 1, table_header_style, rows = row_table_start, cols = 1:29, gridExpand = TRUE)
   df_table = Build_Table()
   df_key = Build_Table_Key()
+  df_counts = Build_Counts()
 
   # need blank rows inserted into df_table to give space for df_key
-  df_blank <- data.frame(matrix(ncol = 29 , nrow = nrow(df_key)))
+  df_blank <- data.frame(matrix(ncol = 29 , nrow = nrow(df_key) + nrow(df_counts)))
 
   # the obnoxious blank strings are because every column in a table has to have a unique header,
   # and because we want those headers to be blank for all but column A
@@ -689,14 +679,45 @@ Write_Table <- function() {
   colnames(df_blank) = names
   df_table = rbind(df_blank, df_table)
 
+  row_count = row_table_start + 1
+  row_key_start = row_table_start + nrow(df_counts) + 1
+  row_key_end = row_table_start + nrow(df_counts) + nrow(df_key)
+
   writeDataTable(wb, 1, x = df_table, startRow = row_table_start, colNames = TRUE, rowNames = FALSE, bandedRows = FALSE, tableStyle = "TableStyleMedium18", na.string = "")
-  writeData(wb, 1, x = df_key, startRow = row_table_start + 1, colNames = FALSE, rowNames = FALSE)
+  writeData(wb, 1, x = df_counts, startRow = row_count, colNames = FALSE, rowNames = FALSE)
+  writeData(wb, 1, x = df_key, startRow = row_key_start, colNames = FALSE, rowNames = FALSE)
+
+  # style the 'today' row
+  today_offset = min(which(df_table[,3] != "Overall"))
+  row_today = row_table_start + today_offset
+  addStyle(wb, 1, today_style, rows = row_today, cols = 1:29)
+
+  # copy today's warnings
+  writeData (wb, 1, x = df_table[today_offset, 28], startRow = row, startCol = 29)
+
+  # style the key
+  addStyle(wb, 1, key_style, rows = row_key_start:row_key_end, cols = 1:29, gridExpand = TRUE)
+  addStyle(wb, 1, key_center, rows = row_key_start:row_key_end, cols = 5:29, gridExpand = TRUE)
+
+  # detect and merge common header cells -- nope, merges can't be done inside a table object, so we fake it
+  if (df_key[1,12] == df_key[1,13] && df_key[1,13] == df_key[1,14]) { # Rxn Time
+    deleteData(wb, 1, rows = row_key_start, cols = 13:14, gridExpand = TRUE) # delete all but first
+    addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 12:14)
+  }
+  if (df_key[1,16] == df_key[1,17] && df_key[1,17] == df_key[1,18]) { # FA %
+    deleteData(wb, 1, rows = row_key_start, cols = 17:18, gridExpand = TRUE)
+    addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 16:18)
+  }
 
 }
 
 Add_Rat_To_Workbook <- function(row, rat_ID) {
-  # NOTE we aren't doing anything special for handling multiple runs in the same day - they have a warning and we display recent run history, that's enough
-  run <<- run_archive[1,]
+  rat_runs <<- run_archive %>% dplyr::filter(rat_ID == ratID) %>% dplyr::arrange(date)
+  run_today <<- rat_runs %>% dplyr::arrange(date) %>% tail(1)
+  experiment_current <<- run_today$assignment[[1]]$experiment
+  phase_current <<- run_today$assignment[[1]]$phase
+  task_current <<- run_today$assignment[[1]]$task
+  detail_current <<- run_today$assignment[[1]]$detail
 
   # write the header
   Write_Header()
