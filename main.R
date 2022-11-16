@@ -1231,7 +1231,7 @@ Add_to_Run_Archive <- function() {
       }
     } else {
       #use the comments from the undergrad file's variable
-      observations = observations
+      observations = observations   # redundant, just for clarity
 
       #TODO read from rat_archive which was written to by supervisor.xlsx
       assignment = list(
@@ -1266,9 +1266,9 @@ Add_to_Run_Archive <- function() {
       invalid = "",    # supervisor can manually mark runs as invalid, putting reasoning here
       comments = observations,    #   undergrad comments
       # check = list(check), # TODO: graphs and UG sign offs will go here
-      warnings_list = list(warnings_list),    #   warnings list
-      omit_list = run_properties$omit_list,    #   omit list?
-      UUID = run_properties$UUID    #   uuid
+      warnings_list = list(warnings_list),
+      omit_list = run_properties$omit_list,
+      UUID = run_properties$UUID
     )
     return(r)
   }
