@@ -13,8 +13,6 @@ Initialize <- function() {
 
   Load_Packages()
   source("A:/Coding/Behavior-autoanalysis/settings.R")  # hardcoded user variables
-  warnings_list <<- list()
-  analysis <<- list()
   rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = "N/A")
   #load("trial_archive.Rdata")
   #load("run_Archive.Rdata")
@@ -1282,6 +1280,9 @@ Add_to_Run_Archive <- function() {
 # MAIN ---------------------------------------------------------
 
 Process_File <- function(file_to_load) {
+  warnings_list <<- list()
+  analysis <<- list()
+
   # load run's .mat file
   Import_Matlab(file_to_load)
 
