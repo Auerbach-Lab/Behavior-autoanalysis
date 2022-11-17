@@ -4,17 +4,23 @@ library(R.matlab); library(openxlsx); library(xml2); library(zip);
 # data manipulation
 library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr); library(data.table)
 
-
-Read_Filled_Sheet <- function() {
-  #TODO check to make sure sheet looks filled in! or at least check resulting data should be easy
-  df = readWorkbook(xlsxFile = "supervisor.xlsx", sheet = 1, cols = c(1, 4, 6, 9, 12, 15, 18), colNames = FALSE)
-  View(df)
-  #then filter to only rows where rat names match archive, which means we need real rat name still present either in column 1 or in some other column that we need to fetch instead of 1
+Initialize <- function() {
+  source("A:/Coding/Behavior-autoanalysis/settings.R")  # hardcoded user variables
+  experiment_config_df <<- read.csv(paste0(user_settings$projects_folder, "experiment_details.csv"), na.strings = "N/A")
+  experiment_config_df <<- Filter(function(x)!all(is.na(x)), experiment_config_df) # remove NA columns
+  rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = "N/A")
 }
 
+
 Workbook_Reader <- function() {
-
-
+  #TODO check to make sure sheet looks filled in! or at least check resulting data should be easy
+  df = readWorkbook(xlsxFile = "supervisor.xlsx", sheet = 1, cols = c(4, 6, 9, 12, 15, 18, 30), colNames = FALSE)
+  colnames(df) = c("Filename", "Experiment", "Phase", "Task", "Detail", "Global_Comment", "Rat_ID")
+  View(df)
+  df = df %>%
+    dplyr::filter(!is.na(Rat_ID))
+  df %>% dplyr::right_join(rat_archive)
+  #then filter to only rows where rat names match archive, which means we need real rat name still present either in column 1 or in some other column that we need to fetch instead of 1
 }
 
 
@@ -56,7 +62,6 @@ Workbook_Writer <- function() {
     setColWidths(wb, 1, cols = "AC", widths = 53.71)
 
     # add experimental configurations table from external file
-    experiment_config_df = readWorkbook(xlsxFile = "experiment details.xlsx", sheet = 1)
     max_search_rows <<- nrow(experiment_config_df)
     writeData(wb, 1, experiment_config_df, startRow = settings$config_row, startCol = settings$config_col, colNames = FALSE, rowNames = FALSE)
 
@@ -753,9 +758,6 @@ Workbook_Writer <- function() {
 
 
 # Writer Workflow ---------------------------------------------------------
-
-
-
   row = 1 #global, index of the next unwritten row
 
   ratID = 24 #TODO more than one rat
@@ -772,6 +774,7 @@ Workbook_Writer <- function() {
 ratID = 24 #TODO more than one rat
 settings = list(dynamic_list_length = 7, dynamic_col = 56, config_row = 1, config_col = 64)
 
+Initialize()
 Workbook_Reader()
 #Workbook_Writer()
 
