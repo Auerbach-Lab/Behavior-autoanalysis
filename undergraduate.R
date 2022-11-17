@@ -1,3 +1,10 @@
+#TODO Should there be a sanity check here with the rat's name?
+# reasoning -- if an undergrad puts in information for blue1 but doubleclicks the file for red47...
+# as long as there's not some (other) catastrophic error that would cause a halt on red47 ANYWAY ...
+# ... then the data will get added with wrong comments, weight, excludelist for red47,
+# and the undergrad WON'T EVEN KNOW something went wrong
+
+
 
 # Trials to exclude from the next file.
 # A comma-separated list of numbers or ranges inside quotation marks.
