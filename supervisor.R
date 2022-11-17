@@ -13,7 +13,7 @@ Read_Filled_Sheet <- function() {
 }
 
 Define_Styles <- function() {
-  rat_name_style <<- createStyle(fontSize = 20, textDecoration = "bold")
+  rat_name_style <<- createStyle(fontSize = 22, textDecoration = "bold")
   rat_header_style <<- createStyle(valign = "center", wrapText = TRUE)
   date_style <<- createStyle(halign = "right")
   mandatory_input_reject_style <<- createStyle(bgFill = "#FFE699", fontColour = "#9C5700")  #conditional uses bg
@@ -38,12 +38,13 @@ Setup_Workbook <- function() {
   addWorksheet(wb, sheetName = "Summary", tabColour = "limegreen")
 
   setColWidths(wb, 1, cols = "A", widths = 20)
-  setColWidths(wb, 1, cols = 2:3, widths = 10)
-  setColWidths(wb, 1, cols = "D", widths = 25)
+  setColWidths(wb, 1, cols = "B", widths = 9)
+  setColWidths(wb, 1, cols = "C", widths = 10)
+  setColWidths(wb, 1, cols = "D", widths = 34)
   setColWidths(wb, 1, cols = 5:27, widths = 5)
   setColWidths(wb, 1, cols = 18:27, widths = 5, hidden = FALSE)
-  setColWidths(wb, 1, cols = "AB", widths = 16, hidden = FALSE)
-  setColWidths(wb, 1, cols = "AC", widths = 50)
+  setColWidths(wb, 1, cols = "AB", widths = 5, hidden = FALSE)
+  setColWidths(wb, 1, cols = "AC", widths = 53.71)
 
   # add experimental configurations table from external file
   experiment_config_df = readWorkbook(xlsxFile = "experiment details.xlsx", sheet = 1)
@@ -115,15 +116,17 @@ Write_Header <- function() {
 
   Write_Dynamic_Lists()
 
-  #Rat Name
-  rat_name = run_today$rat_name %>% stringr::str_to_upper(string = .)
+  #Rat Name & ID
+  rat_name = run_today$rat_name
+  #rat_name = stringr::str_to_upper(string = rat_name)
   digit_index = str_locate(string = rat_name, pattern = "[:digit:]")[1]
   rat_name = paste0(stringr::str_sub(rat_name, 1, digit_index - 1),
                     " ",
                     stringr::str_sub(rat_name, digit_index, stringr::str_length(rat_name))
   )
-  addStyle(wb, 1, rat_name_style, rows = row, cols = 1)
-  #TODO should we stick the unmodified rat name in e.g. column AB to make it easier to retrieve later?
+  addStyle(wb, 1, rat_name_style, rows = row, cols = 1) # Name
+  addStyle(wb, 1, rat_name_style, rows = row, cols = 30) # ID
+
 
   #Date
   addStyle(wb, 1, date_style, rows = row, cols = 2:3)
@@ -179,7 +182,7 @@ Write_Header <- function() {
   mergeCells(wb, 1, cols = 15:16, rows = row)
 
   #Global Comment Field
-  addStyle(wb, 1, rows = row, cols = 18:27, style = optional_input_style) # center the warning text
+  addStyle(wb, 1, rows = row, cols = 18:27, style = optional_input_style)
   mergeCells(wb, 1, cols = 18:27, rows = row) # rat global comment merge
 
   #Warnings
@@ -187,9 +190,8 @@ Write_Header <- function() {
   conditionalFormatting(wb, 1, type = "expression", rule = "!=\"Warnings: none\"", style = warning_style, rows = row, cols = 29)
   addStyle(wb, 1, rows = row, cols = 29, style = halign_center_style, stack = TRUE) # center the warning text
 
-
   #Entire Main Row
-  addStyle(wb, 1, rows = row, cols = 1:29, style = rat_header_style, stack = TRUE) # vertically center & wrap the main row
+  addStyle(wb, 1, rows = row, cols = 1:30, style = rat_header_style, stack = TRUE) # vertically center & wrap the main row
   #Set_Height_Main_Row()
 
   rat_header_df = data.frame(
@@ -213,6 +215,8 @@ Write_Header <- function() {
     "[Global comment field e.g. week-ahead informal plan for this rat]", #R
     "", "", "", "", "", #S T U V W
     "", "", "", "", "", #X Y Z AA AB
+    "", #AC (Warnings will be filled in dynamically later)
+    paste0("#", ratID), #AD, column 30 -- offscreen, but used for readback
     check.names = FALSE, fix.empty.names = FALSE
   )
   writeData(wb, 1, x = rat_header_df, startRow = row, colNames = FALSE, rowNames = FALSE)
@@ -641,7 +645,9 @@ Write_Table <- function() {
       stop("ERROR: unrecognized phase: ", phase_current)
     }
 
-    r[, (length(r) + 1):29] = NA # add columns to reach 29
+    r[, (length(r) + 1):27] = NA # add columns to reach 27
+    r = cbind(r, c("", "Warn"))
+    r = cbind(r, c("", "Observations"))
     return(r)
   }
 
@@ -682,7 +688,7 @@ Write_Table <- function() {
 
   # style the key
   addStyle(wb, 1, key_style, rows = row_key_start:row_key_end, cols = 1:29, gridExpand = TRUE)
-  addStyle(wb, 1, key_center, rows = row_key_start:row_key_end, cols = 5:29, gridExpand = TRUE)
+  addStyle(wb, 1, key_center, rows = row_key_start:row_key_end, cols = 5:28, gridExpand = TRUE) # don't center observations
 
   # detect and merge common header cells -- nope, merges can't be done inside a table object, so just style it
   matching_cells = (df_key[1,12] == df_key[1,13] && df_key[1,13] == df_key[1,14])
@@ -720,11 +726,9 @@ Write_Table <- function() {
     deleteData(wb, 1, rows = row_key_start, cols = 15:25, gridExpand = TRUE)
     addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 14:25)
   }
-
-  writeLines(paste0("Done with ", run_today$rat_name, "."))
 }
 
-Add_Rat_To_Workbook <- function(row, rat_ID) {
+Add_Rat_To_Workbook <- function(row, ratID) {
   rat_runs <<- run_archive %>% dplyr::filter(rat_ID == ratID) %>% dplyr::arrange(date)
   run_today <<- rat_runs %>% dplyr::arrange(date) %>% tail(1)
   experiment_current <<- run_today$assignment[[1]]$experiment
@@ -732,13 +736,10 @@ Add_Rat_To_Workbook <- function(row, rat_ID) {
   task_current <<- run_today$assignment[[1]]$task
   detail_current <<- run_today$assignment[[1]]$detail
 
-  # write the header
   Write_Header()
-
-  # then write the table
   Write_Table()
-  #df = data.frame(x = "foo", y = "bar") #overwriting into table works fine
-  #writeData(wb, 1, df, startRow = 3, startCol = 5, colNames = FALSE)
+
+  writeLines(paste0("Done with ", run_today$rat_name, "."))
 }
 
 
@@ -750,9 +751,10 @@ settings = list(dynamic_list_length = 7, dynamic_col = 56, config_row = 1, confi
 
 Define_Styles()
 Setup_Workbook()
-Add_Rat_To_Workbook(row, rat_ID)
-openXL(wb)
+Add_Rat_To_Workbook(row, ratID)
 #saveWorkbook(wb, "supervisor.xlsx", overwrite = TRUE)
+openXL(wb)
+
 
 
 
@@ -764,5 +766,5 @@ openXL(wb)
 
 #TODO
 #iterate over all rats -- testing this will need proper run_archive with at least 5 days of history for all 48 rats, with annotations in excel sheet for assignments for those days
-#global comment field in rat archive
-#read sheet in again and set filename, assignment, and comment field
+#global comment field in rat archive - read it and display
+#read sheet in again and store filename, assignment, and comment
