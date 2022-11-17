@@ -1232,13 +1232,17 @@ Add_to_Run_Archive <- function() {
       observations = observations   # redundant, just for clarity
 
       #TODO read from rat_archive which was written to by supervisor.xlsx
+      # gonna need rat_ID = Get_Rat_ID(run_properties$rat_name) earlier than below, to filter rat_archive and pull columns
+      #TODO also need to blank these fields from rat_archive after the import so they're never incorporated twice
+      # --- must not do that here, instead do that down below, where we save run_archive (just edit and save rat_archive there) so we don't blank until all chances for errors are past
       assignment = list(
-        assigned_file_name = analysis$assigned_file_name,
+        assigned_file_name = analysis$assigned_file_name, # analysis contains filename already imported from rat_archive, but we should read directly from rat_archive rather than reusing that
         experiment = "",
         phase = "",
         task = "",
         detail = ""
       )
+
     }
 
     # using data.frame instead of tibble automatically can unpack $stats into columns but still need concatenation for warnings_list

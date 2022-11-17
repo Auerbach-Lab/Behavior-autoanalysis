@@ -13,14 +13,33 @@ Initialize <- function() {
 
 
 Workbook_Reader <- function() {
-  #TODO check to make sure sheet looks filled in! or at least check resulting data should be easy
-  df = readWorkbook(xlsxFile = "supervisor.xlsx", sheet = 1, cols = c(4, 6, 9, 12, 15, 18, 30), colNames = FALSE)
-  colnames(df) = c("Filename", "Experiment", "Phase", "Task", "Detail", "Global_Comment", "Rat_ID")
-  View(df)
-  df = df %>%
-    dplyr::filter(!is.na(Rat_ID))
-  df %>% dplyr::right_join(rat_archive)
-  #then filter to only rows where rat names match archive, which means we need real rat name still present either in column 1 or in some other column that we need to fetch instead of 1
+  assignments_df = readWorkbook(xlsxFile = "supervisor.xlsx", sheet = 1, cols = c(4, 6, 9, 12, 15, 18, 30), colNames = FALSE)
+  colnames(assignments_df) = c("Filename", "Experiment", "Phase", "Task", "Detail", "Global_Comment", "Rat_ID")
+  assignments_df = assignments_df %>% dplyr::filter(!is.na(Rat_ID))
+  assignments_df$Rat_ID = assignments_df$Rat_ID %>% stringr::str_sub(start = 2) %>% as.numeric() # trim off pound sign added for humans, coerce to numeric since that's what rat_archive uses
+  if (nrow(assignments_df) != settings$runs_per_day) {
+    warn = paste0("Only ", nrow(assignments_df), " assignments were found. (Expected ", settings$runs_per_day, ")")
+    warning(paste0(warn, "\n"))
+  }
+
+  assignments_without_comment = assignments_df %>% dplyr::select(-Global_Comment)
+  if (any(is.na(assignments_without_comment))) stop("ERROR: Mandatory values are NA. (Are there non-green cells?)")
+
+  new_rat_archive = dplyr::full_join(rat_archive, assignments_df)
+  # TODO WRONG WRONG the columns will already exist. Need to replace the ones that are NA and leave the rest intact
+  # I think dplyr::rows_patch might be the trick? https://dplyr.tidyverse.org/reference/rows.html
+  #TODO need to detect if the non-na ones didn't match, cause that's a problem too
+  new_rat_archive$Global_Comment = new_rat_archive$Global_Comment %>%
+    stringr::str_replace(pattern = "comment field", replacement = NA_character_) # match the (partial) placeholder text for the comment field, replace with NA
+  if (nrow(new_rat_archive) != nrow(rat_archive)) stop("ERROR: rat_archive size changed during join. (Unmatched Rat_ID?)")
+
+
+
+  View(new_rat_archive)
+  #save(new_rat_archive, file = "rat_archive.Rdata", ascii = TRUE, compress = FALSE)
+  #cat(nrow(assignments_df), " assignments specified in rat_archive.", sep = "\t", fill = TRUE)
+
+
 }
 
 

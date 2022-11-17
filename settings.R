@@ -3,6 +3,9 @@ user_settings = list(
   # Note that the slashes have to be / (not \)
   projects_folder = 'A:/coding/Behavior-autoanalysis/',
 
+  # Number of runs per day (probably equals number of active rats)
+  runs_per_day = 48,
+
   # Minimum number of blocks of trials to keep (vs. discard day) not counting the
   # 1st block which will be dropped
   min_blocks = 5,
