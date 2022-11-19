@@ -46,5 +46,11 @@ user_settings = list(
 
   # weight change as percent of bodyweight
   maximum_weight_change_daily_percent = 0.05,
-  maximum_weight_change_overall_percent = 0.25
+  maximum_weight_change_overall_percent = 0.25,
+
+  # positions for the supporting elements in the supervisor spreadsheet
+  dynamic_list_length = 7,
+  dynamic_col = 56,
+  config_row = 1,
+  config_col = 64
 )
