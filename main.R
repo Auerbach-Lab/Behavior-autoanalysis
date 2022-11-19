@@ -12,10 +12,13 @@ Initialize <- function() {
   }
 
   Load_Packages()
+  options(warn=1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
   source("A:/Coding/Behavior-autoanalysis/settings.R")  # hardcoded user variables
-  rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = "N/A")
+
+  rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
   #load("trial_archive.Rdata")
   #load("run_Archive.Rdata")
+
 }
 
 Throw_Warning <- function() {
@@ -1340,7 +1343,7 @@ Initialize()
 directory = "A:\\Coding\\Behavior-autoanalysis\\Fake Project Folder"
 files = list.files(directory)
 files = paste0(directory, "\\", files)
-options(warn=1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
+
 lapply(files, Process_File)
 writeLines(paste("", "", "", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))
 

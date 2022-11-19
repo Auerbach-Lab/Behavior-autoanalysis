@@ -11,7 +11,7 @@ Initialize <- function() {
   experiment_config_df <<- read.csv(paste0(user_settings$projects_folder, "experiment_details.csv"), na.strings = "N/A")
   experiment_config_df <<- Filter(function(x)!all(is.na(x)), experiment_config_df) # remove NA columns
 
-  rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = "N/A")
+  rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
 
 }
 
@@ -234,7 +234,8 @@ Workbook_Writer <- function() {
     #Set_Height_Main_Row()
 
     #Retrieve persistent comment if there is one
-    comment = rat_archive %>% filter()
+    comment = rat_archive %>% filter(Rat_ID == ratID) %>% .$Persistent_Comment
+    if(is.na(comment)) comment = "[Persistent comment field e.g. week-ahead informal plan for this rat]"
 
     rat_header_df = data.frame(
       rat_name, #A
@@ -254,7 +255,7 @@ Workbook_Writer <- function() {
       "[Detail]", #O,
       "", #P - merge with previous
       "", #Q
-      "[Persistent comment field e.g. week-ahead informal plan for this rat]", #R
+      comment, #R
       "", "", "", "", "", #S T U V W
       "", "", "", "", "", #X Y Z AA AB
       "", #AC (Warnings will be filled in dynamically later)
@@ -485,7 +486,7 @@ Workbook_Writer <- function() {
         dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
         group_by(task, detail) %>%
         do(
-          dplyr::arrange(., dplyr::desc(date)) %>% dplyr::select(columns)
+          dplyr::arrange(., dplyr::desc(date)) %>% dplyr::select(all_of(columns))
         )
 
       weight_max = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
@@ -802,8 +803,8 @@ Workbook_Writer <- function() {
 ratID = 24 #TODO more than one rat
 
 Initialize()
-Workbook_Reader()
-#Workbook_Writer()
+#Workbook_Reader()
+Workbook_Writer()
 
 #TODO
 #iterate over all rats -- testing this will need proper run_archive with at least 5 days of history for all 48 rats, with annotations in excel sheet for assignments for those days
