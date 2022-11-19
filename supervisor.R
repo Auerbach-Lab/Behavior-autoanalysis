@@ -5,41 +5,47 @@ library(R.matlab); library(openxlsx); library(xml2); library(zip);
 library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr); library(data.table)
 
 Initialize <- function() {
+  options(warn=1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
+
   source("A:/Coding/Behavior-autoanalysis/settings.R")  # hardcoded user variables
   experiment_config_df <<- read.csv(paste0(user_settings$projects_folder, "experiment_details.csv"), na.strings = "N/A")
   experiment_config_df <<- Filter(function(x)!all(is.na(x)), experiment_config_df) # remove NA columns
+
   rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = "N/A")
+
 }
 
 
 Workbook_Reader <- function() {
   assignments_df = readWorkbook(xlsxFile = "supervisor.xlsx", sheet = 1, cols = c(4, 6, 9, 12, 15, 18, 30), colNames = FALSE)
-  colnames(assignments_df) = c("Filename", "Experiment", "Phase", "Task", "Detail", "Global_Comment", "Rat_ID")
+  colnames(assignments_df) = c("Assigned_Filename", "Assigned_Experiment", "Assigned_Phase", "Assigned_Task", "Assigned_Detail", "Persistent_Comment", "Rat_ID")
   assignments_df = assignments_df %>% dplyr::filter(!is.na(Rat_ID))
   assignments_df$Rat_ID = assignments_df$Rat_ID %>% stringr::str_sub(start = 2) %>% as.numeric() # trim off pound sign added for humans, coerce to numeric since that's what rat_archive uses
-  if (nrow(assignments_df) != settings$runs_per_day) {
-    warn = paste0("Only ", nrow(assignments_df), " assignments were found. (Expected ", settings$runs_per_day, ")")
+  if (nrow(assignments_df) != user_settings$runs_per_day) {
+    warn = paste0("Only ", nrow(assignments_df), " assignments were found. (Expected ", user_settings$runs_per_day, ")")
     warning(paste0(warn, "\n"))
   }
-
-  assignments_without_comment = assignments_df %>% dplyr::select(-Global_Comment)
-  if (any(is.na(assignments_without_comment))) stop("ERROR: Mandatory values are NA. (Are there non-green cells?)")
-
-  new_rat_archive = dplyr::full_join(rat_archive, assignments_df)
-  # TODO WRONG WRONG the columns will already exist. Need to replace the ones that are NA and leave the rest intact
-  # I think dplyr::rows_patch might be the trick? https://dplyr.tidyverse.org/reference/rows.html
-  #TODO need to detect if the non-na ones didn't match, cause that's a problem too
-  new_rat_archive$Global_Comment = new_rat_archive$Global_Comment %>%
+  assignments_mandatory_data = assignments_df %>% dplyr::select(-Persistent_Comment) # comments are allowed to be NA, but nothing else is
+  if (any(is.na(assignments_mandatory_data))) stop("ERROR: Mandatory values are NA. (Are there non-green cells in the supervisor spreadsheet?)")
+  assignments_df$Persistent_Comment = assignments_df$Persistent_Comment %>%
     stringr::str_replace(pattern = "comment field", replacement = NA_character_) # match the (partial) placeholder text for the comment field, replace with NA
-  if (nrow(new_rat_archive) != nrow(rat_archive)) stop("ERROR: rat_archive size changed during join. (Unmatched Rat_ID?)")
 
-
-
-  View(new_rat_archive)
-  #save(new_rat_archive, file = "rat_archive.Rdata", ascii = TRUE, compress = FALSE)
-  #cat(nrow(assignments_df), " assignments specified in rat_archive.", sep = "\t", fill = TRUE)
-
-
+  rat_archive <<- tryCatch(
+    {
+      r = dplyr::rows_update(rat_archive, assignments_df, by = "Rat_ID", unmatched = "error")
+      tryCatch(
+        write.csv(rat_archive, paste0(user_settings$projects_folder, "rat_archive.csv"), row.names = FALSE),
+        finally = writeLines(paste0(nrow(assignments_df), " assignments were recorded in `rat_archive.csv`"))
+      )
+      r
+    },
+    error = function(e) { # this function name is specific to tryCatch and cannot be changed
+      warning("A rat id (column AD) from the supervisor spreadsheet was not found in the rat archive.")
+      message("Original error message:")
+      warning(e)
+      return(rat_archive) #return unmodified
+    }
+  )
 }
 
 
@@ -82,7 +88,7 @@ Workbook_Writer <- function() {
 
     # add experimental configurations table from external file
     max_search_rows <<- nrow(experiment_config_df)
-    writeData(wb, 1, experiment_config_df, startRow = settings$config_row, startCol = settings$config_col, colNames = FALSE, rowNames = FALSE)
+    writeData(wb, 1, experiment_config_df, startRow = user_settings$config_row, startCol = user_settings$config_col, colNames = FALSE, rowNames = FALSE)
 
     return(wb)
   }
@@ -107,41 +113,41 @@ Workbook_Writer <- function() {
       Build_List <- function(i) {
         #build the excel formula that will display the items from the output range that correspond to the query cell for the input range
         dynamic_list_formula = paste0("=IFERROR(INDEX(", output_range, ",SMALL(IF(", query_cell, "=", input_range, ",ROW(", input_range, ")-ROW(", range_start, ")+1),ROW(", i, ":", i, "))),\"\")")
-        writeFormula(wb, 1, dynamic_list_formula, startRow = settings$config_row+i, startCol = settings$dynamic_col + col_offset, array = TRUE)
+        writeFormula(wb, 1, dynamic_list_formula, startRow = user_settings$config_row+i, startCol = user_settings$dynamic_col + col_offset, array = TRUE)
       }
 
-      # phases list lives at settings$config_col+1 (experiment) and +2 (phase), querying off experiment in F
-      range_start = getCellRefs(data.frame(settings$config_row, settings$config_col + 2))
-      range_end = getCellRefs(data.frame(settings$config_row + max_search_rows, settings$config_col + 2))
+      # phases list lives at user_settings$config_col+1 (experiment) and +2 (phase), querying off experiment in F
+      range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 2))
+      range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 2))
       output_range = paste0(range_start, ":", range_end)
-      range_start = getCellRefs(data.frame(settings$config_row, settings$config_col + 1)) # going to use this when we build formula, so it has to be second
-      range_end = getCellRefs(data.frame(settings$config_row + max_search_rows, settings$config_col + 1))
+      range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 1)) # going to use this when we build formula, so it has to be second
+      range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 1))
       input_range = paste0(range_start, ":", range_end)
       query_cell = getCellRefs(data.frame(row, 6))
       col_offset = 0
-      sapply(c(1:settings$dynamic_list_length), Build_List)
+      sapply(c(1:user_settings$dynamic_list_length), Build_List)
 
-      #task list lives at settings$config_col+3 (phase) and +4 (task), querying from phase in I
-      range_start = getCellRefs(data.frame(settings$config_row, settings$config_col + 4))
-      range_end = getCellRefs(data.frame(settings$config_row + max_search_rows, settings$config_col + 4))
+      #task list lives at user_settings$config_col+3 (phase) and +4 (task), querying from phase in I
+      range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 4))
+      range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 4))
       output_range = paste0(range_start, ":", range_end)
-      range_start = getCellRefs(data.frame(settings$config_row, settings$config_col + 3)) # going to use this when we build formula, so it has to be second
-      range_end = getCellRefs(data.frame(settings$config_row + max_search_rows, settings$config_col + 3))
+      range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 3)) # going to use this when we build formula, so it has to be second
+      range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 3))
       input_range = paste0(range_start, ":", range_end)
       query_cell = getCellRefs(data.frame(row, 9))
       col_offset = col_offset + 1
-      sapply(c(1:settings$dynamic_list_length), Build_List)
+      sapply(c(1:user_settings$dynamic_list_length), Build_List)
 
-      #detail list lives at settings$config_col+5 (phase again) and +6 (detail), querying from phase again in I
-      range_start = getCellRefs(data.frame(settings$config_row, settings$config_col + 6))
-      range_end = getCellRefs(data.frame(settings$config_row + max_search_rows, settings$config_col + 6))
+      #detail list lives at user_settings$config_col+5 (phase again) and +6 (detail), querying from phase again in I
+      range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 6))
+      range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 6))
       output_range = paste0(range_start, ":", range_end)
-      range_start = getCellRefs(data.frame(settings$config_row, settings$config_col + 5)) # going to use this when we build formula, so it has to be second
-      range_end = getCellRefs(data.frame(settings$config_row + max_search_rows, settings$config_col + 5))
+      range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 5)) # going to use this when we build formula, so it has to be second
+      range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 5))
       input_range = paste0(range_start, ":", range_end)
       query_cell = getCellRefs(data.frame(row, 9))
       col_offset = col_offset + 1
-      sapply(c(1:settings$dynamic_list_length), Build_List)
+      sapply(c(1:user_settings$dynamic_list_length), Build_List)
 
     }
 
@@ -171,8 +177,8 @@ Workbook_Writer <- function() {
     conditionalFormatting(wb, 1, type = "notcontains", rule = "[", style = mandatory_input_accept_style, rows = row, cols = 4)
 
     #Experiment
-    range_start = getCellRefs(data.frame(settings$config_row, settings$config_col))
-    range_end = getCellRefs(data.frame(settings$config_row + settings$dynamic_list_length, settings$config_col))
+    range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col))
+    range_end = getCellRefs(data.frame(user_settings$config_row + user_settings$dynamic_list_length, user_settings$config_col))
     range_string = paste0(range_start, ":", range_end)
     dataValidation(wb, 1, rows = row, cols = 6, type = "list", value = range_string, operator = "")
     mergeCells(wb, 1, cols = 6:7, rows = row)
@@ -182,8 +188,8 @@ Workbook_Writer <- function() {
     conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_reject_style, rows = row, cols = 6)
 
     #Experimental Phase
-    range_start = getCellRefs(data.frame(row + 1, settings$dynamic_col))
-    range_end = getCellRefs(data.frame(row + 1 + settings$dynamic_list_length, settings$dynamic_col))
+    range_start = getCellRefs(data.frame(row + 1, user_settings$dynamic_col))
+    range_end = getCellRefs(data.frame(row + 1 + user_settings$dynamic_list_length, user_settings$dynamic_col))
     range_string = paste0(range_start, ":", range_end)
     dataValidation(wb, 1, rows = row, cols = 9, type = "list", value = range_string, operator = "")
     rule_string = paste0("COUNTIF(", range_string, ",I", row, ")>0")
@@ -193,8 +199,8 @@ Workbook_Writer <- function() {
     mergeCells(wb, 1, cols = 9:10, rows = row)
 
     #Task
-    range_start = getCellRefs(data.frame(row + 1, settings$dynamic_col + 1))
-    range_end = getCellRefs(data.frame(row + 1 + settings$dynamic_list_length, settings$dynamic_col + 1))
+    range_start = getCellRefs(data.frame(row + 1, user_settings$dynamic_col + 1))
+    range_end = getCellRefs(data.frame(row + 1 + user_settings$dynamic_list_length, user_settings$dynamic_col + 1))
     range_string = paste0(range_start, ":", range_end)
     dataValidation(wb, 1, rows = row, cols = 12, type = "list", value = range_string, operator = "")
     rule_string = paste0("COUNTIF(", range_string, ",L", row, ")>0")
@@ -204,8 +210,8 @@ Workbook_Writer <- function() {
     mergeCells(wb, 1, cols = 12:13, rows = row)
 
     #Detail
-    range_start = getCellRefs(data.frame(row + 1, settings$dynamic_col + 2))
-    range_end = getCellRefs(data.frame(row + 1 + settings$dynamic_list_length, settings$dynamic_col + 2))
+    range_start = getCellRefs(data.frame(row + 1, user_settings$dynamic_col + 2))
+    range_end = getCellRefs(data.frame(row + 1 + user_settings$dynamic_list_length, user_settings$dynamic_col + 2))
     range_string = paste0(range_start, ":", range_end)
     dataValidation(wb, 1, rows = row, cols = 15, type = "list", value = range_string, operator = "")
     rule_string = paste0("COUNTIF(", range_string, ",O", row, ")>0")
@@ -214,9 +220,9 @@ Workbook_Writer <- function() {
     conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_reject_style, rows = row, cols = 15)
     mergeCells(wb, 1, cols = 15:16, rows = row)
 
-    #Global Comment Field
+    #Persistent Comment Field
     addStyle(wb, 1, rows = row, cols = 18:27, style = optional_input_style)
-    mergeCells(wb, 1, cols = 18:27, rows = row) # rat global comment merge
+    mergeCells(wb, 1, cols = 18:27, rows = row) # rat persistent comment merge
 
     #Warnings
     conditionalFormatting(wb, 1, type = "expression", rule = "==\"Warnings: none\"", style = mandatory_input_accept_style, rows = row, cols = 29)
@@ -226,6 +232,9 @@ Workbook_Writer <- function() {
     #Entire Main Row
     addStyle(wb, 1, rows = row, cols = 1:30, style = rat_header_style, stack = TRUE) # vertically center & wrap the main row
     #Set_Height_Main_Row()
+
+    #Retrieve persistent comment if there is one
+    comment = rat_archive %>% filter()
 
     rat_header_df = data.frame(
       rat_name, #A
@@ -245,7 +254,7 @@ Workbook_Writer <- function() {
       "[Detail]", #O,
       "", #P - merge with previous
       "", #Q
-      "[Global comment field e.g. week-ahead informal plan for this rat]", #R
+      "[Persistent comment field e.g. week-ahead informal plan for this rat]", #R
       "", "", "", "", "", #S T U V W
       "", "", "", "", "", #X Y Z AA AB
       "", #AC (Warnings will be filled in dynamically later)
@@ -777,7 +786,7 @@ Workbook_Writer <- function() {
 
 
 # Writer Workflow ---------------------------------------------------------
-  row = 1 #global, index of the next unwritten row
+  row = 1 #persistent, index of the next unwritten row
 
   ratID = 24 #TODO more than one rat
 
@@ -791,23 +800,11 @@ Workbook_Writer <- function() {
 
 # Supervisor Workflow -----------------------------------------------------------
 ratID = 24 #TODO more than one rat
-settings = list(dynamic_list_length = 7, dynamic_col = 56, config_row = 1, config_col = 64)
 
 Initialize()
 Workbook_Reader()
 #Workbook_Writer()
 
-
-
-
-
-
-
-
-
-
-
 #TODO
 #iterate over all rats -- testing this will need proper run_archive with at least 5 days of history for all 48 rats, with annotations in excel sheet for assignments for those days
-#global comment field in rat archive - read it and display
-#read sheet in again and store filename, assignment, and comment
+#persistent comment field in rat archive - read it and display
