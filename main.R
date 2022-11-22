@@ -789,7 +789,7 @@ Check_Assigned_Filename <- function() {
     date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
     date_asDate = paste0(stringr::str_sub(date, 1, 4), "-", stringr::str_sub(date, 5, 6), "-", stringr::str_sub(date, 7, 8)) %>% as.Date()
     old_data = old_excel_archive %>% dplyr::filter(Date == date_asDate & rat_name == run_properties$rat_name)
-    analysis$assigned_file_name <<- old_data$Schedule
+    analysis$assigned_file_name <<- old_data$Filename
     if(rlang::is_empty(analysis$assigned_file_name)) {
       warn = paste0("No assigned file name found in excel document for ", run_properties$rat_name, " on ", date, ".")
       warnings_list <<- append(warnings_list, warn)
