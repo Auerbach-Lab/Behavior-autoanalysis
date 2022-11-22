@@ -3,7 +3,7 @@ require(dplyr)
 require(stringr)
 
 
-names = c("Date", "Filename", "Weight", "Comments/Observations", "Experiment", "Phase", "Task", "Detail", "Rat_Name")
+names = c("Date", "Filename", "Weight", "Comments/Observations", "Experiment", "Phase", "Task", "Detail", "rat_name")
 folder = "A:/Coding/Behavior-autoanalysis/Projects"
 
 readExcel <- function(filename, cols = c(1:3, 23, 28:31)) {

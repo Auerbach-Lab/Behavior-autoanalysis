@@ -1220,7 +1220,7 @@ Add_to_Run_Archive <- function() {
       }
       observations = old_data$`Comments/Observations`
       assignment = list(
-        assigned_file_name = analysis$assigned_file_name,
+        assigned_file_name = old_data$Filename,
         experiment = old_data$Experiment,
         phase = old_data$Phase,
         task = old_data$Task,
