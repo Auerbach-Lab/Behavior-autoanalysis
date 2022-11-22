@@ -1340,8 +1340,8 @@ Initialize()
 
 # Process_File(file.choose())
 
-directory = "A:\\Coding\\Behavior-autoanalysis\\Fake Project Folder"
-files = list.files(directory)
+directory = "A:\\Coding\\Behavior-autoanalysis\\Projects"  # slashes must be either / or \\
+files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
 files = paste0(directory, "\\", files)
 
 lapply(files, Process_File)
