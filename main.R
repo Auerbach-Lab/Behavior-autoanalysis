@@ -97,10 +97,11 @@ Import_Matlab <- function(file_to_load) {
     Get_Rat_Name <- function() {
       # greedy group: (.*) to strip off as much as possible
       # then the main capture group which contains
-        # lookbehind for a \ escaped once because R, and then again cause regex, to \\\\: (?<=\\\\)
+        # lookbehind for either \ (escaped once because R, and then again cause regex, to \\\\) or / character, specified length 1 because r: (?<=[\\/]{1})
         # capture of the rat name, lazy to avoid underscores: .+?
         # lookahead for a _: (?=_)
-      r = stringr::str_match_all(file_to_load, pattern="(.*)((?<=\\\\).+?(?=_))") %>%
+      print(file_to_load)
+      r = stringr::str_match_all(file_to_load, pattern="(.*)((?<=[\\/]{1}).+?(?=_))") %>%
         unlist(recursive = TRUE) %>%
         tail (n = 1)
 
@@ -787,8 +788,8 @@ Check_Assigned_Filename <- function() {
   if(old_file) {
     # need to fetch from old_excel_archive
     date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
-    date_asDate = paste0(stringr::str_sub(date, 1, 4), "-", stringr::str_sub(date, 5, 6), "-", stringr::str_sub(date, 7, 8)) %>% as.Date()
-    old_data = old_excel_archive %>% dplyr::filter(Date == date_asDate & rat_name == run_properties$rat_name)
+    date_asDate <<- paste0(stringr::str_sub(date, 1, 4), "-", stringr::str_sub(date, 5, 6), "-", stringr::str_sub(date, 7, 8)) %>% as.Date()
+    old_data <<- old_excel_archive %>% dplyr::filter(Date == date_asDate & rat_name == run_properties$rat_name)
     analysis$assigned_file_name <<- old_data$Filename
     if(rlang::is_empty(analysis$assigned_file_name)) {
       warn = paste0("No assigned file name found in excel document for ", run_properties$rat_name, " on ", date, ".")
