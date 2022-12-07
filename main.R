@@ -830,7 +830,10 @@ Check_UUID <- function() {
   Is_New_UUID <- function(uuid) {
     is_old = uuid %in% run_archive$UUID
     if (is_old) {
-      stop(paste0("ABORT: This file has already been added: ", uuid))
+      warn = paste0("SKIPPED: This file has already been added: ", uuid)
+      warning(paste0(warn, "\n"))
+      warnings_list <<- append(warnings_list, warn)
+      #stop(paste0("ABORT: This file has already been added: ", uuid))
     }
     return(!is_old)
   }
@@ -1193,6 +1196,13 @@ Check_Weight <- function() {
       weight_change_overall_percent = (analysis$weight - max_weight) / max_weight # negative if lost weight
 
       if (-1 * weight_change_daily_percent > user_settings$maximum_weight_change_daily_percent) {
+
+
+        # TODO TODO don't say one day if it's not one day
+
+
+
+
         warn = paste0("ACTION REQUIRED: Weight fell by more than ", 100*user_settings$maximum_weight_change_daily_percent, "% in one day. (", old_weight, " -> ", analysis$weight, ").")
         warning(paste0(warn, "\n"))
         warnings_list <<- append(warnings_list, warn)
@@ -1283,7 +1293,7 @@ Add_to_Run_Archive <- function() {
   if(nrow(row_to_add) != 1) stop("ABORT: Problem building row to add to Run Archive.")
   run_archive <<- rbind(run_archive, row_to_add)
   save(run_archive, file = "run_archive.Rdata", ascii = TRUE, compress = FALSE)
-  cat("Run added to Run Archive.", sep = "\t", fill = TRUE)
+  cat("Run added to Run Archive (in environment and on disk).", sep = "\t", fill = TRUE)
 }
 
 # MAIN ---------------------------------------------------------
@@ -1305,22 +1315,21 @@ Process_File <- function(file_to_load) {
   Check_Assigned_Filename()
 
   # generate UUID for run
-  Check_UUID()
+  if(Check_UUID()) {
+    # handle weight
+    Check_Weight()
 
-  # handle weight
-  Check_Weight()
+    # check run performance against user-settings cutoffs
+    Check_Performance_Cutoffs()
+    # check run performance against past performance for this rat in this experimental phase
+    # Check_Performance_Consistency
 
-
-  # check run performance against user-settings cutoffs
-  Check_Performance_Cutoffs()
-  # check run performance against past performance for this rat in this experimental phase
-  # Check_Performance_Consistency
-
-  # commit to folding in - display warnings and get user input to override them (and submit to master dataframe), or give option to commit to invalid/storage-only dataframe
-  # curate data prior to folding in, adding disqualifier flags etc (but omitted trials are always totally gone)
-  # Report_Warnings_and_Confirm()
-  Add_to_Run_Archive()
-  # Add_to_Trial_Archive() actually fold run_data -> trial_archive
+    # commit to folding in - display warnings and get user input to override them (and submit to master dataframe), or give option to commit to invalid/storage-only dataframe
+    # curate data prior to folding in, adding disqualifier flags etc (but omitted trials are always totally gone)
+    # Report_Warnings_and_Confirm()
+    Add_to_Run_Archive()
+    # Add_to_Trial_Archive() actually fold run_data -> trial_archive
+  }
 
   # do analyses
   # pop up charts and stuff for undergrads to sign off on (where do the comments they provide on 'no' get saved? text file alongside individual exported graph image? dedicated df? master df in one long appended cell for all comments to graphs?)
@@ -1340,14 +1349,16 @@ Process_File <- function(file_to_load) {
 # set up environment
 Initialize()
 
-# Process_File(file.choose())
+# either:
+#Process_File(file.choose())
 
+# or:
 directory = "A:\\Coding\\Behavior-autoanalysis\\Projects"  # slashes must be either / or \\
 files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
 files = paste0(directory, "\\", files)
-
 lapply(files, Process_File)
-writeLines(paste("", "", "", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))
+writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))
+
 
 
 
