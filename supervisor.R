@@ -65,7 +65,8 @@ Workbook_Writer <- function() {
     key_style <<- createStyle(textDecoration = "bold")
     key_center <<- createStyle (textDecoration = "bold", halign = "center")
     key_merged_style <<- createStyle(fgFill = "#D9D9D9", textDecoration = "bold", halign = "left") #regular uses fg
-    today_style <<-createStyle(fontColour = "#ED7D31")
+    today_style <<- createStyle(fontColour = "#ED7D31")
+    percent_style <<- createStyle(numFmt = "0%")
   }
 
   Setup_Workbook <- function() {
@@ -706,21 +707,28 @@ Workbook_Writer <- function() {
     colnames(df_blank) = names
     df_table = rbind(df_blank, df_table)
 
-    row_count = row_table_start + 1
+    row_counts = row_table_start + 1
     row_key_start = row_table_start + nrow(df_counts) + 1
     row_key_end = row_table_start + nrow(df_counts) + nrow(df_key)
 
     writeDataTable(wb, 1, x = df_table, startRow = row_table_start, colNames = TRUE, rowNames = FALSE, bandedRows = FALSE, tableStyle = "TableStyleMedium18", na.string = "")
-    writeData(wb, 1, x = df_counts, startRow = row_count, colNames = FALSE, rowNames = FALSE)
+    writeData(wb, 1, x = df_counts, startRow = row_counts, colNames = FALSE, rowNames = FALSE)
     writeData(wb, 1, x = df_key, startRow = row_key_start, colNames = FALSE, rowNames = FALSE)
+
+    row_table_end = row_table_start + nrow(df_table)
 
     # style the 'today' row
     today_offset = min(which(df_table[,3] != "Overall"))
     row_today = row_table_start + today_offset
     addStyle(wb, 1, today_style, rows = row_today, cols = 1:29)
 
+    # style the '%' columns
+    percent_columns = t(tail(df_key,1)) %>% as.data.frame() %>% filter(str_detect(.[,1], "%")) %>% rownames() %>% str_sub(start = 2, end = -1) %>% as.numeric
+    addStyle(wb, 1, percent_style, rows = row_key_end:row_table_end, cols = percent_columns, gridExpand = TRUE)
+
     # copy today's warnings
     warns = df_table[today_offset, 28] %>% unlist() %>% stringr::str_c(collapse = "\n")
+    if(warns == "") warns = "Warnings: none"
     writeData (wb, 1, x = warns, startRow = row, startCol = 29)
 
     # style the key
