@@ -65,6 +65,7 @@ Workbook_Writer <- function() {
     key_style <<- createStyle(textDecoration = "bold")
     key_center <<- createStyle (textDecoration = "bold", halign = "center")
     key_merged_style <<- createStyle(fgFill = "#D9D9D9", textDecoration = "bold", halign = "left") #regular uses fg
+    averages_style <<- createStyle(textDecoration = "italic")
     today_style <<- createStyle(fontColour = "#ED7D31")
     percent_style <<- createStyle(numFmt = "0%")
   }
@@ -710,12 +711,15 @@ Workbook_Writer <- function() {
     row_counts = row_table_start + 1
     row_key_start = row_table_start + nrow(df_counts) + 1
     row_key_end = row_table_start + nrow(df_counts) + nrow(df_key)
+    row_table_end = row_table_start + nrow(df_table)
 
     writeDataTable(wb, 1, x = df_table, startRow = row_table_start, colNames = TRUE, rowNames = FALSE, bandedRows = FALSE, tableStyle = "TableStyleMedium18", na.string = "")
     writeData(wb, 1, x = df_counts, startRow = row_counts, colNames = FALSE, rowNames = FALSE)
     writeData(wb, 1, x = df_key, startRow = row_key_start, colNames = FALSE, rowNames = FALSE)
 
-    row_table_end = row_table_start + nrow(df_table)
+    # style the averages rows
+    averages_last_row = row_table_start + max(which(df_table[,3] == "Overall"))
+    addStyle(wb, 1, averages_style, rows = row_key_end:averages_last_row, cols = 1:29, gridExpand = TRUE, stack = TRUE)
 
     # style the 'today' row
     today_offset = min(which(df_table[,3] != "Overall"))
@@ -723,8 +727,8 @@ Workbook_Writer <- function() {
     addStyle(wb, 1, today_style, rows = row_today, cols = 1:29)
 
     # style the '%' columns
-    percent_columns = t(tail(df_key,1)) %>% as.data.frame() %>% filter(str_detect(.[,1], "%")) %>% rownames() %>% str_sub(start = 2, end = -1) %>% as.numeric
-    addStyle(wb, 1, percent_style, rows = row_key_end:row_table_end, cols = percent_columns, gridExpand = TRUE)
+    percentage_columns = t(tail(df_key,1)) %>% as.data.frame() %>% filter(str_detect(.[,1], "%")) %>% rownames() %>% str_sub(start = 2, end = -1) %>% as.numeric
+    addStyle(wb, 1, percent_style, rows = row_key_end:row_table_end, cols = percentage_columns, gridExpand = TRUE, stack = TRUE)
 
     # copy today's warnings
     warns = df_table[today_offset, 28] %>% unlist() %>% stringr::str_c(collapse = "\n")
