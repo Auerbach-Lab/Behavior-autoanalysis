@@ -470,11 +470,6 @@ Workbook_Writer <- function() {
 
 
     Build_Table <- function() {
-      rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID)
-      run_today = rat_runs %>% dplyr::arrange(date) %>% tail(1)
-      experiment_current <<- run_today$assignment[[1]]$experiment
-      phase_current <<- run_today$assignment[[1]]$phase
-
       # Common Columns ----------------------------------------------------------
       columns = c("task", "detail", "date", "file_name", "weight", "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial", "threshold", "reaction", "FA_detailed", "warnings_list", "comments")
 
@@ -773,7 +768,8 @@ Workbook_Writer <- function() {
 
   Add_Rat_To_Workbook <- function(row, ratID) {
     rat_runs <<- run_archive %>% dplyr::filter(rat_ID == ratID) %>% dplyr::arrange(date)
-    run_today <<- rat_runs %>% dplyr::arrange(date) %>% tail(1)
+    if (nrow(rat_runs) == 0) stop("ERROR: no runs found for #", ratID)
+    run_today <<- rat_runs %>% dplyr::arrange(date) %>% tail(1) # this is really just the most recent run, which could actually be old if a rat didn't run 'today', but that should never happen
     experiment_current <<- run_today$assignment[[1]]$experiment
     phase_current <<- run_today$assignment[[1]]$phase
     task_current <<- run_today$assignment[[1]]$task
@@ -789,7 +785,7 @@ Workbook_Writer <- function() {
 # Writer Workflow ---------------------------------------------------------
   row = 1 #persistent, index of the next unwritten row
 
-  ratID = 24 #TODO more than one rat
+  ratID = 209 #TODO more than one rat
 
   Define_Styles()
   Setup_Workbook()
