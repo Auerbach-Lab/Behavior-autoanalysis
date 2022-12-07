@@ -1182,7 +1182,9 @@ Check_Weight <- function() {
     warnings_list <<- append(warnings_list, warn)
     analysis$weight_change <<- 0
   } else {
-    old_weight = rat_weights %>% dplyr::filter(date < date_asNumeric) %>% dplyr::arrange(date) %>% tail(1) %>% .$weight
+    last_data = rat_weights %>% dplyr::filter(date < date_asNumeric) %>% dplyr::arrange(date) %>% tail(1)
+    old_date = last_data$date
+    old_weight = last_data$weight
 
     if(rlang::is_empty(old_weight)) {
       warn = paste0("No weights for ", run_properties$rat_name, "(", Get_Rat_ID(run_properties$rat_name), ") prior to ", date_asDate, ".")
@@ -1192,20 +1194,39 @@ Check_Weight <- function() {
     } else {
       max_weight = max(rat_weights$weight) #TODO add a column to rat_archive called e.g. override_weight to use instead of true max weight for chunky bois, or calculate max in past month or something else
       analysis$weight_change <<- analysis$weight - old_weight  # negative if lost weight
-      weight_change_daily_percent = analysis$weight_change / old_weight # negative if lost weight
+      weight_change_percent = analysis$weight_change / old_weight # negative if lost weight
       weight_change_overall_percent = (analysis$weight - max_weight) / max_weight # negative if lost weight
 
-      if (-1 * weight_change_daily_percent > user_settings$maximum_weight_change_daily_percent) {
+      days_elapsed = analysis$date - old_date
 
+      if(days_elapsed>0) { # Don't want divide-by-zero for resumed runs
+        weight_change_daily_percent = weight_change_percent/days_elapsed
 
-        # TODO TODO don't say one day if it's not one day
+        # Adjust the user setting to compensate for number of days elapsed
+        adjusted_daily_threshold = user_settings$maximum_weight_change_daily_percent * (days_elapsed + 2) / (days_elapsed * 3)
+        # The logic here is that if a single day dropping by 5% is bad,
+        # But it's been, say, 3 days, how do we detect if we had an unrecorded 5% drop one of those days, and still lost weight on the other 2 days as well, we would definitely want to trigger the warning for.
+        # We have 3 approaches:
+        # No adjustment, warn on 5% crossed regardless of days -- but that warns too often, e.g. for a mere 1% per day for 5 consecutive days
+        # No adjustment, warn on 5% crossed PER DAY regardless of days -- but that warns too inferquently, e.g. only if lost 5%+ every day (on average) for 5 consecutive days
+        # Adjust threshold to be tighter the more days are being checked against, so that a pattern of consecutive losses or a loss large enough that one of the days might reasonably have been over threshold gets reported
+        # We're doing the 3rd option here, with adjustment = threshold * (days+2)/(days*3)
+        # A user setting daily threshold of 5% becomes, under that formula,
+        # 5% for one day
+        # 3.33% per day for 2 days (total drop of 6.7% over 2 days)
+        # 2.78% per day for 3 days (total drop of 8.3% over 3 days)
+        # 2.14% per day for 7 days (total drop of 15% over 7 days)
+        # 1.90% per day for 14 days (total drop of 27% over 14 days)
+        # To make it more conservative, add 1 to the two constants (e.g. days+3 / days*4)
+        # To make it less conservative, subtract 1 from the constants (e.g. days+1 / days*2)
 
+        # TODO future feature -- check e.g. last 7 weights against this same formula, so that we can notice strings of consecutive losses that were under the individual threshold
 
-
-
-        warn = paste0("ACTION REQUIRED: Weight fell by more than ", 100*user_settings$maximum_weight_change_daily_percent, "% in one day. (", old_weight, " -> ", analysis$weight, ").")
-        warning(paste0(warn, "\n"))
-        warnings_list <<- append(warnings_list, warn)
+        if (-1 * weight_change_daily_percent > adjusted_daily_threshold) {
+          warn = paste0("ACTION REQUIRED: Weight fell by more than ", 100*adjusted_daily_threshold, "% per day across ", days_elapsed, " day. (", old_weight, " -> ", analysis$weight, ").")
+          warning(paste0(warn, "\n"))
+          warnings_list <<- append(warnings_list, warn)
+        }
       }
       if (-1 * weight_change_overall_percent > user_settings$maximum_weight_change_overall_percent) {
         warn = paste0("ACTION REQUIRED: Rat has lost more than ", 100*user_settings$maximum_weight_change_overall_percent, "% of maximum body weight. (", max_weight, " -> ", analysis$weight, ").")
