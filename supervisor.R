@@ -543,9 +543,8 @@ Workbook_Writer <- function() {
       if(phase_current == "BBN") {
         r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>% select(-Freq, -Dur) %>%
           group_by(task, detail) %>%
-          mutate(Spacer2 = NA,
-                 THrange = paste0(min(TH) %>% round(digits = 0), "-", max(TH) %>% round(digits = 0))) %>%
-          relocate(Spacer2:THrange, .after = TH) %>%
+          mutate(THrange = paste0(min(TH) %>% round(digits = 0), "-", max(TH) %>% round(digits = 0))) %>%
+          relocate(THrange, .after = TH) %>%
           relocate(Spacer1, .after = mean_attempts_per_trial) %>%
           select(-FA_detailed)
       } else if (phase_current == "Tones") {
