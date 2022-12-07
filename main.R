@@ -1199,7 +1199,7 @@ Check_Weight <- function() {
 
       days_elapsed = analysis$date - old_date
 
-      if(days_elapsed>0) { # Don't want divide-by-zero for resumed runs
+      if(days_elapsed > 0) { # Don't want divide-by-zero for resumed runs
         weight_change_daily_percent = weight_change_percent/days_elapsed
 
         # Adjust the user setting to compensate for number of days elapsed
