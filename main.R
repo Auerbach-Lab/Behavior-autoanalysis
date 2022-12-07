@@ -1207,18 +1207,18 @@ Check_Weight <- function() {
         # The logic here is that if a single day dropping by 5% is bad,
         # But it's been, say, 3 days, how do we detect if we had an unrecorded 5% drop one of those days, and still lost weight on the other 2 days as well, we would definitely want to trigger the warning for.
         # We have 3 approaches:
-        # No adjustment, warn on 5% crossed regardless of days -- but that warns too often, e.g. for a mere 1% per day for 5 consecutive days
-        # No adjustment, warn on 5% crossed PER DAY regardless of days -- but that warns too inferquently, e.g. only if lost 5%+ every day (on average) for 5 consecutive days
-        # Adjust threshold to be tighter the more days are being checked against, so that a pattern of consecutive losses or a loss large enough that one of the days might reasonably have been over threshold gets reported
+          # No adjustment, warn on 5% crossed regardless of days -- but that warns too often, e.g. for a mere 1% per day for 5 consecutive days
+          # No adjustment, warn on 5% crossed PER DAY regardless of days -- but that warns too inferquently, e.g. only if lost 5%+ every day (on average) for 5 consecutive days
+          # Adjust threshold to be tighter the more days are being checked against, so that a pattern of consecutive losses or a loss large enough that one of the days might reasonably have been over threshold gets reported
         # We're doing the 3rd option here, with adjustment = threshold * (days+2)/(days*3)
         # A user setting daily threshold of 5% becomes, under that formula,
-        # 5% for one day
-        # 3.33% per day for 2 days (total drop of 6.7% over 2 days)
-        # 2.78% per day for 3 days (total drop of 8.3% over 3 days)
-        # 2.14% per day for 7 days (total drop of 15% over 7 days)
-        # 1.90% per day for 14 days (total drop of 27% over 14 days)
-        # To make it more conservative, add 1 to the two constants (e.g. days+3 / days*4)
-        # To make it less conservative, subtract 1 from the constants (e.g. days+1 / days*2)
+          # 5% for one day
+          # 3.33% per day for 2 days (total drop of 6.7% over 2 days)
+          # 2.78% per day for 3 days (total drop of 8.3% over 3 days)
+          # 2.14% per day for 7 days (total drop of 15% over 7 days)
+          # 1.90% per day for 14 days (total drop of 27% over 14 days)
+          # To make it more conservative, add 1 to the two constants (e.g. days+3 / days*4)
+          # To make it less conservative, subtract 1 from the constants (e.g. days+1 / days*2)
 
         # TODO future feature -- check e.g. last 7 weights against this same formula, so that we can notice strings of consecutive losses that were under the individual threshold
 
