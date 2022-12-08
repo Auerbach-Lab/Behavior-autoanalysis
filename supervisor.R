@@ -356,7 +356,13 @@ Workbook_Writer <- function() {
         df = rat_runs %>%
           mutate(condition = dplyr::if_else(date <= HL_date, "baseline", "post-HL")) %>%
           tidyr::unnest_wider(assignment) %>%
-          dplyr::mutate(duration = dplyr::if_else(length(summary$duration) == 1, unlist(summary$duration), "Mixed")) # TODO: Test
+#original          #dplyr::mutate(duration = dplyr::if_else(length(summary$duration) == 1, unlist(summary$duration), "Mixed")) # TODO: Test
+
+#mine, gets workable 'mixed' result but breaks later on          # unnest_wider(summary) %>%
+          # dplyr::mutate(d = if_else(
+          #   lengths(lapply(.$duration, unlist, recursive=TRUE)) == 1,
+          #   str_extract(as.character(lapply(.$duration, unlist, recursive=TRUE)), "[:digit:]+"),
+          #   "Mixed"))
 
         BBN_counts = df %>%
           dplyr::filter(phase == "BBN") %>%
