@@ -779,27 +779,33 @@ Workbook_Writer <- function() {
 
   Add_Rat_To_Workbook <- function(row, ratID) {
     rat_runs <<- run_archive %>% dplyr::filter(rat_ID == ratID) %>% dplyr::arrange(date)
-    if (nrow(rat_runs) == 0) stop("ERROR: no runs found for #", ratID)
-    run_today <<- rat_runs %>% dplyr::arrange(date) %>% tail(1) # this is really just the most recent run, which could actually be old if a rat didn't run 'today', but that should never happen
-    experiment_current <<- run_today$assignment[[1]]$experiment
-    phase_current <<- run_today$assignment[[1]]$phase
-    task_current <<- run_today$assignment[[1]]$task
-    detail_current <<- run_today$assignment[[1]]$detail
+    if (nrow(rat_runs) == 0) {
+      warn = paste0("SKIPPED: no runs found for #", ratID)
+      warning(paste0(warn, "\n"))
+    }
+    else {
+      writeLines(paste0("Processing ", run_today$rat_name, "..."))
+      run_today <<- rat_runs %>% dplyr::arrange(date) %>% tail(1) # this is really just the most recent run, which could actually be old if a rat didn't run 'today', but that should never happen
+      experiment_current <<- run_today$assignment[[1]]$experiment
+      phase_current <<- run_today$assignment[[1]]$phase
+      task_current <<- run_today$assignment[[1]]$task
+      detail_current <<- run_today$assignment[[1]]$detail
 
-    Write_Header()
-    Write_Table()
-
-    writeLines(paste0("Done with ", run_today$rat_name, "."))
+      Write_Header()
+      Write_Table()
+      writeLines(paste0("Done with ", run_today$rat_name, "."))
+    }
   }
 
 
 # Writer Workflow ---------------------------------------------------------
   row = 1 #persistent, index of the next unwritten row
 
-  ratID = 209 #TODO more than one rat
+  #ratID = 209 #TODO more than one rat
 
   Define_Styles()
   Setup_Workbook()
+  lapply(rat_archive %>% filter(is.na(end_date)) %>% .$Rat_ID, Add_Rat_To_Workbook, row=row)
   Add_Rat_To_Workbook(row, ratID)
   #saveWorkbook(wb, "supervisor.xlsx", overwrite = TRUE)
   openXL(wb)
