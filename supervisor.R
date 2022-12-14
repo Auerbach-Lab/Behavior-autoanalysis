@@ -554,16 +554,44 @@ Workbook_Writer <- function() {
           relocate(Spacer1, .after = mean_attempts_per_trial) %>%
           select(-FA_detailed)
       } else if (phase_current == "Tones") {
-        r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>%
+
+        # Note that this sheet is currently programmed assuming a set of 4 Frequencies: 4, 8, 16, & 32kHz
+        has_all_kHz = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>%
           group_by(task, detail, Freq) %>%
-          mutate(THrange = paste0(min(TH) %>% round(digits = 0), "-", max(TH) %>% round(digits = 0))) %>%
-          relocate(THrange, .after = TH) %>%
-          gather(variable, value, (TH:THrange)) %>%
-          unite(temp, variable, Freq) %>%
-          pivot_wider(names_from = temp, values_from = value) %>%
-          mutate(Spacer2 = NA) %>%
-          relocate(Spacer2, .after = TH_32) %>%
-          mutate_at(vars(starts_with("TH_")), as.numeric)
+          count(unique(Freq)) == 4
+
+        if (has_all_kHz) {
+          r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>%
+            group_by(task, detail, Freq) %>%
+            mutate(THrange = paste0(min(TH) %>% round(digits = 0), "-", max(TH) %>% round(digits = 0))) %>%
+            relocate(THrange, .after = TH) %>%
+            gather(variable, value, (TH:THrange)) %>%
+            unite(temp, variable, Freq) %>%
+            pivot_wider(names_from = temp, values_from = value) %>%
+            mutate(Spacer2 = NA) %>%
+            relocate(Spacer2, .after = TH_32) %>%
+            mutate_at(vars(starts_with("TH_")), as.numeric)
+        } else {
+          r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>%
+            group_by(task, detail, Freq) %>%
+            mutate(THrange = paste0(min(TH) %>% round(digits = 0), "-", max(TH) %>% round(digits = 0))) %>%
+            relocate(THrange, .after = TH) %>%
+            gather(variable, value, (TH:THrange)) %>%
+            unite(temp, variable, Freq) %>%
+            pivot_wider(names_from = temp, values_from = value)
+
+          # I need to see the output of r at this stage to ensure my df below has all the appropriate columns
+
+          df = tibble(TH_4 = NA, TH_8 = NA, TH_16 = NA, TH_32 = NA)
+
+          r = add_column(r, !!!cols[setdiff(names(df), names(r))])
+
+          r = r %>% mutate(Spacer2 = NA) %>%
+            relocate(Spacer2, .after = TH_32) %>%
+            mutate_at(vars(starts_with("TH_")), as.numeric)
+        }
+
+
 
         x = rat_runs %>%
           dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
