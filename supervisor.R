@@ -356,13 +356,11 @@ Workbook_Writer <- function() {
         df = rat_runs %>%
           mutate(condition = dplyr::if_else(date <= HL_date, "baseline", "post-HL")) %>%
           tidyr::unnest_wider(assignment) %>%
-#original          #dplyr::mutate(duration = dplyr::if_else(length(summary$duration) == 1, unlist(summary$duration), "Mixed")) # TODO: Test
-
-#mine, gets workable 'mixed' result but breaks later on          # unnest_wider(summary) %>%
-          # dplyr::mutate(d = if_else(
-          #   lengths(lapply(.$duration, unlist, recursive=TRUE)) == 1,
-          #   str_extract(as.character(lapply(.$duration, unlist, recursive=TRUE)), "[:digit:]+"),
-          #   "Mixed"))
+          mutate(duration = dplyr::if_else(
+            rapply(.$summary, length, how="unlist") %>% .[seq(7, length(.), 7)] == 1,
+            .$summary %>% modify_depth(1, "duration") %>% as.character %>% str_extract("[:digit:]+"),
+            "Mixed"
+          ))
 
         BBN_counts = df %>%
           dplyr::filter(phase == "BBN") %>%
@@ -781,22 +779,24 @@ Workbook_Writer <- function() {
       deleteData(wb, 1, rows = row_key_start, cols = 15:25, gridExpand = TRUE)
       addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 14:25)
     }
+
+    # advance row for next table
+    row <<- row_table_end + 2
   }
 
-  Add_Rat_To_Workbook <- function(row, ratID) {
+  Add_Rat_To_Workbook <- function(ratID) {
     rat_runs <<- run_archive %>% dplyr::filter(rat_ID == ratID) %>% dplyr::arrange(date)
     if (nrow(rat_runs) == 0) {
       warn = paste0("SKIPPED: no runs found for #", ratID)
       warning(paste0(warn, "\n"))
     }
     else {
-      writeLines(paste0("Processing ", run_today$rat_name, "..."))
       run_today <<- rat_runs %>% dplyr::arrange(date) %>% tail(1) # this is really just the most recent run, which could actually be old if a rat didn't run 'today', but that should never happen
+      writeLines(paste0("Processing ", run_today$rat_name, "..."))
       experiment_current <<- run_today$assignment[[1]]$experiment
       phase_current <<- run_today$assignment[[1]]$phase
       task_current <<- run_today$assignment[[1]]$task
       detail_current <<- run_today$assignment[[1]]$detail
-
       Write_Header()
       Write_Table()
       writeLines(paste0("Done with ", run_today$rat_name, "."))
@@ -805,14 +805,13 @@ Workbook_Writer <- function() {
 
 
 # Writer Workflow ---------------------------------------------------------
-  row = 1 #persistent, index of the next unwritten row
+  row <<- 1 #persistent, index of the next unwritten row
 
   #ratID = 209 #TODO more than one rat
 
   Define_Styles()
   Setup_Workbook()
-  lapply(rat_archive %>% filter(is.na(end_date)) %>% .$Rat_ID, Add_Rat_To_Workbook, row=row)
-  Add_Rat_To_Workbook(row, ratID)
+  lapply(rat_archive %>% filter(is.na(end_date)) %>% .$Rat_ID, Add_Rat_To_Workbook)
   #saveWorkbook(wb, "supervisor.xlsx", overwrite = TRUE)
   openXL(wb)
 }
