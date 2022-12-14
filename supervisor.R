@@ -557,7 +557,7 @@ Workbook_Writer <- function() {
 
         # Note that this sheet is currently programmed assuming a set of 4 Frequencies: 4, 8, 16, & 32kHz
         has_all_kHz = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>%
-          group_by(task, detail, Freq) %>%
+          .$Freq %>%
           count(unique(Freq)) == 4
 
         if (has_all_kHz) {
