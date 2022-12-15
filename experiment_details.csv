@@ -1,23 +1,23 @@
-﻿Experiment,,Experiment,Phase,,Phase,Task,,Phase,Detail,,,
-HHL,,HHL,BBN,,BBN,Training,,BBN,Alone,,,
-Oddball,,HHL,Octave,,BBN,Rxn,,BBN,Rotating,,,
-,,HHL,Tones,,BBN,TH,,BBN,Mixed,,,
-,,Oddball,Tone-BBN,,BBN,Reset,,Tones,50 dB BBN,,,
-,,Oddball,Tone-Tone,,Octave,Training,,Tones,30 dB BBN,,,
-,,,,,Octave,Discrimination,,Octave,Normal,,,
-,,,,,Tones,Training,,Octave,Reversed,,,
-,,,,,Tones,Rxn,,Tone-BBN,2-4,,,
-,,,,,Tones,TH,,Tone-BBN,2-6,,,
-,,,,,Tones,Reset,,Tone-BBN,3-5,,,
-,,,,,Tone-BBN,Background,,Tone-BBN,4-6,,,
-,,,,,Tone-BBN,Base case,,Tone-Tone,2-4,,,
-,,,,,Tone-BBN,Catch trials,,Tone-Tone,2-6,,,
-,,,,,Tone-BBN,Rotating,,Tone-Tone,3-5,,,
-,,,,,Tone-BBN,Uneven odds,,Tone-Tone,4-6,,,
-,,,,,Tone-BBN,Uneven odds & Catch,,,,,,
-,,,,,Tone-Tone,Background,,,,,,
-,,,,,Tone-Tone,Base case,,,,,,
-,,,,,Tone-Tone,Catch trials,,,,,,
-,,,,,Tone-Tone,Rotating,,,,,,
-,,,,,Tone-Tone,Uneven odds,,,,,,
-,,,,,Tone-Tone,Uneven odds & Catch,,,,,,
+﻿Experiment,,Experiment,Phase,,Phase,Task,,Phase,Detail
+Oddball,,Oddball,Tone-BBN,,BBN,Training,,BBN,Alone
+TTS,,Oddball,Tone-Tone,,BBN,Rxn,,BBN,Rotating
+Fmr1-LE,,TTS,BBN,,BBN,TH,,BBN,Mixed
+Tsc2-LE,,TTS,Octave,,BBN,Reset,,BBN,None
+GD,,TTS,Tones,,Tones,Training,,Tones,Alone
+,,Tsc2-LE,BBN,,Tones,Rxn,,Tones,Rotating
+,,Tsc2-LE,Octave,,Tones,TH,,Tones,Mixed
+,,Tsc2-LE,Tones,,Tones,Reset,,Tones,None
+,,Fmr1-LE,BBN,,Octave,Training,,Tones,50 dB PKN
+,,Fmr1-LE,Octave,,Octave,Discrimination,,Tones,30 dB PKN
+,,Fmr1-LE,Tones,,Tone-BBN,Base case,,Tones,50 dB BBN
+,,GD,Gap Detection,,Tone-BBN,Background,,Tones,30 dB BBN
+,,,,,Tone-BBN,Catch trials,,Octave,Normal
+,,,,,Tone-BBN,Rotating,,Octave,Reversed
+,,,,,Tone-BBN,Uneven odds,,Tone-BBN,2-4
+,,,,,Tone-BBN,Uneven odds & Catch,,Tone-BBN,2-6
+,,,,,Tone-BBN,Saline,,Tone-BBN,3-5
+,,,,,Tone-BBN,Agent 21 (1mg/kg),,Tone-BBN,4-6
+,,,,,Tone-BBN,Agent 21 (3mg/kg),,,
+,,,,,Tone-BBN,CNO (3mg/kg),,,
+,,,,,Gap Detection,Training,,,
+,,,,,,,,,
