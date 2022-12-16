@@ -4,7 +4,7 @@ library(R.matlab); library(openxlsx); library(xml2); library(zip);
 # data manipulation
 library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr); library(data.table)
 
-Initialize <- function() {
+InitializeSupervisor <- function() {
   options(warn=1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
 
   source("A:/Coding/Behavior-autoanalysis/settings.R")  # hardcoded user variables
@@ -12,7 +12,8 @@ Initialize <- function() {
   experiment_config_df <<- Filter(function(x)!all(is.na(x)), experiment_config_df) # remove NA columns
 
   rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
-
+  load(paste0(user_settings$projects_folder, "run_archive.Rdata"))
+  run_archive <<- run_archive
 }
 
 
@@ -34,7 +35,7 @@ Workbook_Reader <- function() {
     {
       r = dplyr::rows_update(rat_archive, assignments_df, by = "Rat_ID", unmatched = "error")
       tryCatch(
-        write.csv(rat_archive, paste0(user_settings$projects_folder, "rat_archive.csv"), row.names = FALSE),
+        write.csv(rat_archive, paste0(user_settings$projects_folder, "rat_archive.csv"), rowCurrent.names = FALSE),
         finally = writeLines(paste0(nrow(assignments_df), " assignments were recorded in `rat_archive.csv`"))
       )
       r
@@ -95,723 +96,725 @@ Workbook_Writer <- function() {
     return(wb)
   }
 
-  Write_Header <- function() {
-    Calculate_Next_Run_Text <- function () {
-      # TODO this should be even smarter and determine if there are assignments for today
-      # If not, and today is not sunday, then assign for today
-      # Basically it should advance to the first non-sunday that's unassigned
-      # But to do any of that I need to know where I'm putting assignment data. Probably rat_archive.
-      nextrun = Sys.Date() + 1
-      nextrun_text = "Tomorrow"
-      if (nextrun %>% format("%A") == "Sunday") {
-        nextrun = nextrun + 1
-        nextrun_text = "Monday"
+  Add_Rat_To_Workbook <- function(ratID) {
+    Write_Header <- function() {
+      Calculate_Next_Run_Text <- function () {
+        # TODO this should be even smarter and determine if there are assignments for today
+        # If not, and today is not sunday, then assign for today
+        # Basically it should advance to the first non-sunday that's unassigned
+        # But to do any of that I need to know where I'm putting assignment data. Probably rat_archive.
+        nextrun = Sys.Date() + 1
+        nextrun_text = "Tomorrow"
+        if (nextrun %>% format("%A") == "Sunday") {
+          nextrun = nextrun + 1
+          nextrun_text = "Monday"
+        }
+        nextrun_text = paste0(nextrun_text, " - ", nextrun %>% format("%m/%d/%Y"))
+        return(nextrun_text)
       }
-      nextrun_text = paste0(nextrun_text, " - ", nextrun %>% format("%m/%d/%Y"))
-      return(nextrun_text)
+
+      Write_Dynamic_Lists <- function() {
+        Build_List <- function(i) {
+          #build the excel formula that will display the items from the output range that correspond to the query cell for the input range
+          dynamic_list_formula = paste0("=IFERROR(INDEX(", output_range, ",SMALL(IF(", query_cell, "=", input_range, ",rowCurrent(", input_range, ")-rowCurrent(", range_start, ")+1),rowCurrent(", i, ":", i, "))),\"\")")
+          writeFormula(wb, 1, dynamic_list_formula, startRow = user_settings$config_row+i, startCol = user_settings$dynamic_col + col_offset, array = TRUE)
+        }
+
+        # phases list lives at user_settings$config_col+1 (experiment) and +2 (phase), querying off experiment in F
+        range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 2))
+        range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 2))
+        output_range = paste0(range_start, ":", range_end)
+        range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 1)) # going to use this when we build formula, so it has to be second
+        range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 1))
+        input_range = paste0(range_start, ":", range_end)
+        query_cell = getCellRefs(data.frame(rowCurrent, 6))
+        col_offset = 0
+        sapply(c(1:user_settings$dynamic_list_length), Build_List)
+
+        #task list lives at user_settings$config_col+3 (phase) and +4 (task), querying from phase in I
+        range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 4))
+        range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 4))
+        output_range = paste0(range_start, ":", range_end)
+        range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 3)) # going to use this when we build formula, so it has to be second
+        range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 3))
+        input_range = paste0(range_start, ":", range_end)
+        query_cell = getCellRefs(data.frame(rowCurrent, 9))
+        col_offset = col_offset + 1
+        sapply(c(1:user_settings$dynamic_list_length), Build_List)
+
+        #detail list lives at user_settings$config_col+5 (phase again) and +6 (detail), querying from phase again in I
+        range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 6))
+        range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 6))
+        output_range = paste0(range_start, ":", range_end)
+        range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 5)) # going to use this when we build formula, so it has to be second
+        range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 5))
+        input_range = paste0(range_start, ":", range_end)
+        query_cell = getCellRefs(data.frame(rowCurrent, 9))
+        col_offset = col_offset + 1
+        sapply(c(1:user_settings$dynamic_list_length), Build_List)
+
+      }
+
+      # Header Workflow ---------------------------------------------------------
+
+      Write_Dynamic_Lists()
+
+      #Rat Name & ID
+      rat_name = run_today$rat_name
+      #rat_name = stringr::str_to_upper(string = rat_name)
+      digit_index = str_locate(string = rat_name, pattern = "[:digit:]")[1]
+      rat_name = paste0(stringr::str_sub(rat_name, 1, digit_index - 1),
+                        " ",
+                        stringr::str_sub(rat_name, digit_index, stringr::str_length(rat_name))
+      )
+      addStyle(wb, 1, rat_name_style, rows = rowCurrent, cols = 1) # Name
+      addStyle(wb, 1, rat_name_style, rows = rowCurrent, cols = 30) # ID
+
+
+      #Date
+      addStyle(wb, 1, date_style, rows = rowCurrent, cols = 2:3)
+      mergeCells(wb, 1, cols = 2:3, rows = rowCurrent)
+      nextrun_text = Calculate_Next_Run_Text()
+
+      #Tomorrow's Filename
+      conditionalFormatting(wb, 1, type = "contains", rule = "[", style = mandatory_input_reject_style, rows = rowCurrent, cols = 4)
+      conditionalFormatting(wb, 1, type = "notcontains", rule = "[", style = mandatory_input_accept_style, rows = rowCurrent, cols = 4)
+
+      #Experiment
+      range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col))
+      range_end = getCellRefs(data.frame(user_settings$config_row + user_settings$dynamic_list_length, user_settings$config_col))
+      range_string = paste0(range_start, ":", range_end)
+      dataValidation(wb, 1, rows = rowCurrent, cols = 6, type = "list", value = range_string, operator = "")
+      mergeCells(wb, 1, cols = 6:7, rows = rowCurrent)
+      rule_string = paste0("COUNTIF(", range_string, ",F", rowCurrent, ")>0")
+      conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_accept_style, rows = rowCurrent, cols = 6)
+      rule_string = paste0("COUNTIF(", range_string, ",F", rowCurrent, ")<=0")
+      conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_reject_style, rows = rowCurrent, cols = 6)
+
+      #Experimental Phase
+      range_start = getCellRefs(data.frame(rowCurrent + 1, user_settings$dynamic_col))
+      range_end = getCellRefs(data.frame(rowCurrent + 1 + user_settings$dynamic_list_length, user_settings$dynamic_col))
+      range_string = paste0(range_start, ":", range_end)
+      dataValidation(wb, 1, rows = rowCurrent, cols = 9, type = "list", value = range_string, operator = "")
+      rule_string = paste0("COUNTIF(", range_string, ",I", rowCurrent, ")>0")
+      conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_accept_style, rows = rowCurrent, cols = 9)
+      rule_string = paste0("COUNTIF(", range_string, ",I", rowCurrent, ")<=0")
+      conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_reject_style, rows = rowCurrent, cols = 9)
+      mergeCells(wb, 1, cols = 9:10, rows = rowCurrent)
+
+      #Task
+      range_start = getCellRefs(data.frame(rowCurrent + 1, user_settings$dynamic_col + 1))
+      range_end = getCellRefs(data.frame(rowCurrent + 1 + user_settings$dynamic_list_length, user_settings$dynamic_col + 1))
+      range_string = paste0(range_start, ":", range_end)
+      dataValidation(wb, 1, rows = rowCurrent, cols = 12, type = "list", value = range_string, operator = "")
+      rule_string = paste0("COUNTIF(", range_string, ",L", rowCurrent, ")>0")
+      conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_accept_style, rows = rowCurrent, cols = 12)
+      rule_string = paste0("COUNTIF(", range_string, ",L", rowCurrent, ")<=0")
+      conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_reject_style, rows = rowCurrent, cols = 12)
+      mergeCells(wb, 1, cols = 12:13, rows = rowCurrent)
+
+      #Detail
+      range_start = getCellRefs(data.frame(rowCurrent + 1, user_settings$dynamic_col + 2))
+      range_end = getCellRefs(data.frame(rowCurrent + 1 + user_settings$dynamic_list_length, user_settings$dynamic_col + 2))
+      range_string = paste0(range_start, ":", range_end)
+      dataValidation(wb, 1, rows = rowCurrent, cols = 15, type = "list", value = range_string, operator = "")
+      rule_string = paste0("COUNTIF(", range_string, ",O", rowCurrent, ")>0")
+      conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_accept_style, rows = rowCurrent, cols = 15)
+      rule_string = paste0("COUNTIF(", range_string, ",O", rowCurrent, ")<=0")
+      conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_reject_style, rows = rowCurrent, cols = 15)
+      mergeCells(wb, 1, cols = 15:16, rows = rowCurrent)
+
+      #Persistent Comment Field
+      addStyle(wb, 1, rows = rowCurrent, cols = 18:27, style = optional_input_style)
+      mergeCells(wb, 1, cols = 18:27, rows = rowCurrent) # rat persistent comment merge
+
+      #Warnings
+      conditionalFormatting(wb, 1, type = "expression", rule = "==\"Warnings: none\"", style = mandatory_input_accept_style, rows = rowCurrent, cols = 29)
+      conditionalFormatting(wb, 1, type = "expression", rule = "!=\"Warnings: none\"", style = warning_style, rows = rowCurrent, cols = 29)
+      addStyle(wb, 1, rows = rowCurrent, cols = 29, style = halign_center_style, stack = TRUE) # center the warning text
+
+      #Entire Main rowCurrent
+      addStyle(wb, 1, rows = rowCurrent, cols = 1:30, style = rat_header_style, stack = TRUE) # vertically center & wrap the main rowCurrent
+      #Set_Height_Main_Row()
+
+      #Retrieve persistent comment if there is one
+      comment = rat_archive %>% filter(Rat_ID == ratID) %>% .$Persistent_Comment
+      if(is.na(comment)) comment = "[Persistent comment field e.g. week-ahead informal plan for this rat]"
+
+      rat_header_df = data.frame(
+        rat_name, #A
+        nextrun_text, #B
+        "", #C - merge with previous
+        "[Tomorrow's Filename]", #D
+        "", #E
+        experiment_current, #F
+        "", #G - merge with previous
+        "", #H
+        phase_current, #I
+        "", #J - merge with previous
+        "", #K
+        "[Task]", #L,
+        "", #M - merge with previous
+        "", #N
+        "[Detail]", #O,
+        "", #P - merge with previous
+        "", #Q
+        comment, #R
+        "", "", "", "", "", #S T U V W
+        "", "", "", "", "", #X Y Z AA AB
+        "", #AC (Warnings will be filled in dynamically later)
+        paste0("#", ratID), #AD, column 30 -- offscreen, but used for readback
+        check.names = FALSE, fix.empty.names = FALSE
+      )
+      writeData(wb, 1, x = rat_header_df, startRow = rowCurrent, colNames = FALSE, rowNames = FALSE)
     }
 
-    Write_Dynamic_Lists <- function() {
-      Build_List <- function(i) {
-        #build the excel formula that will display the items from the output range that correspond to the query cell for the input range
-        dynamic_list_formula = paste0("=IFERROR(INDEX(", output_range, ",SMALL(IF(", query_cell, "=", input_range, ",ROW(", input_range, ")-ROW(", range_start, ")+1),ROW(", i, ":", i, "))),\"\")")
-        writeFormula(wb, 1, dynamic_list_formula, startRow = user_settings$config_row+i, startCol = user_settings$dynamic_col + col_offset, array = TRUE)
-      }
+    Write_Table <- function() {
+      Build_Counts <- function() {
+        # if experiment_current != Oddball
+        # get current date and compare to rat_archive 'HL induced' column's date to determine post-HL or not
+        pre_HL = is.na(dplyr::filter(rat_archive, Rat_ID == ratID)$HL_date) #(boolean)
+        if (!pre_HL) HL_date = dplyr::filter(rat_archive, Rat_ID == ratID)$HL_date
 
-      # phases list lives at user_settings$config_col+1 (experiment) and +2 (phase), querying off experiment in F
-      range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 2))
-      range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 2))
-      output_range = paste0(range_start, ":", range_end)
-      range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 1)) # going to use this when we build formula, so it has to be second
-      range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 1))
-      input_range = paste0(range_start, ":", range_end)
-      query_cell = getCellRefs(data.frame(row, 6))
-      col_offset = 0
-      sapply(c(1:user_settings$dynamic_list_length), Build_List)
-
-      #task list lives at user_settings$config_col+3 (phase) and +4 (task), querying from phase in I
-      range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 4))
-      range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 4))
-      output_range = paste0(range_start, ":", range_end)
-      range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 3)) # going to use this when we build formula, so it has to be second
-      range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 3))
-      input_range = paste0(range_start, ":", range_end)
-      query_cell = getCellRefs(data.frame(row, 9))
-      col_offset = col_offset + 1
-      sapply(c(1:user_settings$dynamic_list_length), Build_List)
-
-      #detail list lives at user_settings$config_col+5 (phase again) and +6 (detail), querying from phase again in I
-      range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 6))
-      range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 6))
-      output_range = paste0(range_start, ":", range_end)
-      range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 5)) # going to use this when we build formula, so it has to be second
-      range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 5))
-      input_range = paste0(range_start, ":", range_end)
-      query_cell = getCellRefs(data.frame(row, 9))
-      col_offset = col_offset + 1
-      sapply(c(1:user_settings$dynamic_list_length), Build_List)
-
-    }
-
-    # Header Workflow ---------------------------------------------------------
-
-    Write_Dynamic_Lists()
-
-    #Rat Name & ID
-    rat_name = run_today$rat_name
-    #rat_name = stringr::str_to_upper(string = rat_name)
-    digit_index = str_locate(string = rat_name, pattern = "[:digit:]")[1]
-    rat_name = paste0(stringr::str_sub(rat_name, 1, digit_index - 1),
-                      " ",
-                      stringr::str_sub(rat_name, digit_index, stringr::str_length(rat_name))
-    )
-    addStyle(wb, 1, rat_name_style, rows = row, cols = 1) # Name
-    addStyle(wb, 1, rat_name_style, rows = row, cols = 30) # ID
-
-
-    #Date
-    addStyle(wb, 1, date_style, rows = row, cols = 2:3)
-    mergeCells(wb, 1, cols = 2:3, rows = row)
-    nextrun_text = Calculate_Next_Run_Text()
-
-    #Tomorrow's Filename
-    conditionalFormatting(wb, 1, type = "contains", rule = "[", style = mandatory_input_reject_style, rows = row, cols = 4)
-    conditionalFormatting(wb, 1, type = "notcontains", rule = "[", style = mandatory_input_accept_style, rows = row, cols = 4)
-
-    #Experiment
-    range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col))
-    range_end = getCellRefs(data.frame(user_settings$config_row + user_settings$dynamic_list_length, user_settings$config_col))
-    range_string = paste0(range_start, ":", range_end)
-    dataValidation(wb, 1, rows = row, cols = 6, type = "list", value = range_string, operator = "")
-    mergeCells(wb, 1, cols = 6:7, rows = row)
-    rule_string = paste0("COUNTIF(", range_string, ",F", row, ")>0")
-    conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_accept_style, rows = row, cols = 6)
-    rule_string = paste0("COUNTIF(", range_string, ",F", row, ")<=0")
-    conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_reject_style, rows = row, cols = 6)
-
-    #Experimental Phase
-    range_start = getCellRefs(data.frame(row + 1, user_settings$dynamic_col))
-    range_end = getCellRefs(data.frame(row + 1 + user_settings$dynamic_list_length, user_settings$dynamic_col))
-    range_string = paste0(range_start, ":", range_end)
-    dataValidation(wb, 1, rows = row, cols = 9, type = "list", value = range_string, operator = "")
-    rule_string = paste0("COUNTIF(", range_string, ",I", row, ")>0")
-    conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_accept_style, rows = row, cols = 9)
-    rule_string = paste0("COUNTIF(", range_string, ",I", row, ")<=0")
-    conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_reject_style, rows = row, cols = 9)
-    mergeCells(wb, 1, cols = 9:10, rows = row)
-
-    #Task
-    range_start = getCellRefs(data.frame(row + 1, user_settings$dynamic_col + 1))
-    range_end = getCellRefs(data.frame(row + 1 + user_settings$dynamic_list_length, user_settings$dynamic_col + 1))
-    range_string = paste0(range_start, ":", range_end)
-    dataValidation(wb, 1, rows = row, cols = 12, type = "list", value = range_string, operator = "")
-    rule_string = paste0("COUNTIF(", range_string, ",L", row, ")>0")
-    conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_accept_style, rows = row, cols = 12)
-    rule_string = paste0("COUNTIF(", range_string, ",L", row, ")<=0")
-    conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_reject_style, rows = row, cols = 12)
-    mergeCells(wb, 1, cols = 12:13, rows = row)
-
-    #Detail
-    range_start = getCellRefs(data.frame(row + 1, user_settings$dynamic_col + 2))
-    range_end = getCellRefs(data.frame(row + 1 + user_settings$dynamic_list_length, user_settings$dynamic_col + 2))
-    range_string = paste0(range_start, ":", range_end)
-    dataValidation(wb, 1, rows = row, cols = 15, type = "list", value = range_string, operator = "")
-    rule_string = paste0("COUNTIF(", range_string, ",O", row, ")>0")
-    conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_accept_style, rows = row, cols = 15)
-    rule_string = paste0("COUNTIF(", range_string, ",O", row, ")<=0")
-    conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_reject_style, rows = row, cols = 15)
-    mergeCells(wb, 1, cols = 15:16, rows = row)
-
-    #Persistent Comment Field
-    addStyle(wb, 1, rows = row, cols = 18:27, style = optional_input_style)
-    mergeCells(wb, 1, cols = 18:27, rows = row) # rat persistent comment merge
-
-    #Warnings
-    conditionalFormatting(wb, 1, type = "expression", rule = "==\"Warnings: none\"", style = mandatory_input_accept_style, rows = row, cols = 29)
-    conditionalFormatting(wb, 1, type = "expression", rule = "!=\"Warnings: none\"", style = warning_style, rows = row, cols = 29)
-    addStyle(wb, 1, rows = row, cols = 29, style = halign_center_style, stack = TRUE) # center the warning text
-
-    #Entire Main Row
-    addStyle(wb, 1, rows = row, cols = 1:30, style = rat_header_style, stack = TRUE) # vertically center & wrap the main row
-    #Set_Height_Main_Row()
-
-    #Retrieve persistent comment if there is one
-    comment = rat_archive %>% filter(Rat_ID == ratID) %>% .$Persistent_Comment
-    if(is.na(comment)) comment = "[Persistent comment field e.g. week-ahead informal plan for this rat]"
-
-    rat_header_df = data.frame(
-      rat_name, #A
-      nextrun_text, #B
-      "", #C - merge with previous
-      "[Tomorrow's Filename]", #D
-      "", #E
-      experiment_current, #F
-      "", #G - merge with previous
-      "", #H
-      phase_current, #I
-      "", #J - merge with previous
-      "", #K
-      "[Task]", #L,
-      "", #M - merge with previous
-      "", #N
-      "[Detail]", #O,
-      "", #P - merge with previous
-      "", #Q
-      comment, #R
-      "", "", "", "", "", #S T U V W
-      "", "", "", "", "", #X Y Z AA AB
-      "", #AC (Warnings will be filled in dynamically later)
-      paste0("#", ratID), #AD, column 30 -- offscreen, but used for readback
-      check.names = FALSE, fix.empty.names = FALSE
-    )
-    writeData(wb, 1, x = rat_header_df, startRow = row, colNames = FALSE, rowNames = FALSE)
-  }
-
-  Write_Table <- function() {
-    Build_Counts <- function() {
-      # if experiment_current != Oddball
-      # get current date and compare to rat_archive 'HL induced' column's date to determine post-HL or not
-      pre_HL = is.na(dplyr::filter(rat_archive, Rat_ID == ratID)$HL_date) #(boolean)
-      if (!pre_HL) HL_date = dplyr::filter(rat_archive, Rat_ID == ratID)$HL_date
-
-      # BBN Rxn/TH PreHL Alone
-      if (phase_current == "BBN" & task_current %in% c("Rxn", "TH") & pre_HL & detail_current == "Alone") {
-        count_df = rat_runs %>%
-          tidyr::unnest_wider(assignment) %>%
-          dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Alone") %>%
-          group_by(task) %>%
-          summarise(task = unique(task), detail = unique(detail),
-                    date = tail(date, 1), n = n(),
-                    condition = "baseline",
-                    .groups = "drop")
-      }
-
-      # BBN Rxn/TH PreHL Mixed
-      #TODO Untested as not in current dataset
-      if (phase_current == "BBN" & task_current %in% c("Rxn", "TH") & pre_HL & detail_current == "Mixed") {
-        count_df = rat_runs %>%
-          tidyr::unnest_wider(assignment) %>%
-          dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Mixed") %>%
-          group_by(task) %>%
-          summarise(task = unique(task), detail = unique(detail),
-                    date = tail(date, 1), n = n(),
-                    condition = "baseline",
-                    .groups = "drop")
-      }
-
-      # BBN Training/Reset PreHL Alone
-      #TODO Untested as not in current dataset
-      if (phase_current == "BBN" & task_current %in% c("Training", "Reset") & pre_HL & detail_current == "Alone") {
-        count_df = rat_runs %>%
-          tidyr::unnest_wider(assignment) %>%
-          dplyr::filter(phase == "BBN" & detail == "Alone") %>%
-          group_by(task) %>%
-          summarise(task = unique(task), detail = unique(detail),
-                    date = tail(date, 1), n = n(),
-                    condition = "baseline",
-                    .groups = "drop")
-      }
-
-      # BBN Training/Reset PreHL Mixed
-      #TODO Untested as not in current dataset
-      if (phase_current == "BBN" & task_current %in% c("Training", "Reset") & pre_HL & detail_current == "Mixed") {
-        count_df = rat_runs %>%
-          tidyr::unnest_wider(assignment) %>%
-          dplyr::filter(phase == "BBN" & detail == "Mixed") %>%
-          group_by(task) %>%
-          summarise(task = unique(task), detail = unique(detail),
-                    date = tail(date, 1), n = n(),
-                    condition = "baseline",
-                    .groups = "drop")
-      }
-
-      # Tones Rxn/TH PreHL
-      if (phase_current == "Tones" & task_current %in% c("Rxn", "TH") & pre_HL) {
-        count_df = rat_runs %>%
-          tidyr::unnest_wider(assignment) %>%
-          dplyr::filter(phase == "Tones" & task_current %in% c("Rxn", "TH")) %>%
-          group_by(task) %>%
-          summarise(task = unique(task), detail = unique(detail),
-                    date = tail(date, 1), n = n(),
-                    condition = "baseline",
-                    .groups = "drop") %>%
-          dplyr::arrange(dplyr::desc(detail), task)
-      }
-
-      # Tones Training/Reset PreHL
-      #TODO Untested as not in current dataset
-      if (phase_current == "Tones" & task_current %in% c("Training", "Reset") & pre_HL) {
-        count_df = rat_runs %>%
-          tidyr::unnest_wider(assignment) %>%
-          dplyr::filter(phase == "Tones") %>% # keeping all tasks
-          group_by(task) %>%
-          summarise(task = unique(task), detail = NA,
-                    date = tail(date, 1), n = n(),
-                    condition = "baseline",
-                    .groups = "drop")
-      }
-
-      # BBN/Tones Rxn/TH PostHL
-      if (phase_current %in% c("BBN", "Tones") & task_current %in% c("Rxn", "TH") & !pre_HL) {
-        df = rat_runs %>%
-          mutate(condition = dplyr::if_else(date <= HL_date, "baseline", "post-HL")) %>%
-          tidyr::unnest_wider(assignment) %>%
-          mutate(duration = dplyr::if_else(
-            rapply(.$summary, length, how="unlist") %>% .[seq(7, length(.), 7)] == 1,
-            .$summary %>% modify_depth(1, "duration") %>% as.character %>% str_extract("[:digit:]+"),
-            "Mixed"
-          ))
-
-        BBN_counts = df %>%
-          dplyr::filter(phase == "BBN") %>%
-          dplyr::filter((task == "TH" & condition == "baseline" & detail == "Alone" & duration == 50) #TODO need to limit to current duration/50ms test
-                        | (condition == "post-HL" & detail == "Alone")) %>%
-          group_by(task, condition) %>%
-          summarise(task = paste("BBN", unique(task)), detail = unique(detail),
-                    date = tail(date, 1), n = n(),
-                    condition = unique(condition),
-                    .groups = "drop") %>%
-          dplyr::arrange(condition, task)
-
-        Tones_counts = df %>%
-          dplyr::filter(phase == "Tones") %>%
-          dplyr::filter(task %in% c("Rxn", "TH")) %>%
-          group_by(task, condition) %>%
-          summarise(task = paste("Tones", unique(task)), detail = unique(detail),
-                    date = tail(date, 1), n = n(),
-                    condition = unique(condition),
-                    .groups = "drop") %>%
-          dplyr::arrange(condition, task)
-
-        count_df = rbind(BBN_counts, Tones_counts)
-      }
-
-      # BBN Training/Reset PostHL
-      #TODO Partially tested as not in current dataset
-      if (phase_current == "BBN" & task_current %in% c("Training", "Reset") & !pre_HL) {
-        count_df = rat_runs %>%
-          tidyr::unnest_wider(assignment) %>%
-          dplyr::filter(phase == "BBN" & date <= HL_date) %>%
-          group_by(task) %>%
-          summarise(task = unique(task), detail = NA,
-                    date = tail(date, 1), n = n(),
-                    condition = "post-HL",
-                    .groups = "drop")
-      }
-
-      # Tones Training/Reset PostHL
-      #TODO Partially tested as not in current dataset
-      if (phase_current == "Tones" & task_current %in% c("Training", "Reset") & !pre_HL) {
-        count_df = rat_runs %>%
-          tidyr::unnest_wider(assignment) %>%
-          dplyr::filter(phase == "Tones") %>% # keeping all tasks
-          group_by(task) %>%
-          summarise(task = unique(task), detail = NA,
-                    date = tail(date, 1), n = n(),
-                    condition = "post-HL",
-                    .groups = "drop")
-      }
-
-      # Octave
-      if (phase_current == "Octave") {
-        if(pre_HL) {
+        # BBN Rxn/TH PreHL Alone
+        if (phase_current == "BBN" & task_current %in% c("Rxn", "TH") & pre_HL & detail_current == "Alone") {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
-            dplyr::filter(phase == "Octave") %>% # keeping all tasks
-            group_by(task, detail) %>%
+            dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Alone") %>%
+            group_by(task) %>%
             summarise(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
                       condition = "baseline",
                       .groups = "drop")
-        } else {
+        }
+
+        # BBN Rxn/TH PreHL Mixed
+        #TODO Untested as not in current dataset
+        if (phase_current == "BBN" & task_current %in% c("Rxn", "TH") & pre_HL & detail_current == "Mixed") {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
-            dplyr::filter(phase == "Octave" & date >= HL_date) %>% # keeping all tasks
-            group_by(task, detail) %>%
+            dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Mixed") %>%
+            group_by(task) %>%
             summarise(task = unique(task), detail = unique(detail),
+                      date = tail(date, 1), n = n(),
+                      condition = "baseline",
+                      .groups = "drop")
+        }
+
+        # BBN Training/Reset PreHL Alone
+        #TODO Untested as not in current dataset
+        if (phase_current == "BBN" & task_current %in% c("Training", "Reset") & pre_HL & detail_current == "Alone") {
+          count_df = rat_runs %>%
+            tidyr::unnest_wider(assignment) %>%
+            dplyr::filter(phase == "BBN" & detail == "Alone") %>%
+            group_by(task) %>%
+            summarise(task = unique(task), detail = unique(detail),
+                      date = tail(date, 1), n = n(),
+                      condition = "baseline",
+                      .groups = "drop")
+        }
+
+        # BBN Training/Reset PreHL Mixed
+        #TODO Untested as not in current dataset
+        if (phase_current == "BBN" & task_current %in% c("Training", "Reset") & pre_HL & detail_current == "Mixed") {
+          count_df = rat_runs %>%
+            tidyr::unnest_wider(assignment) %>%
+            dplyr::filter(phase == "BBN" & detail == "Mixed") %>%
+            group_by(task) %>%
+            summarise(task = unique(task), detail = unique(detail),
+                      date = tail(date, 1), n = n(),
+                      condition = "baseline",
+                      .groups = "drop")
+        }
+
+        # Tones Rxn/TH PreHL
+        if (phase_current == "Tones" & task_current %in% c("Rxn", "TH") & pre_HL) {
+          count_df = rat_runs %>%
+            tidyr::unnest_wider(assignment) %>%
+            dplyr::filter(phase == "Tones" & task_current %in% c("Rxn", "TH")) %>%
+            group_by(task) %>%
+            summarise(task = unique(task), detail = unique(detail),
+                      date = tail(date, 1), n = n(),
+                      condition = "baseline",
+                      .groups = "drop") %>%
+            dplyr::arrange(dplyr::desc(detail), task)
+        }
+
+        # Tones Training/Reset PreHL
+        #TODO Untested as not in current dataset
+        if (phase_current == "Tones" & task_current %in% c("Training", "Reset") & pre_HL) {
+          count_df = rat_runs %>%
+            tidyr::unnest_wider(assignment) %>%
+            dplyr::filter(phase == "Tones") %>% # keeping all tasks
+            group_by(task) %>%
+            summarise(task = unique(task), detail = NA,
+                      date = tail(date, 1), n = n(),
+                      condition = "baseline",
+                      .groups = "drop")
+        }
+
+        # BBN/Tones Rxn/TH PostHL
+        if (phase_current %in% c("BBN", "Tones") & task_current %in% c("Rxn", "TH") & !pre_HL) {
+          df = rat_runs %>%
+            mutate(condition = dplyr::if_else(date <= HL_date, "baseline", "post-HL")) %>%
+            tidyr::unnest_wider(assignment) %>%
+            mutate(duration = dplyr::if_else(
+              rapply(.$summary, length, how="unlist") %>% .[seq(7, length(.), 7)] == 1,
+              .$summary %>% modify_depth(1, "duration") %>% as.character %>% str_extract("[:digit:]+"),
+              "Mixed"
+            ))
+
+          BBN_counts = df %>%
+            dplyr::filter(phase == "BBN") %>%
+            dplyr::filter((task == "TH" & condition == "baseline" & detail == "Alone" & duration == 50) #TODO need to limit to current duration/50ms test
+                          | (condition == "post-HL" & detail == "Alone")) %>%
+            group_by(task, condition) %>%
+            summarise(task = paste("BBN", unique(task)), detail = unique(detail),
+                      date = tail(date, 1), n = n(),
+                      condition = unique(condition),
+                      .groups = "drop") %>%
+            dplyr::arrange(condition, task)
+
+          Tones_counts = df %>%
+            dplyr::filter(phase == "Tones") %>%
+            dplyr::filter(task %in% c("Rxn", "TH")) %>%
+            group_by(task, condition) %>%
+            summarise(task = paste("Tones", unique(task)), detail = unique(detail),
+                      date = tail(date, 1), n = n(),
+                      condition = unique(condition),
+                      .groups = "drop") %>%
+            dplyr::arrange(condition, task)
+
+          count_df = rbind(BBN_counts, Tones_counts)
+        }
+
+        # BBN Training/Reset PostHL
+        #TODO Partially tested as not in current dataset
+        if (phase_current == "BBN" & task_current %in% c("Training", "Reset") & !pre_HL) {
+          count_df = rat_runs %>%
+            tidyr::unnest_wider(assignment) %>%
+            dplyr::filter(phase == "BBN" & date <= HL_date) %>%
+            group_by(task) %>%
+            summarise(task = unique(task), detail = NA,
                       date = tail(date, 1), n = n(),
                       condition = "post-HL",
                       .groups = "drop")
         }
-      }
 
-      # Oddball
-      if (experiment_current == "Oddball") {
-        df_basecase = rat_runs %>%
-          tidyr::unnest_wider(assignment) %>%
-          dplyr::filter(phase == phase_current & task == "Base case") %>% # note that this is agnostic of the most recent detail and will return any recent base case streak
-          mutate( groupid = data.table::rleid(task, detail) ) %>%
-          filter(groupid == max(groupid)) %>%
-          summarise(task = unique(task), detail = unique(detail),
-                    date = tail(date, 1), n = n(),
-                    condition = NA,
-                    .groups = "drop")
-
-        if (task_current != "Base case") {
-          df_task = rat_runs %>%
+        # Tones Training/Reset PostHL
+        #TODO Partially tested as not in current dataset
+        if (phase_current == "Tones" & task_current %in% c("Training", "Reset") & !pre_HL) {
+          count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
-            dplyr::filter(phase == phase_current & task == task_current) %>%
+            dplyr::filter(phase == "Tones") %>% # keeping all tasks
+            group_by(task) %>%
+            summarise(task = unique(task), detail = NA,
+                      date = tail(date, 1), n = n(),
+                      condition = "post-HL",
+                      .groups = "drop")
+        }
+
+        # Octave
+        if (phase_current == "Octave") {
+          if(pre_HL) {
+            count_df = rat_runs %>%
+              tidyr::unnest_wider(assignment) %>%
+              dplyr::filter(phase == "Octave") %>% # keeping all tasks
+              group_by(task, detail) %>%
+              summarise(task = unique(task), detail = unique(detail),
+                        date = tail(date, 1), n = n(),
+                        condition = "baseline",
+                        .groups = "drop")
+          } else {
+            count_df = rat_runs %>%
+              tidyr::unnest_wider(assignment) %>%
+              dplyr::filter(phase == "Octave" & date >= HL_date) %>% # keeping all tasks
+              group_by(task, detail) %>%
+              summarise(task = unique(task), detail = unique(detail),
+                        date = tail(date, 1), n = n(),
+                        condition = "post-HL",
+                        .groups = "drop")
+          }
+        }
+
+        # Oddball
+        if (experiment_current == "Oddball") {
+          df_basecase = rat_runs %>%
+            tidyr::unnest_wider(assignment) %>%
+            dplyr::filter(phase == phase_current & task == "Base case") %>% # note that this is agnostic of the most recent detail and will return any recent base case streak
+            mutate( groupid = data.table::rleid(task, detail) ) %>%
+            filter(groupid == max(groupid)) %>%
             summarise(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
                       condition = NA,
                       .groups = "drop")
 
-          # This ensures that the Base case is always at the top
-          count_df = rbind(df_basecase, df_task)
-        } else count_df = df_basecase
-      }
+          if (task_current != "Base case") {
+            df_task = rat_runs %>%
+              tidyr::unnest_wider(assignment) %>%
+              dplyr::filter(phase == phase_current & task == task_current) %>%
+              summarise(task = unique(task), detail = unique(detail),
+                        date = tail(date, 1), n = n(),
+                        condition = NA,
+                        .groups = "drop")
 
-      #format date correctly
-      date = count_df$date
-      date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))
-      count_df$date = date
-
-      count_df = count_df %>% add_column(blank = NA, .after = "n") # col 5 should be blank
-      count_df[, (length(count_df) + 1):29] = NA # add columns to reach 29
-
-      return(count_df)
-    }
-
-
-
-
-    Build_Table <- function() {
-      # Common Columns ----------------------------------------------------------
-      columns = c("task", "detail", "date", "file_name", "weight", "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial", "threshold", "reaction", "FA_detailed", "warnings_list", "comments")
-
-      r = rat_runs %>%
-        dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
-        dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
-        tidyr::unnest_wider(assignment) %>%
-        tidyr::unnest_wider(stats) %>%
-        dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
-        group_by(task, detail) %>%
-        do(
-          dplyr::arrange(., dplyr::desc(date)) %>% dplyr::select(all_of(columns))
-        )
-
-      weight_max = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
-
-      min_duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
-
-
-      # Task-specific RXN column ------------------------------------------------
-
-      if(experiment_current == "Oddball") {
-        r = r %>% mutate(reaction1 = reaction) %>%
-          unnest(reaction) %>%
-          group_by(date) %>%
-          mutate(Rxn = mean(Rxn)) %>%
-          select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`) %>% #TODO check that Frequency is actually go tone postional data
-          distinct()
-      } else {
-        if(phase_current == "Octave") {
-          r = r %>% unnest(reaction) %>%
-            select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
-        } else {
-          # TH and Rxn refer to the task detail not the column
-          df_TH_BBN = NULL
-          df_TH_tones = NULL
-          df_Rxn = NULL
-
-          df_TH_BBN = r %>% unnest(reaction) %>%
-            dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` == 0 & `Inten (dB)` == 40)
-
-          intensity = r %>% unnest(reaction) %>%
-            dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
-            group_by(date) %>%
-            count(`Inten (dB)`) %>% arrange(desc(`Inten (dB)`)) %>% slice(which.max(n)) %>%
-            rename(desired_dB = `Inten (dB)`) %>% select(-n)
-
-          df_TH_tones = r %>% unnest(reaction) %>%
-            dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
-            right_join(intensity, by = "date") %>%
-            filter(`Inten (dB)` == desired_dB) %>%
-            group_by(date) %>%
-            mutate(Rxn = mean(Rxn)) %>%
-            select(-desired_dB)
-
-          df_Rxn = r %>% unnest(reaction) %>%
-            dplyr::filter(task != "TH" & `Dur (ms)` == min_duration & `Inten (dB)` == 60) %>% # not equal TH
-            group_by(date) %>%
-            mutate(Rxn = mean(Rxn))
-
-          r = rbind(df_TH_BBN, df_TH_tones, df_Rxn) %>%
-            select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`) %>%
-            distinct()
-        }
-      }
-
-      r = r %>% relocate(Rxn, .before = mean_attempts_per_trial) %>%
-        mutate(Spacer1 = NA)
-
-      # Phase-specific Columns --------------------------------------------------------
-      if(phase_current == "BBN") {
-        r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>% select(-Freq, -Dur) %>%
-          group_by(task, detail) %>%
-          mutate(THrange = paste0(min(TH) %>% round(digits = 0), "-", max(TH) %>% round(digits = 0))) %>%
-          relocate(THrange, .after = TH) %>%
-          relocate(Spacer1, .after = mean_attempts_per_trial) %>%
-          select(-FA_detailed)
-      } else if (phase_current == "Tones") {
-
-        # Note that this sheet is currently programmed assuming a set of 4 Frequencies: 4, 8, 16, & 32kHz
-        has_all_kHz = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>%
-          .$Freq %>% unique() %>% length() == 4
-
-        if (has_all_kHz) {
-          r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>%
-            group_by(task, detail, Freq) %>%
-            mutate(THrange = paste0(min(TH) %>% round(digits = 0), "-", max(TH) %>% round(digits = 0))) %>%
-            relocate(THrange, .after = TH) %>%
-            gather(variable, value, (TH:THrange)) %>%
-            unite(temp, variable, Freq) %>%
-            pivot_wider(names_from = temp, values_from = value) %>%
-            mutate(Spacer2 = NA) %>%
-            relocate(Spacer2, .after = TH_32) %>%
-            mutate_at(vars(starts_with("TH_")), as.numeric)
-        } else {
-          r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>%
-            group_by(task, detail, Freq) %>%
-            mutate(THrange = paste0(min(TH) %>% round(digits = 0), "-", max(TH) %>% round(digits = 0))) %>%
-            relocate(THrange, .after = TH) %>%
-            gather(variable, value, (TH:THrange)) %>%
-            unite(temp, variable, Freq) %>%
-            pivot_wider(names_from = temp, values_from = value)
-
-          # I need to see the output of r at this stage to ensure my df below has all the appropriate columns
-
-          df = tibble(TH_4 = NA, TH_8 = NA, TH_16 = NA, TH_32 = NA)
-
-          r = add_column(r, !!!df[setdiff(names(df), names(r))])
-
-          r = r %>% mutate(Spacer2 = NA) %>%
-            relocate(Spacer2, .after = TH_32) %>%
-            mutate_at(vars(starts_with("TH_")), as.numeric)
+            # This ensures that the Base case is always at the top
+            count_df = rbind(df_basecase, df_task)
+          } else count_df = df_basecase
         }
 
+        #format date correctly
+        date = count_df$date
+        date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))
+        count_df$date = date
+
+        count_df = count_df %>% add_column(blank = NA, .after = "n") # col 5 should be blank
+        count_df[, (length(count_df) + 1):29] = NA # add columns to reach 29
+
+        return(count_df)
+      }
 
 
-        x = rat_runs %>%
-          dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
-          dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
-          tidyr::unnest_wider(assignment) %>%
-          tidyr::unnest(summary) %>%
-          select(task, detail, date, `Freq (kHz)`, dB_min, dB_max) %>%
-          dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
-          group_by(date, task, detail, `Freq (kHz)`) %>% #do(print(.))
-          mutate(Spacer3 = NA,
-                 Stimrange = paste0(unique(dB_min), "-", unique(dB_max))) %>%
-          select(task, detail, date, Spacer3, `Freq (kHz)`, Stimrange)
-
-        s = left_join(r, x, by = c("task", "detail", "date")) %>%
-          pivot_wider(names_from = `Freq (kHz)`, values_from = Stimrange)
 
 
-      } else if (phase_current == "Octave") {
-        r = r %>% select(-threshold)
+      Build_Table <- function() {
+        # Common Columns ----------------------------------------------------------
+        columns = c("task", "detail", "date", "file_name", "weight", "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial", "threshold", "reaction", "FA_detailed", "warnings_list", "comments")
 
-        #TODO NOT MVP convert to 1/12 of octaves based on summary kHz range
-        df_discrimination = r %>% filter(task != "Training") %>%
-          unnest(FA_detailed) %>%
-          group_by(date) %>%
-          do(mutate(., Oct = c(1:6), dprime = max(dprime))) %>% # mutate(Oct_position = c(1:6)) %>% print) %>%
-          select(-FA, -trials, -`Freq (kHz)`) %>%
-          pivot_wider(names_from = Oct, values_from = FA_percent_detailed)
-
-        df_training = r %>% filter(task == "Training") %>% select(-FA_detailed)
-
-        x = rat_runs %>%
+        r = rat_runs %>%
           dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
           dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
           tidyr::unnest_wider(assignment) %>%
           tidyr::unnest_wider(stats) %>%
-          select(task, detail, date, dprime) %>%
-          dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4)))
+          dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
+          group_by(task, detail) %>%
+          do(
+            dplyr::arrange(., dplyr::desc(date)) %>% dplyr::select(all_of(columns))
+          )
 
-        df_training = left_join(df_training, x, by = c("task", "detail", "date"))
+        weight_max = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
 
-        r = rbind(df_discrimination, df_training) %>%
-          relocate(dprime, .after = Spacer1) %>%
-          mutate(Spacer2 = NA) %>% relocate(Spacer2, .after = dprime)
+        min_duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
 
-      } else if (experiment_current == "Oddball") {
-        r = r %>%
-          select(-threshold) %>%
-          rename(Rxn_avg = Rxn) %>%
-          unnest(c(reaction1, FA_detailed)) %>%
-          group_by(date) %>%
-          do(filter(., `Inten (dB)` %in% c(min(`Inten (dB)`), median(`Inten (dB)`), max(`Inten (dB)`))) %>%
-               mutate(position = c("early", "mid", "late"))) %>%
-          select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`, -FA, -trials) %>%
-          pivot_wider(names_from = position, values_from = c(Rxn, FA_percent_detailed)) %>%
-          mutate(Spacer2 = NA) %>% relocate(Spacer2, .after = Rxn_late)
+
+        # Task-specific RXN column ------------------------------------------------
+
+        if(experiment_current == "Oddball") {
+          r = r %>% mutate(reaction1 = reaction) %>%
+            unnest(reaction) %>%
+            group_by(date) %>%
+            mutate(Rxn = mean(Rxn)) %>%
+            select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`) %>% #TODO check that Frequency is actually go tone postional data
+            distinct()
+        } else {
+          if(phase_current == "Octave") {
+            r = r %>% unnest(reaction) %>%
+              select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
+          } else {
+            # TH and Rxn refer to the task detail not the column
+            df_TH_BBN = NULL
+            df_TH_tones = NULL
+            df_Rxn = NULL
+
+            df_TH_BBN = r %>% unnest(reaction) %>%
+              dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` == 0 & `Inten (dB)` == 40)
+
+            intensity = r %>% unnest(reaction) %>%
+              dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
+              group_by(date) %>%
+              count(`Inten (dB)`) %>% arrange(desc(`Inten (dB)`)) %>% slice(which.max(n)) %>%
+              rename(desired_dB = `Inten (dB)`) %>% select(-n)
+
+            df_TH_tones = r %>% unnest(reaction) %>%
+              dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
+              right_join(intensity, by = "date") %>%
+              filter(`Inten (dB)` == desired_dB) %>%
+              group_by(date) %>%
+              mutate(Rxn = mean(Rxn)) %>%
+              select(-desired_dB)
+
+            df_Rxn = r %>% unnest(reaction) %>%
+              dplyr::filter(task != "TH" & `Dur (ms)` == min_duration & `Inten (dB)` == 60) %>% # not equal TH
+              group_by(date) %>%
+              mutate(Rxn = mean(Rxn))
+
+            r = rbind(df_TH_BBN, df_TH_tones, df_Rxn) %>%
+              select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`) %>%
+              distinct()
+          }
+        }
+
+        r = r %>% relocate(Rxn, .before = mean_attempts_per_trial) %>%
+          mutate(Spacer1 = NA)
+
+        # Phase-specific Columns --------------------------------------------------------
+        if(phase_current == "BBN") {
+          r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>% select(-Freq, -Dur) %>%
+            group_by(task, detail) %>%
+            mutate(THrange = paste0(min(TH) %>% round(digits = 0), "-", max(TH) %>% round(digits = 0))) %>%
+            relocate(THrange, .after = TH) %>%
+            relocate(Spacer1, .after = mean_attempts_per_trial) %>%
+            select(-FA_detailed)
+        } else if (phase_current == "Tones") {
+
+          # Note that this sheet is currently programmed assuming a set of 4 Frequencies: 4, 8, 16, & 32kHz
+          has_all_kHz = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>%
+            .$Freq %>% unique() %>% length() == 4
+
+          if (has_all_kHz) {
+            r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>%
+              group_by(task, detail, Freq) %>%
+              mutate(THrange = paste0(min(TH) %>% round(digits = 0), "-", max(TH) %>% round(digits = 0))) %>%
+              relocate(THrange, .after = TH) %>%
+              gather(variable, value, (TH:THrange)) %>%
+              unite(temp, variable, Freq) %>%
+              pivot_wider(names_from = temp, values_from = value) %>%
+              mutate(Spacer2 = NA) %>%
+              relocate(Spacer2, .after = TH_32) %>%
+              mutate_at(vars(starts_with("TH_")), as.numeric)
+          } else {
+            r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>%
+              group_by(task, detail, Freq) %>%
+              mutate(THrange = paste0(min(TH) %>% round(digits = 0), "-", max(TH) %>% round(digits = 0))) %>%
+              relocate(THrange, .after = TH) %>%
+              gather(variable, value, (TH:THrange)) %>%
+              unite(temp, variable, Freq) %>%
+              pivot_wider(names_from = temp, values_from = value)
+
+            # I need to see the output of r at this stage to ensure my df below has all the appropriate columns
+
+            df = tibble(TH_4 = NA, TH_8 = NA, TH_16 = NA, TH_32 = NA)
+
+            r = add_column(r, !!!df[setdiff(names(df), names(r))])
+
+            r = r %>% mutate(Spacer2 = NA) %>%
+              relocate(Spacer2, .after = TH_32) %>%
+              mutate_at(vars(starts_with("TH_")), as.numeric)
+          }
+
+
+
+          x = rat_runs %>%
+            dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
+            dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
+            tidyr::unnest_wider(assignment) %>%
+            tidyr::unnest(summary) %>%
+            select(task, detail, date, `Freq (kHz)`, dB_min, dB_max) %>%
+            dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
+            group_by(date, task, detail, `Freq (kHz)`) %>% #do(print(.))
+            mutate(Spacer3 = NA,
+                   Stimrange = paste0(unique(dB_min), "-", unique(dB_max))) %>%
+            select(task, detail, date, Spacer3, `Freq (kHz)`, Stimrange)
+
+          s = left_join(r, x, by = c("task", "detail", "date")) %>%
+            pivot_wider(names_from = `Freq (kHz)`, values_from = Stimrange)
+
+
+        } else if (phase_current == "Octave") {
+          r = r %>% select(-threshold)
+
+          #TODO NOT MVP convert to 1/12 of octaves based on summary kHz range
+          df_discrimination = r %>% filter(task != "Training") %>%
+            unnest(FA_detailed) %>%
+            group_by(date) %>%
+            do(mutate(., Oct = c(1:6), dprime = max(dprime))) %>% # mutate(Oct_position = c(1:6)) %>% print) %>%
+            select(-FA, -trials, -`Freq (kHz)`) %>%
+            pivot_wider(names_from = Oct, values_from = FA_percent_detailed)
+
+          df_training = r %>% filter(task == "Training") %>% select(-FA_detailed)
+
+          x = rat_runs %>%
+            dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
+            dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
+            tidyr::unnest_wider(assignment) %>%
+            tidyr::unnest_wider(stats) %>%
+            select(task, detail, date, dprime) %>%
+            dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4)))
+
+          df_training = left_join(df_training, x, by = c("task", "detail", "date"))
+
+          r = rbind(df_discrimination, df_training) %>%
+            relocate(dprime, .after = Spacer1) %>%
+            mutate(Spacer2 = NA) %>% relocate(Spacer2, .after = dprime)
+
+        } else if (experiment_current == "Oddball") {
+          r = r %>%
+            select(-threshold) %>%
+            rename(Rxn_avg = Rxn) %>%
+            unnest(c(reaction1, FA_detailed)) %>%
+            group_by(date) %>%
+            do(filter(., `Inten (dB)` %in% c(min(`Inten (dB)`), median(`Inten (dB)`), max(`Inten (dB)`))) %>%
+                 mutate(position = c("early", "mid", "late"))) %>%
+            select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`, -FA, -trials) %>%
+            pivot_wider(names_from = position, values_from = c(Rxn, FA_percent_detailed)) %>%
+            mutate(Spacer2 = NA) %>% relocate(Spacer2, .after = Rxn_late)
+        }
+
+
+        averages = r %>%
+          dplyr::group_by(task, detail) %>%
+          dplyr::summarise_if(.predicate = is.numeric, .funs = mean) %>%
+          dplyr::mutate(date = "Overall", file_name = "Averages", warnings_list = NA, comments = NA) %>%
+          dplyr::relocate(date, file_name, .before = weight)
+
+        r = r %>% do(
+          head(., 3)
+        ) %>%
+          mutate(date = as.character(date))
+
+        r = rbind(r, averages) %>%
+          mutate(weight = (weight - weight_max)/weight_max)
+
+        r[, (length(r) + 1):29] = NA # add columns to reach 29
+
+        r = r %>% relocate(warnings_list, comments, .after = last_col()) %>%
+          arrange(desc(date))
+
+        return(as.data.frame(r))  #shed the grouping that prevents rbinding later on
+      }
+
+      Build_Table_Key <- function() {
+        r = c("", "", "    ", "        ", "     ", "      ", "     ", "    ", "___", "_____")
+        r = rbind(r, c("", "", "Date", "Filename", "Wt d%", "Trials", "Hit %", "FA %", "Rxn", "Atmpt")) %>% as.data.frame()
+        r = cbind(r, NA) #spacer
+
+        if (phase_current == "BBN") {
+          r = cbind(r, c("", "TH"))
+          r = cbind(r, c("", "{TH}"))
+        }
+        else if (phase_current == "Tones") {
+          r = cbind(r, c("                       TH", "4"))
+          r = cbind(r, c("                       TH", "8"))
+          r = cbind(r, c("                       TH", "16"))
+          r = cbind(r, c("                       TH", "32"))
+          r = cbind(r, NA)
+          r = cbind(r, c("                {TH} Range", "4"))
+          r = cbind(r, c("                {TH} Range", "8"))
+          r = cbind(r, c("                {TH} Range", "16"))
+          r = cbind(r, c("                {TH} Range", "32"))
+          r = cbind(r, NA)
+          r = cbind(r, c("              {Stim} Range", "4"))
+          r = cbind(r, c("              {Stim} Range", "8"))
+          r = cbind(r, c("              {Stim} Range", "16"))
+          r = cbind(r, c("              {Stim} Range", "32"))
+        }
+        else if (phase_current == "Octave") {
+          r = cbind(r, c("", "d'"))
+          r = cbind(r, NA)
+          r = cbind(r, t(data.frame(c("                                             No-Go False Alarm % (by octave steps)") %>% rep_len(12), c(1:12))))
+        }
+        else if (phase_current == "Tone-BBN" || phase_current == "Tone-Tone") {
+          r = cbind(r, c("           Rxn Time", "Early"))
+          r = cbind(r, c("           Rxn Time", "Mid"))
+          r = cbind(r, c("           Rxn Time", "Late"))
+          r = cbind(r, NA)
+          r = cbind(r, c("       False Alarm %", "Early"))
+          r = cbind(r, c("       False Alarm %", "Mid"))
+          r = cbind(r, c("       False Alarm %", "Late"))
+          r = cbind(r, NA)
+        }
+        else {
+          stop("ERROR: unrecognized phase: ", phase_current)
+        }
+
+        r[, (length(r) + 1):27] = NA # add columns to reach 27
+        r = cbind(r, c("", "Warn"))
+        r = cbind(r, c("", "Observations"))
+        return(r)
       }
 
 
-      averages = r %>%
-        dplyr::group_by(task, detail) %>%
-        dplyr::summarise_if(.predicate = is.numeric, .funs = mean) %>%
-        dplyr::mutate(date = "Overall", file_name = "Averages", warnings_list = NA, comments = NA) %>%
-        dplyr::relocate(date, file_name, .before = weight)
+      # Write Table Workflow ----------------------------------------------------
+      row_table_start = rowCurrent + 1 #save for later
+      addStyle(wb, 1, table_header_style, rows = row_table_start, cols = 1:29, gridExpand = TRUE)
+      df_table = Build_Table()
+      df_key = Build_Table_Key()
+      df_counts = Build_Counts()
 
-      r = r %>% do(
-        head(., 3)
-      ) %>%
-        mutate(date = as.character(date))
+      # need blank rows inserted into df_table to give space for df_key
+      df_blank <- data.frame(matrix(ncol = 29 , nrow = nrow(df_key) + nrow(df_counts)))
 
-      r = rbind(r, averages) %>%
-        mutate(weight = (weight - weight_max)/weight_max)
+      # the obnoxious blank strings are because every column in a table has to have a unique header,
+      # and because we want those headers to be blank for all but column A
+      names = c("Task (Filter)", "Detail (Filter)", "  ", "   ", "    ", "     ", "      ", "       ", "        ", "         ", "          ", "           ", "            ", "             ", "              ", "               ", "                ", "                 ", "                  ", "                   ", "                    ", "                     ", "                      ", "                       ", "                        ", "                         ", "                          ", "                           ", "                            ")
+      colnames(df_table) = names
+      colnames(df_blank) = names
+      df_table = rbind(df_blank, df_table)
 
-      r[, (length(r) + 1):29] = NA # add columns to reach 29
+      row_counts = row_table_start + 1
+      row_key_start = row_table_start + nrow(df_counts) + 1
+      row_key_end = row_table_start + nrow(df_counts) + nrow(df_key)
+      row_table_end = row_table_start + nrow(df_table)
 
-      r = r %>% relocate(warnings_list, comments, .after = last_col()) %>%
-        arrange(desc(date))
+      writeDataTable(wb, 1, x = df_table, startRow = row_table_start, colNames = TRUE, rowNames = FALSE, bandedRows = FALSE, tableStyle = "TableStyleMedium18", na.string = "")
+      writeData(wb, 1, x = df_counts, startRow = row_counts, colNames = FALSE, rowNames = FALSE)
+      writeData(wb, 1, x = df_key, startRow = row_key_start, colNames = FALSE, rowNames = FALSE)
 
-      return(as.data.frame(r))  #shed the grouping that prevents rbinding later on
-    }
+      # style the averages rows
+      averages_last_row = row_table_start + max(which(df_table[,3] == "Overall"))
+      addStyle(wb, 1, averages_style, rows = row_key_end:averages_last_row, cols = 1:29, gridExpand = TRUE, stack = TRUE)
 
-    Build_Table_Key <- function() {
-      r = c("", "", "    ", "        ", "     ", "      ", "     ", "    ", "___", "_____")
-      r = rbind(r, c("", "", "Date", "Filename", "Wt d%", "Trials", "Hit %", "FA %", "Rxn", "Atmpt")) %>% as.data.frame()
-      r = cbind(r, NA) #spacer
+      # style the 'today' rowCurrent
+      today_offset = min(which(df_table[,3] != "Overall"))
+      row_today = row_table_start + today_offset
+      addStyle(wb, 1, today_style, rows = row_today, cols = 1:29)
 
-      if (phase_current == "BBN") {
-        r = cbind(r, c("", "TH"))
-        r = cbind(r, c("", "{TH}"))
-      }
-      else if (phase_current == "Tones") {
-        r = cbind(r, c("                       TH", "4"))
-        r = cbind(r, c("                       TH", "8"))
-        r = cbind(r, c("                       TH", "16"))
-        r = cbind(r, c("                       TH", "32"))
-        r = cbind(r, NA)
-        r = cbind(r, c("                {TH} Range", "4"))
-        r = cbind(r, c("                {TH} Range", "8"))
-        r = cbind(r, c("                {TH} Range", "16"))
-        r = cbind(r, c("                {TH} Range", "32"))
-        r = cbind(r, NA)
-        r = cbind(r, c("              {Stim} Range", "4"))
-        r = cbind(r, c("              {Stim} Range", "8"))
-        r = cbind(r, c("              {Stim} Range", "16"))
-        r = cbind(r, c("              {Stim} Range", "32"))
-      }
-      else if (phase_current == "Octave") {
-        r = cbind(r, c("", "d'"))
-        r = cbind(r, NA)
-        r = cbind(r, t(data.frame(c("                                             No-Go False Alarm % (by octave steps)") %>% rep_len(12), c(1:12))))
-      }
-      else if (phase_current == "Tone-BBN" || phase_current == "Tone-Tone") {
-        r = cbind(r, c("           Rxn Time", "Early"))
-        r = cbind(r, c("           Rxn Time", "Mid"))
-        r = cbind(r, c("           Rxn Time", "Late"))
-        r = cbind(r, NA)
-        r = cbind(r, c("       False Alarm %", "Early"))
-        r = cbind(r, c("       False Alarm %", "Mid"))
-        r = cbind(r, c("       False Alarm %", "Late"))
-        r = cbind(r, NA)
-      }
-      else {
-        stop("ERROR: unrecognized phase: ", phase_current)
+      # style the '%' columns
+      percentage_columns = t(tail(df_key,1)) %>% as.data.frame() %>% filter(str_detect(.[,1], "%")) %>% rownames() %>% str_sub(start = 2, end = -1) %>% as.numeric
+      addStyle(wb, 1, percent_style, rows = row_key_end:row_table_end, cols = percentage_columns, gridExpand = TRUE, stack = TRUE)
+
+      # copy today's warnings
+      warns = df_table[today_offset, 28] %>% unlist() %>% stringr::str_c(collapse = "\n")
+      if(warns == "") warns = "Warnings: none"
+      writeData (wb, 1, x = warns, startRow = rowCurrent, startCol = 29)
+
+      # style the key
+      addStyle(wb, 1, key_style, rows = row_key_start:row_key_end, cols = 1:29, gridExpand = TRUE)
+      addStyle(wb, 1, key_center, rows = row_key_start:row_key_end, cols = 5:28, gridExpand = TRUE) # don't center observations
+
+      # detect and merge common header cells -- nope, merges can't be done inside a table object, so just style it
+      matching_cells = (df_key[1,12] == df_key[1,13] && df_key[1,13] == df_key[1,14])
+      if (!is.na(matching_cells) && matching_cells) { # Rxn Time
+        deleteData(wb, 1, rows = row_key_start, cols = 13:14, gridExpand = TRUE) # delete all but first
+        addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 12:14)
       }
 
-      r[, (length(r) + 1):27] = NA # add columns to reach 27
-      r = cbind(r, c("", "Warn"))
-      r = cbind(r, c("", "Observations"))
-      return(r)
+      matching_cells = (df_key[1,12] == df_key[1,15])
+      if (!is.na(matching_cells) && matching_cells) { # TH; rxn above will also fire but we just overwrite what it does
+        deleteData(wb, 1, rows = row_key_start, cols = 15)
+        addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 12:15)
+      }
+
+      matching_cells = (df_key[1,17] == df_key[1,18] && df_key[1,17] == df_key[1,19] && df_key[1,17] == df_key[1,20])
+      if (!is.na(matching_cells) && matching_cells) { # TH Range
+        deleteData(wb, 1, rows = row_key_start, cols = 18:20, gridExpand = TRUE)
+        addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 17:20)
+      }
+
+      matching_cells = (df_key[1,22] == df_key[1,23] && df_key[1,22] == df_key[1,24] && df_key[1,22] == df_key[1,25])
+      if (!is.na(matching_cells) && matching_cells) {  # Stim range
+        deleteData(wb, 1, rows = row_key_start, cols = 23:25, gridExpand = TRUE)
+        addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 22:25)
+      }
+
+      matching_cells = (df_key[1,16] == df_key[1,17] && df_key[1,17] == df_key[1,18])
+      if (!is.na(matching_cells) && matching_cells) {  # FA %
+        deleteData(wb, 1, rows = row_key_start, cols = 17:18, gridExpand = TRUE)
+        addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 16:18)
+      }
+
+      matching_cells = (df_key[1,14] == df_key[1,25]) # No Go False Alarm % (by octave steps)
+      if (!is.na(matching_cells) && matching_cells) {
+        deleteData(wb, 1, rows = row_key_start, cols = 15:25, gridExpand = TRUE)
+        addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 14:25)
+      }
+
+      # advance rowCurrent for next table
+      rowCurrent <<- row_table_end + 2
     }
 
 
-    # Write Table Workflow ----------------------------------------------------
-    row_table_start = row + 1 #save for later
-    addStyle(wb, 1, table_header_style, rows = row_table_start, cols = 1:29, gridExpand = TRUE)
-    df_table = Build_Table()
-    df_key = Build_Table_Key()
-    df_counts = Build_Counts()
-
-    # need blank rows inserted into df_table to give space for df_key
-    df_blank <- data.frame(matrix(ncol = 29 , nrow = nrow(df_key) + nrow(df_counts)))
-
-    # the obnoxious blank strings are because every column in a table has to have a unique header,
-    # and because we want those headers to be blank for all but column A
-    names = c("Task (Filter)", "Detail (Filter)", "  ", "   ", "    ", "     ", "      ", "       ", "        ", "         ", "          ", "           ", "            ", "             ", "              ", "               ", "                ", "                 ", "                  ", "                   ", "                    ", "                     ", "                      ", "                       ", "                        ", "                         ", "                          ", "                           ", "                            ")
-    colnames(df_table) = names
-    colnames(df_blank) = names
-    df_table = rbind(df_blank, df_table)
-
-    row_counts = row_table_start + 1
-    row_key_start = row_table_start + nrow(df_counts) + 1
-    row_key_end = row_table_start + nrow(df_counts) + nrow(df_key)
-    row_table_end = row_table_start + nrow(df_table)
-
-    writeDataTable(wb, 1, x = df_table, startRow = row_table_start, colNames = TRUE, rowNames = FALSE, bandedRows = FALSE, tableStyle = "TableStyleMedium18", na.string = "")
-    writeData(wb, 1, x = df_counts, startRow = row_counts, colNames = FALSE, rowNames = FALSE)
-    writeData(wb, 1, x = df_key, startRow = row_key_start, colNames = FALSE, rowNames = FALSE)
-
-    # style the averages rows
-    averages_last_row = row_table_start + max(which(df_table[,3] == "Overall"))
-    addStyle(wb, 1, averages_style, rows = row_key_end:averages_last_row, cols = 1:29, gridExpand = TRUE, stack = TRUE)
-
-    # style the 'today' row
-    today_offset = min(which(df_table[,3] != "Overall"))
-    row_today = row_table_start + today_offset
-    addStyle(wb, 1, today_style, rows = row_today, cols = 1:29)
-
-    # style the '%' columns
-    percentage_columns = t(tail(df_key,1)) %>% as.data.frame() %>% filter(str_detect(.[,1], "%")) %>% rownames() %>% str_sub(start = 2, end = -1) %>% as.numeric
-    addStyle(wb, 1, percent_style, rows = row_key_end:row_table_end, cols = percentage_columns, gridExpand = TRUE, stack = TRUE)
-
-    # copy today's warnings
-    warns = df_table[today_offset, 28] %>% unlist() %>% stringr::str_c(collapse = "\n")
-    if(warns == "") warns = "Warnings: none"
-    writeData (wb, 1, x = warns, startRow = row, startCol = 29)
-
-    # style the key
-    addStyle(wb, 1, key_style, rows = row_key_start:row_key_end, cols = 1:29, gridExpand = TRUE)
-    addStyle(wb, 1, key_center, rows = row_key_start:row_key_end, cols = 5:28, gridExpand = TRUE) # don't center observations
-
-    # detect and merge common header cells -- nope, merges can't be done inside a table object, so just style it
-    matching_cells = (df_key[1,12] == df_key[1,13] && df_key[1,13] == df_key[1,14])
-    if (!is.na(matching_cells) && matching_cells) { # Rxn Time
-      deleteData(wb, 1, rows = row_key_start, cols = 13:14, gridExpand = TRUE) # delete all but first
-      addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 12:14)
-    }
-
-    matching_cells = (df_key[1,12] == df_key[1,15])
-    if (!is.na(matching_cells) && matching_cells) { # TH; rxn above will also fire but we just overwrite what it does
-      deleteData(wb, 1, rows = row_key_start, cols = 15)
-      addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 12:15)
-    }
-
-    matching_cells = (df_key[1,17] == df_key[1,18] && df_key[1,17] == df_key[1,19] && df_key[1,17] == df_key[1,20])
-    if (!is.na(matching_cells) && matching_cells) { # TH Range
-      deleteData(wb, 1, rows = row_key_start, cols = 18:20, gridExpand = TRUE)
-      addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 17:20)
-    }
-
-    matching_cells = (df_key[1,22] == df_key[1,23] && df_key[1,22] == df_key[1,24] && df_key[1,22] == df_key[1,25])
-    if (!is.na(matching_cells) && matching_cells) {  # Stim range
-      deleteData(wb, 1, rows = row_key_start, cols = 23:25, gridExpand = TRUE)
-      addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 22:25)
-    }
-
-    matching_cells = (df_key[1,16] == df_key[1,17] && df_key[1,17] == df_key[1,18])
-    if (!is.na(matching_cells) && matching_cells) {  # FA %
-      deleteData(wb, 1, rows = row_key_start, cols = 17:18, gridExpand = TRUE)
-      addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 16:18)
-    }
-
-    matching_cells = (df_key[1,14] == df_key[1,25]) # No Go False Alarm % (by octave steps)
-    if (!is.na(matching_cells) && matching_cells) {
-      deleteData(wb, 1, rows = row_key_start, cols = 15:25, gridExpand = TRUE)
-      addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 14:25)
-    }
-
-    # advance row for next table
-    row <<- row_table_end + 2
-  }
-
-  Add_Rat_To_Workbook <- function(ratID) {
+    # Add Rat To Workbook Workflow --------------------------------------------
     rat_runs <<- run_archive %>% dplyr::filter(rat_ID == ratID) %>% dplyr::arrange(date)
     if (nrow(rat_runs) == 0) {
       warn = paste0("SKIPPED: no runs found for #", ratID)
@@ -832,7 +835,7 @@ Workbook_Writer <- function() {
 
 
 # Writer Workflow ---------------------------------------------------------
-  row <<- 1 #persistent, index of the next unwritten row
+  rowCurrent <<- 1 #persistent, index of the next unwritten rowCurrent
 
   #ratID = 209 #TODO more than one rat
 
@@ -845,9 +848,8 @@ Workbook_Writer <- function() {
 
 
 # Supervisor Workflow -----------------------------------------------------------
-ratID = 24 #TODO more than one rat
 
-Initialize()
+InitializeSupervisor()
 #Workbook_Reader()
 Workbook_Writer()
 
