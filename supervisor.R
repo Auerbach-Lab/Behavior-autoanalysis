@@ -822,7 +822,7 @@ Workbook_Writer <- function() {
     }
     else {
       run_today <<- rat_runs %>% dplyr::arrange(date) %>% tail(1) # this is really just the most recent run, which could actually be old if a rat didn't run 'today', but that should never happen
-      writeLines(paste0("Processing ", run_today$rat_name, "..."))
+      writeLines(paste0("Processing ", run_today$rat_name, " (#", ratID, ")", "..."))
       experiment_current <<- run_today$assignment[[1]]$experiment
       phase_current <<- run_today$assignment[[1]]$phase
       task_current <<- run_today$assignment[[1]]$task
@@ -837,11 +837,18 @@ Workbook_Writer <- function() {
 # Writer Workflow ---------------------------------------------------------
   rowCurrent <<- 1 #persistent, index of the next unwritten rowCurrent
 
-  #ratID = 209 #TODO more than one rat
+
 
   Define_Styles()
   Setup_Workbook()
-  lapply(rat_archive %>% filter(is.na(end_date)) %>% .$Rat_ID, Add_Rat_To_Workbook)
+
+
+  Add_Rat_To_Workbook(213)
+  #OR
+  #lapply(rat_archive %>% filter(is.na(end_date)) %>% .$Rat_ID, Add_Rat_To_Workbook)
+
+
+
   #saveWorkbook(wb, "supervisor.xlsx", overwrite = TRUE)
   openXL(wb)
 }
@@ -853,6 +860,3 @@ InitializeSupervisor()
 #Workbook_Reader()
 Workbook_Writer()
 
-#TODO
-#iterate over all rats -- testing this will need proper run_archive with at least 5 days of history for all 48 rats, with annotations in excel sheet for assignments for those days
-#persistent comment field in rat archive - read it and display
