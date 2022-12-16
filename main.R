@@ -1,5 +1,5 @@
 
-Initialize <- function() {
+InitializeMain <- function() {
    Load_Packages <- function() {
     # data loading external file formats
     library(R.matlab);
@@ -17,7 +17,8 @@ Initialize <- function() {
 
   rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
   #load("trial_archive.Rdata")
-  #load("run_Archive.Rdata")
+  #load(paste0(user_settings$projects_folder, "run_archive.Rdata"))
+  #run_archive <<- run_archive
 
 }
 
@@ -1182,9 +1183,9 @@ Check_Weight <- function() {
     warnings_list <<- append(warnings_list, warn)
     analysis$weight_change <<- 0
   } else {
-    last_data = rat_weights %>% dplyr::filter(date < date_asNumeric) %>% dplyr::arrange(date) %>% tail(1)
-    old_date = last_data$date
-    old_weight = last_data$weight
+    last_run = rat_weights %>% dplyr::filter(date < date_asNumeric) %>% dplyr::arrange(date) %>% tail(1)
+    old_date = last_run$date
+    old_weight = last_run$weight
 
     if(rlang::is_empty(old_weight)) {
       warn = paste0("No weights for ", run_properties$rat_name, "(", Get_Rat_ID(run_properties$rat_name), ") prior to ", date_asDate, ".")
@@ -1197,7 +1198,8 @@ Check_Weight <- function() {
       weight_change_percent = analysis$weight_change / old_weight # negative if lost weight
       weight_change_overall_percent = (analysis$weight - max_weight) / max_weight # negative if lost weight
 
-      days_elapsed = analysis$date - old_date
+
+      days_elapsed = date_asNumeric - old_date
 
       if(days_elapsed > 0) { # Don't want divide-by-zero for resumed runs
         weight_change_daily_percent = weight_change_percent/days_elapsed
@@ -1368,7 +1370,7 @@ Process_File <- function(file_to_load) {
 }
 
 # set up environment
-Initialize()
+InitializeMain()
 
 # either:
 #Process_File(file.choose())
@@ -1378,7 +1380,7 @@ directory = "A:\\Coding\\Behavior-autoanalysis\\Projects"  # slashes must be eit
 files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
 files = paste0(directory, "\\", files)
 lapply(files, Process_File)
-writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))
+writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))
 
 
 
