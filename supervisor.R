@@ -557,8 +557,7 @@ Workbook_Writer <- function() {
 
         # Note that this sheet is currently programmed assuming a set of 4 Frequencies: 4, 8, 16, & 32kHz
         has_all_kHz = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>%
-          .$Freq %>%
-          count(unique(Freq)) == 4
+          .$Freq %>% unique() %>% length() == 4
 
         if (has_all_kHz) {
           r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>%
@@ -584,7 +583,7 @@ Workbook_Writer <- function() {
 
           df = tibble(TH_4 = NA, TH_8 = NA, TH_16 = NA, TH_32 = NA)
 
-          r = add_column(r, !!!cols[setdiff(names(df), names(r))])
+          r = add_column(r, !!!df[setdiff(names(df), names(r))])
 
           r = r %>% mutate(Spacer2 = NA) %>%
             relocate(Spacer2, .after = TH_32) %>%
