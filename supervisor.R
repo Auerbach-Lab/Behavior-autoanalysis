@@ -301,12 +301,12 @@ Workbook_Writer <- function() {
                       .groups = "drop")
         }
 
-        # BBN Training/Reset PreHL Alone
+        # BBN Training/Reset PreHL
         #TODO Untested as not in current dataset
-        if (phase_current == "BBN" & task_current %in% c("Training", "Reset") & pre_HL & detail_current == "Alone") {
+        if (phase_current == "BBN" & task_current %in% c("Training", "Reset") & pre_HL) {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
-            dplyr::filter(phase == "BBN" & detail == "Alone") %>%
+            dplyr::filter(phase == "BBN" & detail == detail_current) %>%
             group_by(task) %>%
             summarise(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
@@ -314,18 +314,6 @@ Workbook_Writer <- function() {
                       .groups = "drop")
         }
 
-        # BBN Training/Reset PreHL Mixed
-        #TODO Untested as not in current dataset
-        if (phase_current == "BBN" & task_current %in% c("Training", "Reset") & pre_HL & detail_current == "Mixed") {
-          count_df = rat_runs %>%
-            tidyr::unnest_wider(assignment) %>%
-            dplyr::filter(phase == "BBN" & detail == "Mixed") %>%
-            group_by(task) %>%
-            summarise(task = unique(task), detail = unique(detail),
-                      date = tail(date, 1), n = n(),
-                      condition = "baseline",
-                      .groups = "drop")
-        }
 
         # Tones Rxn/TH PreHL
         if (phase_current == "Tones" & task_current %in% c("Rxn", "TH") & pre_HL) {
@@ -843,9 +831,9 @@ Workbook_Writer <- function() {
   Setup_Workbook()
 
 
-  Add_Rat_To_Workbook(213)
+  #Add_Rat_To_Workbook(213)
   #OR
-  #lapply(rat_archive %>% filter(is.na(end_date)) %>% .$Rat_ID, Add_Rat_To_Workbook)
+  lapply(rat_archive %>% filter(is.na(end_date)) %>% .$Rat_ID, Add_Rat_To_Workbook)
 
 
 
