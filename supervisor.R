@@ -116,39 +116,41 @@ Workbook_Writer <- function() {
       Write_Dynamic_Lists <- function() {
         Build_List <- function(i) {
           #build the excel formula that will display the items from the output range that correspond to the query cell for the input range
-          dynamic_list_formula = paste0("=IFERROR(INDEX(", output_range, ",SMALL(IF(", query_cell, "=", input_range, ",rowCurrent(", input_range, ")-rowCurrent(", range_start, ")+1),rowCurrent(", i, ":", i, "))),\"\")")
-          writeFormula(wb, 1, dynamic_list_formula, startRow = user_settings$config_row+i, startCol = user_settings$dynamic_col + col_offset, array = TRUE)
           dynamic_list_formula = paste0("=IFERROR(INDEX(", output_range, ",SMALL(IF(", query_cell, "=", input_range, ",ROW(", input_range, ")-ROW(", range_start, ")+1),ROW(", i, ":", i, "))),\"\")")
+          writeFormula(wb, 1, dynamic_list_formula, startRow = user_settings$config_row+i+rowCurrent-1, startCol = user_settings$dynamic_col + col_offset, array = TRUE)
         }
 
-        # phases list lives at user_settings$config_col+1 (experiment) and +2 (phase), querying off experiment in F
-        range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 2))
-        range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 2))
+        r = user_settings$config_row
+        c = user_settings$config_col
+
+        # phases list lives at c+1 (experiment) and +2 (phase), querying off experiment in F
+        range_start = getCellRefs(data.frame(r, c + 2))
+        range_end = getCellRefs(data.frame(r + max_search_rows, c + 2))
         output_range = paste0(range_start, ":", range_end)
-        range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 1)) # going to use this when we build formula, so it has to be second
-        range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 1))
+        range_start = getCellRefs(data.frame(r, c + 1)) # going to use this when we build formula, so it has to be second
+        range_end = getCellRefs(data.frame(r + max_search_rows, c + 1))
         input_range = paste0(range_start, ":", range_end)
         query_cell = getCellRefs(data.frame(rowCurrent, 6))
         col_offset = 0
         sapply(c(1:user_settings$dynamic_list_length), Build_List)
 
-        #task list lives at user_settings$config_col+3 (phase) and +4 (task), querying from phase in I
-        range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 4))
-        range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 4))
+        #task list lives at c+3 (phase) and +4 (task), querying from phase in I
+        range_start = getCellRefs(data.frame(r, c + 4))
+        range_end = getCellRefs(data.frame(r + max_search_rows, c + 4))
         output_range = paste0(range_start, ":", range_end)
-        range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 3)) # going to use this when we build formula, so it has to be second
-        range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 3))
+        range_start = getCellRefs(data.frame(r, c + 3)) # going to use this when we build formula, so it has to be second
+        range_end = getCellRefs(data.frame(r + max_search_rows, c + 3))
         input_range = paste0(range_start, ":", range_end)
         query_cell = getCellRefs(data.frame(rowCurrent, 9))
         col_offset = col_offset + 1
         sapply(c(1:user_settings$dynamic_list_length), Build_List)
 
-        #detail list lives at user_settings$config_col+5 (phase again) and +6 (detail), querying from phase again in I
-        range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 6))
-        range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 6))
+        #detail list lives at c+5 (phase again) and +6 (detail), querying from phase again in I
+        range_start = getCellRefs(data.frame(r, c + 6))
+        range_end = getCellRefs(data.frame(r + max_search_rows, c + 6))
         output_range = paste0(range_start, ":", range_end)
-        range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col + 5)) # going to use this when we build formula, so it has to be second
-        range_end = getCellRefs(data.frame(user_settings$config_row + max_search_rows, user_settings$config_col + 5))
+        range_start = getCellRefs(data.frame(r, c + 5)) # going to use this when we build formula, so it has to be second
+        range_end = getCellRefs(data.frame(r + max_search_rows, c + 5))
         input_range = paste0(range_start, ":", range_end)
         query_cell = getCellRefs(data.frame(rowCurrent, 9))
         col_offset = col_offset + 1
