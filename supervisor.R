@@ -118,6 +118,7 @@ Workbook_Writer <- function() {
           #build the excel formula that will display the items from the output range that correspond to the query cell for the input range
           dynamic_list_formula = paste0("=IFERROR(INDEX(", output_range, ",SMALL(IF(", query_cell, "=", input_range, ",rowCurrent(", input_range, ")-rowCurrent(", range_start, ")+1),rowCurrent(", i, ":", i, "))),\"\")")
           writeFormula(wb, 1, dynamic_list_formula, startRow = user_settings$config_row+i, startCol = user_settings$dynamic_col + col_offset, array = TRUE)
+          dynamic_list_formula = paste0("=IFERROR(INDEX(", output_range, ",SMALL(IF(", query_cell, "=", input_range, ",ROW(", input_range, ")-ROW(", range_start, ")+1),ROW(", i, ":", i, "))),\"\")")
         }
 
         # phases list lives at user_settings$config_col+1 (experiment) and +2 (phase), querying off experiment in F
