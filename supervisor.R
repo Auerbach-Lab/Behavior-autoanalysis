@@ -751,7 +751,11 @@ Workbook_Writer <- function() {
       addStyle(wb, 1, today_style, rows = row_today, cols = 1:29)
 
       # style the '%' columns
-      percentage_columns = t(tail(df_key,1)) %>% as.data.frame() %>% filter(str_detect(.[,1], "%")) %>% rownames() %>% str_sub(start = 2, end = -1) %>% as.numeric
+      tk = t(tail(df_key))
+      row.names(tk) <- 1:nrow(tk)
+      pc1 = tk %>% as.data.frame() %>% filter(str_detect(.[,1], "%")) %>% rownames() %>% as.numeric
+      pc2 = tk %>% as.data.frame() %>% filter(str_detect(.[,2], "%")) %>% rownames() %>% as.numeric
+      percentage_columns = c(pc1, pc2)
       addStyle(wb, 1, percent_style, rows = row_key_end:row_table_end, cols = percentage_columns, gridExpand = TRUE, stack = TRUE)
 
       # copy today's warnings
