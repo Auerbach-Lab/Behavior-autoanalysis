@@ -485,8 +485,8 @@ Workbook_Writer <- function() {
 
         weight_max = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
 
-        min_duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
-
+        #min_duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
+        min_duration = r %>% unnest(reaction) %>% dplyr::filter(task == task_current & detail == detail_current) %>% .$`Dur (ms)` %>% unique() %>% min()
 
         # Task-specific RXN column ------------------------------------------------
 
