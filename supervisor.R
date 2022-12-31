@@ -355,10 +355,16 @@ Workbook_Writer <- function() {
               "Mixed"
             ))
 
+          # get the duration that was used in today's run
+          duration_current = df %>%
+            filter(phase == phase_current & task == task_current & detail == detail_current) %>%
+            .$duration %>% unique()
+
+          # count number of pre-HL TH runs, and number of post-HL runs by detail
           BBN_counts = df %>%
             dplyr::filter(phase == "BBN") %>%
-            dplyr::filter((task == "TH" & condition == "baseline" & detail == "Alone" & duration == 50) #TODO need to limit to current duration/50ms test
-                          | (condition == "post-HL" & detail == "Alone")) %>%
+            dplyr::filter((task == "TH" & condition == "baseline" & detail == detail_current & duration == duration_current)
+                          | (condition == "post-HL" & detail == detail_current)) %>%
             group_by(task, condition) %>%
             summarise(task = paste("BBN", unique(task)), detail = unique(detail),
                       date = tail(date, 1), n = n(),
