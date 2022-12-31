@@ -644,7 +644,7 @@ Workbook_Writer <- function() {
 
         averages = r %>%
           dplyr::group_by(task, detail) %>%
-          dplyr::summarise_if(.predicate = is.numeric, .funs = mean) %>%
+          dplyr::summarise_if(.predicate = is.numeric, .funs = mean, na.rm = TRUE) %>%
           dplyr::mutate(date = "Overall", file_name = "Averages", warnings_list = NA, comments = NA) %>%
           dplyr::relocate(date, file_name, .before = weight)
 
