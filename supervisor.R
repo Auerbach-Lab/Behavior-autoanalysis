@@ -550,7 +550,7 @@ Workbook_Writer <- function() {
         if (phase_current == "BBN") {
           r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>% select(-Freq, -Dur) %>%
             group_by(task, detail) %>%
-            mutate(THrange = paste0(min(TH) %>% round(digits = 0), "-", max(TH) %>% round(digits = 0))) %>%
+            mutate(THrange = paste0(suppressWarnings(min(TH, na.rm = TRUE)) %>% round(digits = 0), "-", suppressWarnings(max(TH, na.rm = TRUE)) %>% round(digits = 0))) %>%
             relocate(THrange, .after = TH) %>%
             relocate(Spacer1, .after = mean_attempts_per_trial) %>%
             select(-FA_detailed)
@@ -563,7 +563,7 @@ Workbook_Writer <- function() {
           if (has_all_kHz) {
             r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>%
               group_by(task, detail, Freq) %>%
-              mutate(THrange = paste0(min(TH) %>% round(digits = 0), "-", max(TH) %>% round(digits = 0))) %>%
+              mutate(THrange = paste0(suppressWarnings(min(TH, na.rm = TRUE)) %>% round(digits = 0), "-", suppressWarnings(max(TH, na.rm = TRUE)) %>% round(digits = 0))) %>%
               relocate(THrange, .after = TH) %>%
               gather(variable, value, (TH:THrange)) %>%
               unite(temp, variable, Freq) %>%
@@ -574,7 +574,7 @@ Workbook_Writer <- function() {
           } else {
             r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>%
               group_by(task, detail, Freq) %>%
-              mutate(THrange = paste0(min(TH) %>% round(digits = 0), "-", max(TH) %>% round(digits = 0))) %>%
+              mutate(THrange = paste0(suppressWarnings(min(TH, na.rm = TRUE)) %>% round(digits = 0), "-", suppressWarnings(max(TH, na.rm = TRUE)) %>% round(digits = 0))) %>%
               relocate(THrange, .after = TH) %>%
               gather(variable, value, (TH:THrange)) %>%
               unite(temp, variable, Freq) %>%
