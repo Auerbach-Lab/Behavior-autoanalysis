@@ -242,7 +242,7 @@ Workbook_Writer <- function() {
 
       #Retrieve persistent comment if there is one
       comment = rat_archive %>% filter(Rat_ID == ratID) %>% .$Persistent_Comment
-      if(is.na(comment)) comment = "[Persistent comment field e.g. week-ahead informal plan for this rat]"
+      if (is.na(comment)) comment = "[Persistent comment field e.g. week-ahead informal plan for this rat]"
 
       rat_header_df = data.frame(
         rat_name, #A
@@ -407,7 +407,7 @@ Workbook_Writer <- function() {
 
         # Octave
         if (phase_current == "Octave") {
-          if(pre_HL) {
+          if (pre_HL) {
             count_df = rat_runs %>%
               tidyr::unnest_wider(assignment) %>%
               dplyr::filter(phase == "Octave") %>% # keeping all tasks
@@ -490,7 +490,7 @@ Workbook_Writer <- function() {
 
         # Task-specific RXN column ------------------------------------------------
 
-        if(experiment_current == "Oddball") {
+        if (experiment_current == "Oddball") {
           r = r %>% mutate(reaction1 = reaction) %>%
             unnest(reaction) %>%
             group_by(date) %>%
@@ -498,7 +498,7 @@ Workbook_Writer <- function() {
             select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`) %>% #TODO check that Frequency is actually go tone postional data
             distinct()
         } else {
-          if(phase_current == "Octave") {
+          if (phase_current == "Octave") {
             r = r %>% unnest(reaction) %>%
               select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
           } else {
@@ -539,7 +539,7 @@ Workbook_Writer <- function() {
           mutate(Spacer1 = NA)
 
         # Phase-specific Columns --------------------------------------------------------
-        if(phase_current == "BBN") {
+        if (phase_current == "BBN") {
           r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>% select(-Freq, -Dur) %>%
             group_by(task, detail) %>%
             mutate(THrange = paste0(min(TH) %>% round(digits = 0), "-", max(TH) %>% round(digits = 0))) %>%
@@ -760,8 +760,8 @@ Workbook_Writer <- function() {
 
       # copy today's warnings
       warns = df_table[today_offset, 28] %>% unlist() %>% stringr::str_c(collapse = "\n")
-      if(warns == "") warns = "Warnings: none"
-      writeData (wb, 1, x = warns, startRow = rowCurrent, startCol = 29)
+      if (warns == "") warns = "Warnings: none"
+      writeData(wb, 1, x = warns, startRow = rowCurrent, startCol = 29)
 
       # style the key
       addStyle(wb, 1, key_style, rows = row_key_start:row_key_end, cols = 1:29, gridExpand = TRUE)
