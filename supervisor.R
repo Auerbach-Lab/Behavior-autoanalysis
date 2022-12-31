@@ -322,8 +322,8 @@ Workbook_Writer <- function() {
         if (phase_current == "Tones" & task_current %in% c("Rxn", "TH") & pre_HL) {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
-            dplyr::filter(phase == "Tones" & task_current %in% c("Rxn", "TH")) %>%
-            group_by(task) %>%
+            dplyr::filter(phase == "Tones" & task %in% c("Rxn", "TH")) %>%
+            group_by(task, detail) %>%
             summarise(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
                       condition = "baseline",
