@@ -486,6 +486,7 @@ Workbook_Writer <- function() {
           dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
           tidyr::unnest_wider(assignment) %>%
           tidyr::unnest_wider(stats) %>%
+          tidyr::unnest_wider(summary) %>%
           dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
           group_by(task, detail) %>%
           do(
@@ -533,10 +534,23 @@ Workbook_Writer <- function() {
               mutate(Rxn = mean(Rxn)) %>%
               select(-desired_dB)
 
-            df_Rxn = r %>% unnest(reaction) %>%
+            # if we have a 60db entry for a date, great
+            df_Temp = r %>%
+              unnest(reaction) %>%
               dplyr::filter(task != "TH" & `Dur (ms)` == min_duration & `Inten (dB)` == 60) %>% # not equal TH
               group_by(date) %>%
               mutate(Rxn = mean(Rxn))
+
+            # for all dates, take their 55 and 65 entries (stepsize 5 will have potentially all of 55, 60, 65, stepsize 10 will have either 60 or both 55 and 65)
+            # take the average Rxn from the 55 and 65 and only keep dates that aren't already in df_Temp
+            df_Rxn = r %>%
+              unnest(reaction) %>%
+              dplyr::filter(task != "TH" & `Dur (ms)` == min_duration & `Inten (dB)` %in% c(55,65)) %>% # not equal TH
+              group_by(date) %>%
+              summarise(Rxn = mean(Rxn), `Inten (dB)` = mean(`Inten (dB)`), across(), .groups = "drop") %>%
+              distinct() %>%
+              filter(! date %in% df_Temp$date) %>%
+              rbind(df_Temp)
 
             r = rbind(df_TH_BBN, df_TH_tones, df_Rxn) %>%
               select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`) %>%
@@ -853,7 +867,7 @@ Workbook_Writer <- function() {
   Setup_Workbook()
 
 
-  #Add_Rat_To_Workbook(213)
+  #Add_Rat_To_Workbook(139)
   #OR
   lapply(rat_archive %>% filter(is.na(end_date)) %>% .$Rat_ID, Add_Rat_To_Workbook)
 
