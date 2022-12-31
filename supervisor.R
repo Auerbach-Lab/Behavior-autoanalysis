@@ -382,7 +382,8 @@ Workbook_Writer <- function() {
                       .groups = "drop") %>%
             dplyr::arrange(condition, task)
 
-          count_df = rbind(BBN_counts, Tones_counts)
+          count_df = rbind(BBN_counts, Tones_counts) %>%
+            relocate(condition, .after = n)
         }
 
         # BBN Training/Reset PostHL
