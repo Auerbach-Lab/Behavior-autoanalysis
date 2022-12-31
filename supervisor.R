@@ -578,19 +578,20 @@ Workbook_Writer <- function() {
               relocate(THrange, .after = TH) %>%
               gather(variable, value, (TH:THrange)) %>%
               unite(temp, variable, Freq) %>%
-              pivot_wider(names_from = temp, values_from = value)
+              pivot_wider(names_from = temp, values_from = value) %>%
+              select(-Dur, -FA_detailed) %>%
+              relocate(warnings_list, comments, .after = last_col())
 
-            # I need to see the output of r at this stage to ensure my df below has all the appropriate columns
-
-            df = tibble(TH_4 = NA, TH_8 = NA, TH_16 = NA, TH_32 = NA)
-
-            r = add_column(r, !!!df[setdiff(names(df), names(r))])
+            # Adding missing columns without overwriting extant THs and THranges
+            df = tibble(TH_4 = NA, TH_8 = NA, TH_16 = NA, TH_32 = NA,
+                        THrange_4 = NA, THrange_8 = NA, THrange_16 = NA, THrange_32 = NA)
+            r = add_column(r, !!!df[setdiff(names(df), names(r))]) %>%
+              relocate(TH_4, TH_8, TH_16, TH_32, THrange_4, THrange_8, THrange_16, THrange_32, .after = Spacer1)
 
             r = r %>% mutate(Spacer2 = NA) %>%
               relocate(Spacer2, .after = TH_32) %>%
               mutate_at(vars(starts_with("TH_")), as.numeric)
           }
-
 
 
           x = rat_runs %>%
@@ -605,8 +606,13 @@ Workbook_Writer <- function() {
                    Stimrange = paste0(unique(dB_min), "-", unique(dB_max))) %>%
             select(task, detail, date, Spacer3, `Freq (kHz)`, Stimrange)
 
-          s = left_join(r, x, by = c("task", "detail", "date")) %>%
+          r = left_join(r, x, by = c("task", "detail", "date")) %>%
             pivot_wider(names_from = `Freq (kHz)`, values_from = Stimrange)
+
+          # Adding missing columns without overwriting extant THs and THranges
+          df = tibble(`4` = NA, `8` = NA, `16` = NA, `32` = NA)
+          r = add_column(r, !!!df[setdiff(names(df), names(r))]) %>%
+            relocate(`4`, `8`, `16`, `32`, .after = Spacer3)
 
 
         } else if (phase_current == "Octave") {
@@ -654,11 +660,11 @@ Workbook_Writer <- function() {
           dplyr::group_by(task, detail) %>%
           dplyr::summarise_if(.predicate = is.numeric, .funs = mean, na.rm = TRUE) %>%
           dplyr::mutate(date = "Overall", file_name = "Averages", warnings_list = NA, comments = NA) %>%
-          dplyr::relocate(date, file_name, .before = weight)
+          dplyr::relocate(date, file_name, .before = weight) %>%
+          ungroup() %>%
+          mutate_all(~ifelse(is.nan(.), NA, .))
 
-        r = r %>% do(
-          head(., 3)
-        ) %>%
+        r = r %>% do(head(., 3)) %>%
           mutate(date = as.character(date))
 
         r = rbind(r, averages) %>%
