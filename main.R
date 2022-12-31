@@ -16,9 +16,10 @@ InitializeMain <- function() {
   source("A:/Coding/Behavior-autoanalysis/settings.R")  # hardcoded user variables
 
   rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
-  #load("trial_archive.Rdata")
-  #load(paste0(user_settings$projects_folder, "run_archive.Rdata"))
-  #run_archive <<- run_archive
+  load(paste0(user_settings$projects_folder, "trial_archive.Rdata"))
+  trial_archive <<- trial_archive
+  load(paste0(user_settings$projects_folder, "run_archive.Rdata"))
+  run_archive <<- run_archive
 
 }
 
@@ -1319,6 +1320,8 @@ Add_to_Run_Archive <- function() {
   cat("Run added to Run Archive (in environment and on disk).", sep = "\t", fill = TRUE)
 }
 
+
+
 # MAIN ---------------------------------------------------------
 
 Process_File <- function(file_to_load) {
@@ -1351,7 +1354,7 @@ Process_File <- function(file_to_load) {
     # curate data prior to folding in, adding disqualifier flags etc (but omitted trials are always totally gone)
     # Report_Warnings_and_Confirm()
     Add_to_Run_Archive()
-    # Add_to_Trial_Archive() actually fold run_data -> trial_archive
+    Add_to_Trial_Archive() #actually fold run_data -> trial_archive
   }
 
   # do analyses
