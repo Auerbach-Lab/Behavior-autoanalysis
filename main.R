@@ -104,7 +104,11 @@ Import_Matlab <- function(file_to_load) {
         unlist(recursive = TRUE) %>%
         tail (n = 1)
 
+      r_compare = r %>% str_replace_all(" ", "") %>% str_to_lower()
+      name_compare = name %>% str_replace_all(" ", "") %>% str_to_lower() # from undergraduate.R
+
       if (rlang::is_empty(r)) stop("ERROR: system filename improper: ", file_to_load)
+      if (r_compare != name_compare) stop(paste0("ABORT: Rat name given (", name_compare, ") does not match chosen file (", r_compare, ")."))
 
       return(r)
     }
@@ -1411,11 +1415,12 @@ InitializeMain()
 Process_File(file.choose())
 
 # or:
-#directory = "A:\\Coding\\Behavior-autoanalysis\\Projects"  # slashes must be either / or \\
-#files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
-#files = paste0(directory, "\\", files)
-#lapply(files, Process_File)
-#writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))
+# old_file = TRUE
+# directory = "A:\\Coding\\Behavior-autoanalysis\\Projects"  # slashes must be either / or \\
+# files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
+# files = paste0(directory, "\\", files)
+# lapply(files, Process_File)
+# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))
 
 
 
