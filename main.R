@@ -784,10 +784,10 @@ Build_Filename <- function() {
 
 Check_Assigned_Filename <- function() {
   r = TRUE
+  date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
 
   if(old_file) {
     # need to fetch from old_excel_archive
-    date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
     date_asDate <<- paste0(stringr::str_sub(date, 1, 4), "-", stringr::str_sub(date, 5, 6), "-", stringr::str_sub(date, 7, 8)) %>% as.Date()
     old_data <<- old_excel_archive %>% dplyr::filter(Date == date_asDate & rat_name == run_properties$rat_name)
     analysis$assigned_file_name <<- old_data$Filename
@@ -796,7 +796,15 @@ Check_Assigned_Filename <- function() {
       warnings_list <<- append(warnings_list, warn)
     }
   } else {
-    analysis$assigned_file_name <<- analysis$computed_file_name # TODO read from rat_archive which has been written to from supervisor.xlsx
+    id = Get_Rat_ID(run_properties$rat_name)
+    if(length(id) == 0) stop("ABORT: Unknown rat ID.")
+    rat_data = rat_archive[rat_archive$Rat_ID == id,]
+    analysis$assigned_file_name <<- rat_data$Assigned_Filename
+    if(rlang::is_na(analysis$assigned_file_name)) {
+      warn = paste0("No assigned file name found in rat_archive for ", run_properties$rat_name, " on ", date, ".")
+      analysis$assigned_file_name <<- "none"
+      warnings_list <<- append(warnings_list, warn)
+    }
   }
 
   # handle customized individual files
@@ -1237,7 +1245,32 @@ Check_Weight <- function() {
   }
 }
 
-Add_to_Run_Archive <- function() {
+Add_to_Archives <- function() {
+  Clear_Assignment <- function(rat_id) {
+      rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Filename <<- NA
+      rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Experiment <<- NA
+      rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Phase <<- NA
+      rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Task <<- NA
+      rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Detail <<- NA
+      write.csv(rat_archive, paste0(user_settings$projects_folder, "rat_archive.csv"), row.names = FALSE)
+      #writeLines(paste0("Old assignment cleared for ", run_properties$rat_name, " (#", rat_id, ")."))
+      cat("Rat archive... ")
+  }
+
+  Add_to_Run_Archive <- function(rat_id, row_to_add) {
+      run_archive <<- rbind(run_archive, row_to_add)
+      save(run_archive, file = "run_archive.Rdata", ascii = TRUE, compress = FALSE)
+      #writeLines(paste0("Run ", row_to_add$UUID, " of ", run_properties$rat_name, " (#", rat_id, ") added to Run Archive."))
+      cat("Run archive... ")
+  }
+
+  Add_to_Trial_Archive <- function(rat_id, uuid) {
+      trial_archive <<- rbind(trial_archive, cbind(run_data, UUID = uuid))
+      save(trial_archive, file = "trial_archive.Rdata", ascii = TRUE, compress = FALSE)
+      #writeLines(paste0("Trials in run ", uuid, " of ", run_properties$rat_name, " (#", rat_id, ") added to Trial Archive."))
+      cat("Trial archive... ")
+  }
+
   Construct_Run_Entry <- function() {
     date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
     time = run_properties$creation_time %>% stringr::str_sub(9,15) %>% as.numeric()
@@ -1267,17 +1300,20 @@ Add_to_Run_Archive <- function() {
       #use the comments from the undergrad file's variable
       observations = observations   # redundant, just for clarity
 
-      #TODO read from rat_archive which was written to by supervisor.xlsx
-      # gonna need rat_ID = Get_Rat_ID(run_properties$rat_name) earlier than below, to filter rat_archive and pull columns
-      #TODO also need to blank these fields from rat_archive after the import so they're never incorporated twice
-      # --- must not do that here, instead do that down below, where we save run_archive (just edit and save rat_archive there) so we don't blank until all chances for errors are past
+      rat_id = Get_Rat_ID(run_properties$rat_name)
+      if(length(rat_id) == 0) stop("ABORT: Unknown rat ID.")
+      rat_data = rat_archive[rat_archive$Rat_ID == rat_id,]
+
       assignment = list(
-        assigned_file_name = analysis$assigned_file_name, # analysis contains filename already imported from rat_archive, but we should read directly from rat_archive rather than reusing that
-        experiment = "",
-        phase = "",
-        task = "",
-        detail = ""
+        assigned_file_name = rat_data$Assigned_Filename, # analysis contains filename already imported from rat_archive, but we should read directly from rat_archive rather than reusing that
+        experiment = rat_data$Assigned_Experiment,
+        phase = rat_data$Assigned_Phase,
+        task = rat_data$Assigned_Task,
+        detail = rat_data$Assigned_Detail,
+        comment = rat_data$Persistent_Comment
       )
+      # also need to blank these fields from rat_archive after the import so they're never incorporated twice
+      # --- must not do that here, instead do that down below, where we modify other archives so we don't blank until all chances for errors are past
 
     }
 
@@ -1310,17 +1346,22 @@ Add_to_Run_Archive <- function() {
     )
     return(r)
   }
+
+
+  # Add to Archive Workflow -------------------------------------------------
+
   row_to_add = Construct_Run_Entry()
   if(nrow(row_to_add) != 1) stop("ABORT: Problem building row to add to Run Archive.")
-  run_archive <<- rbind(run_archive, row_to_add)
-  save(run_archive, file = "run_archive.Rdata", ascii = TRUE, compress = FALSE)
-  cat("Run added to Run Archive (in environment and on disk).", sep = "\t", fill = TRUE)
-}
 
-Add_to_Trial_Archive <- function() {
-  #leftjoin uuid to run_data or something
-}
+  rat_id = Get_Rat_ID(run_properties$rat_name)
+  if(length(rat_id) == 0) stop("ABORT: Unknown rat ID.")
 
+  Add_to_Run_Archive(rat_id, row_to_add)
+  Add_to_Trial_Archive(rat_id, row_to_add$UUID)
+  Clear_Assignment(rat_id)
+  writeLines("")
+  writeLines(paste0("Run ", row_to_add$UUID, " of ", run_properties$rat_name, " (#", rat_id, ") successfully added to all archives (in environment and on disk)."))
+}
 
 # MAIN ---------------------------------------------------------
 
@@ -1353,8 +1394,7 @@ Process_File <- function(file_to_load) {
     # commit to folding in - display warnings and get user input to override them (and submit to master dataframe), or give option to commit to invalid/storage-only dataframe
     # curate data prior to folding in, adding disqualifier flags etc (but omitted trials are always totally gone)
     # Report_Warnings_and_Confirm()
-    Add_to_Run_Archive()
-    Add_to_Trial_Archive() #actually fold run_data -> trial_archive
+    Add_to_Archives()
   }
 
   # do analyses
