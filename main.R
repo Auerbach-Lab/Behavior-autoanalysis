@@ -12,19 +12,15 @@ InitializeMain <- function() {
   }
 
   Load_Packages()
-  options(warn=1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
+  options(warn = 1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
   source("A:/Coding/Behavior-autoanalysis/settings.R")  # hardcoded user variables
 
   rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
-  load(paste0(user_settings$projects_folder, "trial_archive.Rdata"))
-  trial_archive <<- trial_archive
-  load(paste0(user_settings$projects_folder, "run_archive.Rdata"))
-  run_archive <<- run_archive
+  #load(paste0(user_settings$projects_folder, "trial_archive.Rdata"))
+  #trial_archive <<- trial_archive
+  #load(paste0(user_settings$projects_folder, "run_archive.Rdata"))
+  #run_archive <<- run_archive
 
-}
-
-Throw_Warning <- function() {
-  # We don't do this because it means the warning names this method, rather than the place where the check failed
 }
 
 Import_Matlab <- function(file_to_load) {
@@ -200,7 +196,7 @@ Import_Matlab <- function(file_to_load) {
       # This is how long the nose must remain out to be counted as 'withdraw' or
       # response. Response time is for the withdraw.
 
-      trigger_sensitivity = `if`(all(is.na(run_properties$detect.time.win)),   #if timewin is undefined, use 200
+      trigger_sensitivity = `if`(all(is.na(run_properties$detect.time.win)),   #if dtw is undefined, use 200
                                  200,
                                  run_properties$detect.time.win[[1]] %>% as.numeric()),
 
@@ -301,6 +297,7 @@ Import_Matlab <- function(file_to_load) {
     run_data = dplyr::bind_cols(run_data, Get_Delay_DF(run_data))
 
     #TODO: detect same day same rat data, renumber blocks in this list AND in master dataframe to continuous chronological order
+    #see also: CheckMultipartRun
     block_list = rep(1:ceiling(nrow(run_data)/run_properties$stim_block_size), each = run_properties$stim_block_size)
 
     run_data = run_data %>% dplyr::mutate(Trial_number = row_number(),
@@ -1320,6 +1317,9 @@ Add_to_Run_Archive <- function() {
   cat("Run added to Run Archive (in environment and on disk).", sep = "\t", fill = TRUE)
 }
 
+Add_to_Trial_Archive <- function() {
+  #leftjoin uuid to run_data or something
+}
 
 
 # MAIN ---------------------------------------------------------
@@ -1360,14 +1360,6 @@ Process_File <- function(file_to_load) {
   # do analyses
   # pop up charts and stuff for undergrads to sign off on (where do the comments they provide on 'no' get saved? text file alongside individual exported graph image? dedicated df? master df in one long appended cell for all comments to graphs?)
 
-
-  # # plus a 48-line dataframe of box+time combos that represents the current 'schedule'
-  #   rat uid/name
-  #   assigned box
-  #   timeslot
-
-
-
   writeLines("") #TODO change all cats to writelines
   return(invisible(NULL))
 }
@@ -1376,14 +1368,14 @@ Process_File <- function(file_to_load) {
 InitializeMain()
 
 # either:
-#Process_File(file.choose())
+Process_File(file.choose())
 
 # or:
-directory = "A:\\Coding\\Behavior-autoanalysis\\Projects"  # slashes must be either / or \\
-files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
-files = paste0(directory, "\\", files)
-lapply(files, Process_File)
-writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))
+#directory = "A:\\Coding\\Behavior-autoanalysis\\Projects"  # slashes must be either / or \\
+#files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
+#files = paste0(directory, "\\", files)
+#lapply(files, Process_File)
+#writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))
 
 
 
