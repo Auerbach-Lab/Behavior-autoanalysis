@@ -35,13 +35,13 @@ Workbook_Reader <- function() {
     {
       r = dplyr::rows_update(rat_archive, assignments_df, by = "Rat_ID", unmatched = "error")
       tryCatch(
-        write.csv(rat_archive, paste0(user_settings$projects_folder, "rat_archive.csv"), rowCurrent.names = FALSE),
+        write.csv(rat_archive, paste0(user_settings$projects_folder, "rat_archive.csv"), row.names = FALSE),
         finally = writeLines(paste0(nrow(assignments_df), " assignments were recorded in `rat_archive.csv`"))
       )
-      r
+      return(r)
     },
     error = function(e) { # this function name is specific to tryCatch and cannot be changed
-      warning("A rat id (column AD) from the supervisor spreadsheet was not found in the rat archive.")
+      warning("A rat id (column AD) from the supervisor spreadsheet was not found in the rat archive (or other error, see below)")
       message("Original error message:")
       warning(e)
       return(rat_archive) #return unmodified
@@ -73,6 +73,7 @@ Workbook_Writer <- function() {
 
   Setup_Workbook <- function() {
     wb <<- createWorkbook()
+    rowCurrent <<- 1 #persistent, index of the next unwritten rowCurrent
 
     options("openxlsx.borderColour" = "#4F80BD")
     options("openxlsx.borderStyle" = "thin")
@@ -859,21 +860,14 @@ Workbook_Writer <- function() {
 
 
 # Writer Workflow ---------------------------------------------------------
-  rowCurrent <<- 1 #persistent, index of the next unwritten rowCurrent
-
-
-
   Define_Styles()
   Setup_Workbook()
-
 
   #Add_Rat_To_Workbook(139)
   #OR
   lapply(rat_archive %>% filter(is.na(end_date)) %>% .$Rat_ID, Add_Rat_To_Workbook)
 
-
-
-  #saveWorkbook(wb, "supervisor.xlsx", overwrite = TRUE)
+  saveWorkbook(wb, "supervisor.xlsx", overwrite = TRUE)
   openXL(wb)
 }
 
@@ -881,6 +875,6 @@ Workbook_Writer <- function() {
 # Supervisor Workflow -----------------------------------------------------------
 
 InitializeSupervisor()
-#Workbook_Reader()
+Workbook_Reader()
 Workbook_Writer()
 
