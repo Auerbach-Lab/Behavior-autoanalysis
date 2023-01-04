@@ -1,7 +1,7 @@
 # Rat name
 # Capitalization and spaces do not matter
 # Example: rat_name = "Orange11"
-name = "BP1"
+name = "Blue2"
 
 # Trials to exclude from the next file.
 # A comma-separated list of numbers or ranges inside quotation marks.

@@ -20,7 +20,7 @@ InitializeMain <- function() {
   #trial_archive <<- trial_archive
   #load(paste0(user_settings$projects_folder, "run_archive.Rdata"))
   #run_archive <<- run_archive
-
+  ignore_name_check <<- FALSE
 }
 
 Import_Matlab <- function(file_to_load) {
@@ -108,7 +108,7 @@ Import_Matlab <- function(file_to_load) {
       name_compare = name %>% str_replace_all(" ", "") %>% str_to_lower() # from undergraduate.R
 
       if (rlang::is_empty(r)) stop("ERROR: system filename improper: ", file_to_load)
-      if (r_compare != name_compare) stop(paste0("ABORT: Rat name given (", name_compare, ") does not match chosen file (", r_compare, ")."))
+      if (!ignore_name_check && r_compare != name_compare) stop(paste0("ABORT: Rat name given (", name_compare, ") does not match chosen file (", r_compare, ")."))
 
       return(r)
     }
@@ -1251,28 +1251,30 @@ Check_Weight <- function() {
 
 Add_to_Archives <- function() {
   Clear_Assignment <- function(rat_id) {
-      rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Filename <<- NA
-      rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Experiment <<- NA
-      rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Phase <<- NA
-      rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Task <<- NA
-      rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Detail <<- NA
-      write.csv(rat_archive, paste0(user_settings$projects_folder, "rat_archive.csv"), row.names = FALSE)
-      #writeLines(paste0("Old assignment cleared for ", run_properties$rat_name, " (#", rat_id, ")."))
-      cat("Rat archive... ")
+    cat("Rat... ")
+    rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Filename <<- NA
+    rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Experiment <<- NA
+    rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Phase <<- NA
+    rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Task <<- NA
+    rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Detail <<- NA
+    write.csv(rat_archive, paste0(user_settings$projects_folder, "rat_archive.csv"), row.names = FALSE)
+    #writeLines(paste0("Old assignment cleared for ", run_properties$rat_name, " (#", rat_id, ")."))
   }
 
   Add_to_Run_Archive <- function(rat_id, row_to_add) {
-      run_archive <<- rbind(run_archive, row_to_add)
-      save(run_archive, file = "run_archive.Rdata", ascii = TRUE, compress = FALSE)
-      #writeLines(paste0("Run ", row_to_add$UUID, " of ", run_properties$rat_name, " (#", rat_id, ") added to Run Archive."))
-      cat("Run archive... ")
+    cat("Run... ")
+    run_archive <<- rbind(run_archive, row_to_add)
+    save(run_archive, file = "run_archive.Rdata", ascii = TRUE, compress = FALSE)
+    #writeLines(paste0("Run ", row_to_add$UUID, " of ", run_properties$rat_name, " (#", rat_id, ") added to Run Archive."))
+
   }
 
   Add_to_Trial_Archive <- function(rat_id, uuid) {
-      trial_archive <<- rbind(trial_archive, cbind(run_data, UUID = uuid))
-      save(trial_archive, file = "trial_archive.Rdata", ascii = TRUE, compress = FALSE)
-      #writeLines(paste0("Trials in run ", uuid, " of ", run_properties$rat_name, " (#", rat_id, ") added to Trial Archive."))
-      cat("Trial archive... ")
+    cat("Trials... ")
+    trial_archive <<- rbind(trial_archive, cbind(run_data, UUID = uuid))
+    save(trial_archive, file = "trial_archive.Rdata", ascii = TRUE, compress = FALSE)
+    #writeLines(paste0("Trials in run ", uuid, " of ", run_properties$rat_name, " (#", rat_id, ") added to Trial Archive."))
+
   }
 
   Construct_Run_Entry <- function() {
@@ -1360,6 +1362,7 @@ Add_to_Archives <- function() {
   rat_id = Get_Rat_ID(run_properties$rat_name)
   if(length(rat_id) == 0) stop("ABORT: Unknown rat ID.")
 
+  cat("Archiving ")
   Add_to_Run_Archive(rat_id, row_to_add)
   Add_to_Trial_Archive(rat_id, row_to_add$UUID)
   Clear_Assignment(rat_id)
@@ -1416,6 +1419,7 @@ Process_File(file.choose())
 
 # or:
 # old_file = TRUE
+# ignore_name_check = TRUE
 # directory = "A:\\Coding\\Behavior-autoanalysis\\Projects"  # slashes must be either / or \\
 # files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
 # files = paste0(directory, "\\", files)
