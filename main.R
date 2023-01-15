@@ -16,10 +16,8 @@ InitializeMain <- function() {
   source("A:/Coding/Behavior-autoanalysis/settings.R")  # hardcoded user variables
 
   rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
-  #load(paste0(user_settings$projects_folder, "trial_archive.Rdata"))
-  #trial_archive <<- trial_archive
-  #load(paste0(user_settings$projects_folder, "run_archive.Rdata"))
-  #run_archive <<- run_archive
+  load(paste0(user_settings$projects_folder, "run_archive.Rdata"), .GlobalEnv)
+
   ignore_name_check <<- FALSE
 }
 
@@ -1264,17 +1262,26 @@ Add_to_Archives <- function() {
   Add_to_Run_Archive <- function(rat_id, row_to_add) {
     cat("Run... ")
     run_archive <<- rbind(run_archive, row_to_add)
-    save(run_archive, file = "run_archive.Rdata", ascii = TRUE, compress = FALSE)
+    save(run_archive, file = paste0(user_settings$projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
     #writeLines(paste0("Run ", row_to_add$UUID, " of ", run_properties$rat_name, " (#", rat_id, ") added to Run Archive."))
 
   }
 
-  Add_to_Trial_Archive <- function(rat_id, uuid) {
+  Add_to_Trial_Archive <- function(rat_id, row_to_add) {
     cat("Trials... ")
-    trial_archive <<- rbind(trial_archive, cbind(run_data, UUID = uuid))
-    save(trial_archive, file = "trial_archive.Rdata", ascii = TRUE, compress = FALSE)
-    #writeLines(paste0("Trials in run ", uuid, " of ", run_properties$rat_name, " (#", rat_id, ") added to Trial Archive."))
+    uuid = row_to_add$UUID
+    experiment = row_to_add %>% .$assignment %>% .[[1]] %>% pluck("experiment")
+    variable_name = paste0(experiment, "_archive")
+    filename = paste0(user_settings$projects_folder, variable_name, ".Rdata")
 
+    if(file.exists(filename)){
+      load(filename)
+      assign(variable_name, rbind(get(variable_name), cbind(run_data, UUID = uuid))) # tack UUID onto row and add row to existing dynamically-named archive
+    } else {
+      assign(variable_name, cbind(run_data, UUID = uuid))
+    }
+
+    save(list = get("variable_name"), file = filename, ascii = TRUE, compress = FALSE)
   }
 
   Construct_Run_Entry <- function() {
@@ -1364,10 +1371,10 @@ Add_to_Archives <- function() {
 
   cat("Archiving ")
   Add_to_Run_Archive(rat_id, row_to_add)
-  Add_to_Trial_Archive(rat_id, row_to_add$UUID)
+  Add_to_Trial_Archive(rat_id, row_to_add)
   Clear_Assignment(rat_id)
   writeLines("")
-  writeLines(paste0("Run ", row_to_add$UUID, " of ", run_properties$rat_name, " (#", rat_id, ") successfully added to all archives (in environment and on disk)."))
+  writeLines(paste0("Run ", row_to_add$UUID, " of ", run_properties$rat_name, " (#", rat_id, ") successfully added to archives (in environment and on disk)."))
 }
 
 # MAIN ---------------------------------------------------------
@@ -1414,17 +1421,17 @@ Process_File <- function(file_to_load) {
 # set up environment
 InitializeMain()
 
-# either:
-Process_File(file.choose())
+#### either:
+#Process_File(file.choose())
 
-# or:
-# old_file = TRUE
-# ignore_name_check = TRUE
-# directory = "A:\\Coding\\Behavior-autoanalysis\\Projects"  # slashes must be either / or \\
-# files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
-# files = paste0(directory, "\\", files)
-# lapply(files, Process_File)
-# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))
+#### or:
+old_file = TRUE
+ignore_name_check = TRUE
+directory = "A:\\Coding\\Behavior-autoanalysis\\Projects"  # slashes must be either / or \\
+files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
+files = paste0(directory, "\\", files)
+lapply(files, Process_File)
+writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))
 
 
 
