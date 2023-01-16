@@ -37,9 +37,15 @@ It is possible to run main.R directly and edit the section near the bottom to sw
 Initial whiteboard - https://miro.com/app/board/uXjVO2HtI6U=/
 
 The basic architecture is Model-View-Controller.
-**Model**: The `*_archive.Rdata` files contain the model. These include the `rat_archive` (CSV not Rdata), the `run_archive`, and the per-experiment trial archives (e.g. `Fmr1-LE_archive`).
-**View**: The view is provided by `supervisor-summarize.R`. This script outputs a well-formatted .xlsx (Excel) file that allows the experimental supervisor to view summary data and statistics for the last several days for each rat, along with any warnings found when processing each day's files.
-**Controller**: The primary controller is `main.R`, used through its frontend interface `undergraduate.R`. This file imports `.mat` files, which are the output from each run of the  matlab control program. The data is converted into usable formats and the file is extensively checked for errors, especially mismatches between the expected or assigned parameters of that experimental run to the actual parameters used by the computer during the run. Data from the run's `.mat` file and input from `undergraduate.R` (such as the animal's current weight) is saved into the appropriate archives.
+####Model####
+The `*_archive.Rdata` files contain the model. These include the `rat_archive` (CSV not Rdata), the `run_archive`, and the per-experiment trial archives (e.g. `Fmr1-LE_archive`).
+
+####View####
+The view is provided by `supervisor-summarize.R`. This script outputs a well-formatted .xlsx (Excel) file that allows the experimental supervisor to view summary data and statistics for the last several days for each rat, along with any warnings found when processing each day's files.
+
+####Controller####
+The primary controller is `main.R`, used through its frontend interface `undergraduate.R`. This file imports `.mat` files, which are the output from each run of the  matlab control program. The data is converted into usable formats and the file is extensively checked for errors, especially mismatches between the expected or assigned parameters of that experimental run to the actual parameters used by the computer during the run. Data from the run's `.mat` file and input from `undergraduate.R` (such as the animal's current weight) is saved into the appropriate archives.
+
 The `supervisor-assign.R` file, combined with the summary .xlsx file, also acts as a controller. This script transfers the future assignments (created by the supervisor using the summary sheet) to the model. This data is then checked against during `main.R`'s execution.
 
 Other files:
