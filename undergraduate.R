@@ -1,7 +1,7 @@
 # Rat name
 # Capitalization and spaces do not matter
 # Example: rat_name = "Orange11"
-name = "Blue2"
+name = "BP1"
 
 # Trials to exclude from the next file.
 # A comma-separated list of numbers or ranges inside quotation marks.
@@ -13,7 +13,7 @@ exclude_trials = ""
 # Is there data about this file in the (old) excel sheets
 # A boolean value (TRUE or FALSE)
 # Example: old_file = TRUE
-old_file = TRUE
+old_file = FALSE
 
 # Rat's weight, in grams.
 # Example: weight = 360

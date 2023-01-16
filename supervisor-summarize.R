@@ -15,7 +15,6 @@ InitializeWriter <- function() {
   load(paste0(user_settings$projects_folder, "run_archive.Rdata"), .GlobalEnv)
 }
 
-
 Workbook_Writer <- function() {
   Define_Styles <- function() {
     rat_name_style <<- createStyle(fontSize = 22, textDecoration = "bold")
@@ -836,7 +835,7 @@ Workbook_Writer <- function() {
 }
 
 
-# Main Workflow -----------------------------------------------------------
+# Workflow -----------------------------------------------------------
 
 InitializeWriter()
 Workbook_Writer()

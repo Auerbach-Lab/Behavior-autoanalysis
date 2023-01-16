@@ -1422,19 +1422,14 @@ Process_File <- function(file_to_load) {
 InitializeMain()
 
 #### either:
-#Process_File(file.choose())
+Process_File(file.choose())
 
 #### or:
-old_file = TRUE
-ignore_name_check = TRUE
-directory = "A:\\Coding\\Behavior-autoanalysis\\Projects"  # slashes must be either / or \\
-files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
-files = paste0(directory, "\\", files)
-lapply(files, Process_File)
-writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))
-
-
-
-
-
+# old_file = TRUE
+# ignore_name_check = TRUE
+# directory = "A:\\Coding\\Behavior-autoanalysis\\Projects"  # slashes must be either / or \\
+# files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
+# files = paste0(directory, "\\", files)
+# lapply(files, Process_File)
+# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))
 

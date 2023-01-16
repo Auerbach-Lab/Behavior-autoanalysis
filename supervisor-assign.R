@@ -10,7 +10,6 @@ InitializeReader <- function() {
   rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
 }
 
-
 Workbook_Reader <- function() {
   assignments_df = readWorkbook(xlsxFile = "supervisor.xlsx", sheet = 1, cols = c(4, 6, 9, 12, 15, 18, 30), colNames = FALSE)
   colnames(assignments_df) = c("Assigned_Filename", "Assigned_Experiment", "Assigned_Phase", "Assigned_Task", "Assigned_Detail", "Persistent_Comment", "Rat_ID")
@@ -43,6 +42,6 @@ Workbook_Reader <- function() {
   )
 }
 
-# Main Workflow -----------------------------------------------------------
+# Workflow -----------------------------------------------------------
 
 Workbook_Reader()
