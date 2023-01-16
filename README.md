@@ -1,7 +1,7 @@
 # PiedPiper 0.1-ALPHA
 
 ## Installation
-Download the repository and, as necessary update installed R packages from the dependency list below.
+Download the repository and, as necessary, update installed R packages from the dependency list below.
 
 ### Dependencies
 	data.table_1.14.6
