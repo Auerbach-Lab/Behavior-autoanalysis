@@ -65,7 +65,7 @@ The primary controller is `main.R`, used through its frontend interface `undergr
 
 The `supervisor-assign.R` file, combined with the summary .xlsx file, also acts as a controller. This script transfers the future assignments (created by the supervisor using the summary sheet) to the model. This data is then checked against during `main.R`'s execution.
 
-Other files:
+#### Other files
 - `settings.R` - contains settings used by the main and supervisor scripts, such as the TH Cutoff, the desired minimum number of completed trials, or the amount of weight change required to trigger a warning message.
 - `import_old_excel.R` - This is a utility to read a directory tree and import information from the old experimental excel sheets that PiedPiper is designed to replace.
 - `experiment_details.csv` - This file lists the active experiments, the phases that correspond to each experiment, and the tasks and details that correspond to each phase. Combined, this nomenclature specifies most of the parameters used to create the configuration files that are loaded into the matlab control program that specify the behavior of the experimental boxes. Future work is intended to use these parameters to generate the matlab configuration files directly; in 0.1-ALPHA these values are used for post-run validation instead.
