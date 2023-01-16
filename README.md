@@ -38,7 +38,7 @@ Initial whiteboard - https://miro.com/app/board/uXjVO2HtI6U=/
 
 The basic architecture is Model-View-Controller.
 #### Model
-The `*_archive.Rdata` files contain the model. These include the `rat_archive` (CSV not Rdata), the `run_archive`, and the per-experiment trial archives (e.g. `Fmr1-LE_archive`).
+The `*_archive.Rdata` files contain the model responsible for storing the data. These include the `rat_archive` (CSV not Rdata), the `run_archive`, and the per-experiment trial archives (e.g. `Fmr1-LE_archive`).
 
 #### View
 The view is provided by `supervisor-summarize.R`. This script outputs a well-formatted .xlsx (Excel) file that allows the experimental supervisor to view summary data and statistics for the last several days for each rat, along with any warnings found when processing each day's files.
