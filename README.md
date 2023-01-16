@@ -25,7 +25,7 @@ The versions of many of these packages matter, particularly openxlsx and the tid
 Be sure to update to at least the listed versions of the dependencies above.
 
 ### First-time run
-Change hardcoded paths in .R files - search for `A:\Coding\` to find them. This will be handled more appropriately in a later release.
+Change hardcoded paths in .R files - search for `A:/Coding` and `A:\\Coding`. This will be handled more appropriately in a later release.
 Use the included bootstrapped `run_archive.Rdata` and `rat_archive.csv` or create appropriate versions (NULL will do for the former). 
 	
 ## Usage
