@@ -54,7 +54,15 @@ Other files:
 - `experiment_details.csv` - This file lists the active experiments, the phases that correspond to each experiment, and the tasks and details that correspond to each phase. Combined, this nomenclature specifies most of the parameters used to create the configuration files that are loaded into the matlab control program that specify the behavior of the experimental boxes. Future work is intended to use these parameters to generate the matlab configuration files directly; in 0.1-ALPHA these values are used for post-run validation instead.
 
 ## Maintenance
+### New Experiment
 Adding a new experiment requires, at minimum, updating `experiment_details.csv` to add the new experiment and denote its corresponding phases. If the experiment uses existing phase types, no further work is required.
+
 If new phase types are added, `main.R` and `supervisor-summarize.R` must be updated to correctly process them. Non-exhaustively, in main, `Identify_Analysis_Type()` and `Build_Filename()` will need new definitions, and it is possible that `Calculate_Summary_Statistics()` will also. In supervisor-summarize, `Build_Counts()` and the task-specific and phase-specific portions of `Build_Table()` will need updating. In addition, the phase's tasks and details will have to be listed in `experiment_details.csv`.
+
+### New Rat
+The new rat should be added to the `rat_archive.csv` file, either by opening it with a spreadsheet program or through R.
+
+### Hearing Loss, Rat Retirement/Death, etc
+The `rat_archive.csv` file should be updated with the corresponding information. **Do not delete** rows (rats) from the archive, simply update their `end_date` column. 
 
 
