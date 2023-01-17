@@ -13,7 +13,7 @@ InitializeMain <- function() {
 
   Load_Packages()
   options(warn = 1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
-  source("A:/Coding/Behavior-autoanalysis/settings.R")  # hardcoded user variables
+  source("Z:/Behavior-autoanalysis/settings.R")  # hardcoded user variables
 
   rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
   load(paste0(user_settings$projects_folder, "run_archive.Rdata"), .GlobalEnv)

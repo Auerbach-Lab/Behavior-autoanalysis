@@ -1,7 +1,7 @@
 user_settings = list(
   # The folder where the project subfolders are:
   # Note that the slashes have to be / (not \)
-  projects_folder = 'A:/coding/Behavior-autoanalysis/',
+  projects_folder = 'Z:/Behavior-autoanalysis/',
 
   # Number of runs per day (probably equals number of active rats)
   runs_per_day = 48,
