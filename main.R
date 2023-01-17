@@ -260,6 +260,11 @@ Import_Matlab <- function(file_to_load) {
       misses_calc = run_data %>% dplyr::filter(Response == "Miss") %>% dplyr::count() %>% as.numeric()
       CRs_calc = run_data %>% dplyr::filter(Response == "CR") %>% dplyr::count() %>% as.numeric()
       FAs_calc = run_data %>% dplyr::filter(Response == "FA") %>% dplyr::count() %>% as.numeric()
+      hit_percent = (hits_calc / (hits_calc + misses_calc)) * 100
+      FA_percent = (FAs_calc / (FAs_calc + CRs_calc)) * 100
+      
+      # Added to compare to written record at request of Undergrads
+      writeLines(paste0("\tTrials: ", total_trials, "\tHit%: ", round(hit_percent, digits = 1), "\tFA%: ", round(FA_percent, digits = 1)))
 
       if (results_total_trials == 0 | run_properties$stim_type == "train") {
         cat("Validate_Mat_Summary: Skipped (no summary)", sep = "\t", fill = TRUE)
@@ -1031,8 +1036,10 @@ Calculate_Summary_Statistics <- function() {
   misses = run_data %>% dplyr::filter(Response == "Miss") %>% dplyr::count() %>% as.numeric()
   CRs = run_data %>% dplyr::filter(Response == "CR") %>% dplyr::count() %>% as.numeric()
   FAs = run_data %>% dplyr::filter(Response == "FA") %>% dplyr::count() %>% as.numeric()
-  hit_percent = hits / trial_count
-  FA_percent = FAs / trial_count
+  trial_count_go = hits + misses
+  trial_count_nogo = CRs + FAs
+  hit_percent = hits / trial_count_go
+  FA_percent = FAs / trial_count_nogo
   mean_attempts_per_trial = dplyr::summarise_at(run_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
   if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
     TH_by_frequency_and_duration = NA

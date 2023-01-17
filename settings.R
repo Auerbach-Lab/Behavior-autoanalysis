@@ -40,8 +40,8 @@ user_settings = list(
     "Oddball (Uneven Odds & Catch)" = 330,
     "Oddball (Catch)" = 330),
 
-  minimum_hit_percent = 0.600,
-  maximum_FA_percent = 0.333,
+  minimum_hit_percent = 0.850,
+  maximum_FA_percent = 0.200,
   maximum_attempts_per_trial = 2.0,
 
   # weight change as percent of bodyweight
