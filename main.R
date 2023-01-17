@@ -943,6 +943,8 @@ Calculate_Summary_Statistics <- function() {
 
     dprime_table = Format_for_Psycho(dprime_table)
     dprime_data = Calculate_dprime(dprime_table)
+    dprime <<- select(dprime_data, Freq, dB, Dur, dprime)
+    # save this to stats
 
     r = dprime_data %>%
       select(Freq, Dur, dB, dprime) %>%
@@ -1034,6 +1036,11 @@ Calculate_Summary_Statistics <- function() {
   hit_percent = hits / trial_count
   FA_percent = FAs / trial_count
   mean_attempts_per_trial = dplyr::summarise_at(run_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
+  dprime = psycho::dprime(n_hit = hits,
+                          n_fa = FAs,
+                          n_miss = misses,
+                          n_cr = CRs,
+                          adjusted = TRUE) %>% .$dprime
   if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
     TH_by_frequency_and_duration = NA
   } else {
@@ -1048,11 +1055,7 @@ Calculate_Summary_Statistics <- function() {
   }
   #overall_TH = Calculate_Threshold() #TODO overall calculation using trials archive
   reaction = Calculate_Reaction_Time() #NOTE this can take audible only (default false) or min time (default 0.015)
-  dprime = psycho::dprime(n_hit = hits,
-                           n_fa = FAs,
-                           n_miss = misses,
-                           n_cr = CRs,
-                           adjusted = TRUE) %>% .$dprime
+
 
   stats = list(
     trial_count = trial_count,
@@ -1063,7 +1066,7 @@ Calculate_Summary_Statistics <- function() {
     hit_percent = hit_percent,
     FA_percent = FA_percent,
     mean_attempts_per_trial = mean_attempts_per_trial,
-    dprime = dprime,
+    dprime = tibble(dprime),
     threshold = TH_by_frequency_and_duration,
     reaction = reaction,
     FA_detailed = FA_detailed
