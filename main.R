@@ -1044,11 +1044,11 @@ Calculate_Summary_Statistics <- function() {
   hit_percent = hits / trial_count_go
   FA_percent = ifelse(trial_count_nogo == 0, NA, FAs / trial_count_nogo)
   mean_attempts_per_trial = dplyr::summarise_at(run_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
-  dprime = psycho::dprime(n_hit = hits,
-                          n_fa = FAs,
-                          n_miss = misses,
-                          n_cr = CRs,
-                          adjusted = TRUE) %>% .$dprime
+  dprime = FA_percent = ifelse(trial_count_nogo == 0, NA, psycho::dprime(n_hit = hits,
+                                                                         n_fa = FAs,
+                                                                         n_miss = misses,
+                                                                         n_cr = CRs,
+                                                                         adjusted = TRUE) %>% .$dprime)
   if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
     TH_by_frequency_and_duration = NA
   } else {
