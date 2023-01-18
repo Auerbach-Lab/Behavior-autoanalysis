@@ -1105,7 +1105,7 @@ Calculate_Summary_Statistics <- function() {
   trial_count_go = run_data %>% dplyr::filter(Trial_type != 0) %>% dplyr::count() %>% as.numeric()
   trial_count_nogo = run_data %>% dplyr::filter(Trial_type == 0) %>% dplyr::count() %>% as.numeric()
   hit_percent = hits / trial_count_go
-  FA_percent = ifelse(trial_count_nogo == 0, 0, FAs / trial_count_nogo)
+  FA_percent = ifelse(trial_count_nogo == 0, NA, FAs / trial_count_nogo)
   mean_attempts_per_trial = dplyr::summarise_at(run_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
   dprime = FA_percent = ifelse(trial_count_nogo == 0, NA, psycho::dprime(n_hit = hits,
                                                                          n_fa = FAs,
@@ -1161,10 +1161,12 @@ Check_Performance_Cutoffs <- function() {
     warnings_list <<- append(warnings_list, warn)
   }
 
-  if (analysis$stats$FA_percent > user_settings$maximum_FA_percent) {
-    warn = paste0("High false alarm (FA) rate: ", round(analysis$stats$FA_percent * 100, digits = 1), "%")
-    warning(paste0(warn, "\n"))
-    warnings_list <<- append(warnings_list, warn)
+  if(!is.na(analysis$stats$FA_percent)) {
+    if (analysis$stats$FA_percent > user_settings$maximum_FA_percent | !is.na(analysis$stats$FA_percent)) {
+      warn = paste0("High false alarm (FA) rate: ", round(analysis$stats$FA_percent * 100, digits = 1), "%")
+      warning(paste0(warn, "\n"))
+      warnings_list <<- append(warnings_list, warn)
+    }
   }
 
   if (analysis$stats$mean_attempts_per_trial > user_settings$maximum_attempts_per_trial) {
