@@ -34,6 +34,10 @@ user_settings = list(
     "Training - BBN" = 50,
     "BBN (Standard)" = 240,
     "BBN Mixed Duration" = 330,
+    
+    "Training - Gap" = 50,
+    "Gap (Standard)" = 240,
+    "Gap Mixed Duration" = 330,
 
     "Oddball (Standard)" = 330,
     "Oddball (Uneven Odds)" = 330,
