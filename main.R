@@ -1162,7 +1162,7 @@ Check_Performance_Cutoffs <- function() {
   }
 
   if(!is.na(analysis$stats$FA_percent)) {
-    if (analysis$stats$FA_percent > user_settings$maximum_FA_percent | !is.na(analysis$stats$FA_percent)) {
+    if (analysis$stats$FA_percent > user_settings$maximum_FA_percent) {
       warn = paste0("High false alarm (FA) rate: ", round(analysis$stats$FA_percent * 100, digits = 1), "%")
       warning(paste0(warn, "\n"))
       warnings_list <<- append(warnings_list, warn)
