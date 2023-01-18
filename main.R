@@ -535,6 +535,19 @@ Identify_Analysis_Type <- function() {
     else r = "BBN (Standard)"
     return(r)
   }
+  
+  ID_Gap <- function() {
+    r = NULL
+    has_one_dB = run_properties$summary$dB_min == run_properties$summary$dB_max
+    has_multiple_durations = length(unique(run_properties$stim_encoding_table$`Dur (ms)`)) > 1
+    
+    # For gap detection files (training or otherwise)
+    # DO NOT CHANGE THE TEXTUAL DESCRIPTIONS OR YOU WILL BREAK COMPARISONS LATER
+    if (has_one_dB) r = "Training - Gap"
+    else if (has_multiple_durations) r = "Gap Mixed Duration"
+    else r = "Gap (Standard)"
+    return(r)
+  }
 
   ID_Oddball <- function() {
     r = NULL
@@ -561,13 +574,14 @@ Identify_Analysis_Type <- function() {
     dplyr::group_by(`Freq (kHz)`, `Delay (s)`, `Type`, `Repeat_number`) %>%
     dplyr::summarise(dB = unique(`Inten (dB)`), .groups = 'drop') # Get each unique dB
 
-  if (run_properties$stim_type == "BBN" | run_properties$stim_type == "tone") run_properties <<- append(run_properties, list(summary = Get_File_Summary_BBN_Tone()))
+  if (run_properties$stim_type == "BBN" | run_properties$stim_type == "tone" | run_properties$stim_type == "gap") run_properties <<- append(run_properties, list(summary = Get_File_Summary_BBN_Tone()))
   else if (run_properties$stim_type == "train") run_properties <<- append(run_properties, list(summary = Get_File_Summary_Oddball()))
   else stop(paste0("ABORT: Unknown stim type: ", run_properties$stim_type))
 
   r = NULL
   if (run_properties$stim_type == "tone") r = ID_Tonal()
   if (run_properties$stim_type == "BBN") r = ID_BBN()
+  if (run_properties$stim_type == "gap") r = ID_Gap()
   if (run_properties$stim_type == "train") r = ID_Oddball()
 
   if (is.null("r")) stop("ABORT: Unknown file type. Can not proceed with analysis")
@@ -739,6 +753,54 @@ Build_Filename <- function() {
     }
     return(computed_file_name)
   }
+  
+  Gap_Filename <- function() {
+    if (analysis$type == "Training - Gap") {
+      go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB_")
+      catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
+      delay = run_properties$delay %>% stringr::str_replace(" ", "-")
+      lockout = `if`(length(run_properties$lockout) > 0, run_properties$lockout, 0)
+      
+      computed_file_name = paste0("gap_", go_dB)
+      if (length(catch_number) == 0) {
+        computed_file_name = paste0(computed_file_name, delay, "s_0catch")
+        delay_in_filename <<- TRUE
+      }
+      else if (catch_number > 0) {
+        computed_file_name = paste0(computed_file_name, catch_number, "catch_", lockout, "s")
+        delay_in_filename <<- FALSE
+        
+        if (catch_number >= 3) {
+          analysis$minimum_trials <<- user_settings$minimum_trials$`Gap (Standard)`
+        }
+      }
+    }
+    else
+    {
+      go_dB_range = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_min %>% unique(), "-",
+                           run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_max %>% unique(), "dB")
+      
+      has_duration_range = nrow(unique(run_properties$duration)) > 1
+      if (has_duration_range) {
+        duration = paste0(min(run_properties$duration), "-",
+                          max(run_properties$duration), "")
+      } else {
+        duration = run_properties$duration
+      }
+      
+      response_window = unique(run_properties$stim_encoding_table["Nose Out TL (s)"]) %>% as.numeric()
+      has_Response_window = response_window != 2
+      has_TR = run_properties$trigger_sensitivity != 200
+
+      # Note there is not BG test here because there is expected to always be background in a Gap Detection file.
+      
+      computed_file_name = paste0("gap_", go_dB_range, "_", duration, "ms_", run_properties$lockout, "s")
+      if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
+      if (has_TR) computed_file_name = paste0(computed_file_name, "_", "TR", run_properties$trigger_sensitivity, "ms")
+      if (has_BG) computed_file_name = paste0(computed_file_name, "_", BG)
+    }
+    return(computed_file_name)
+  }
 
   Oddball_Filename <- function() {
     expected_delay <<- user_settings$delay_oddball
@@ -761,6 +823,7 @@ Build_Filename <- function() {
   computed_file_name = switch(run_properties$stim_type,
                               "tone" = Tonal_Filename(),
                               "BBN" = BBN_Filename(),
+                              "gap" = Gap_Filename(),
                               "train" = Oddball_Filename())
   if (is.null(computed_file_name)) stop("ABORT: Unknown file type. Can not create filename.")
 
@@ -1049,7 +1112,7 @@ Calculate_Summary_Statistics <- function() {
                                                                          n_miss = misses,
                                                                          n_cr = CRs,
                                                                          adjusted = TRUE) %>% .$dprime)
-  if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
+  if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
     TH_by_frequency_and_duration = NA
   } else {
     TH_by_frequency_and_duration = Calculate_Threshold()
