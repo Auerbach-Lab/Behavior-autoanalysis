@@ -46,7 +46,8 @@ Import_Matlab <- function(file_to_load) {
         freq_current = unique(stim_encoding_table$`Freq (kHz)`)
         source_current = unique(stim_encoding_table$`Stim Source`)
 
-        if (xor(freq_current == 0, source_current == "BBN")) {
+        # Check for gap or BBN matching frequncy 0
+        if (xor(freq_current == 0, source_current %in% c("BBN", "gap"))) {
           warn = paste0("ACTION REQUIRED: Source (", source_current, ") does not match single Frequency (", freq_current, " kHz).")
           warning(paste0(warn, "\n"))
           warnings_list <<- append(warnings_list, warn)
