@@ -263,9 +263,6 @@ Import_Matlab <- function(file_to_load) {
       FAs_calc = run_data %>% dplyr::filter(Response == "FA") %>% dplyr::count() %>% as.numeric()
       hit_percent = (hits_calc / (hits_calc + misses_calc)) * 100
       FA_percent = (FAs_calc / (FAs_calc + CRs_calc)) * 100
-      
-      # Added to compare to written record at request of Undergrads
-      writeLines(paste0("\tTrials: ", total_trials, "\tHit%: ", round(hit_percent, digits = 1), "\tFA%: ", round(FA_percent, digits = 1)))
 
       if (results_total_trials == 0 | run_properties$stim_type == "train") {
         cat("Validate_Mat_Summary: Skipped (no summary)", sep = "\t", fill = TRUE)
@@ -1105,13 +1102,19 @@ Calculate_Summary_Statistics <- function() {
   trial_count_go = run_data %>% dplyr::filter(Trial_type != 0) %>% dplyr::count() %>% as.numeric()
   trial_count_nogo = run_data %>% dplyr::filter(Trial_type == 0) %>% dplyr::count() %>% as.numeric()
   hit_percent = hits / trial_count_go
-  FA_percent = ifelse(trial_count_nogo == 0, NA, FAs / trial_count_nogo)
+  if (trial_count_nogo > 0) FA_percent = FAs / trial_count_nogo
+  else if (trial_count_nogo == 0 & analysis$type %in% c("Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) FA_percent = FAs / trial_count
+  else FA_percent = NA
   mean_attempts_per_trial = dplyr::summarise_at(run_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
   dprime = ifelse(trial_count_nogo == 0, NA, psycho::dprime(n_hit = hits,
                                                                          n_fa = FAs,
                                                                          n_miss = misses,
                                                                          n_cr = CRs,
                                                                          adjusted = TRUE) %>% .$dprime)
+  
+  # Added to compare to written record at request of Undergrads
+  writeLines(paste0("\tTrials: ", trial_count, "\tHit%: ", round(hit_percent * 100, digits = 1), "\tFA%: ", round(FA_percent * 100, digits = 1)))
+  
   if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
     TH_by_frequency_and_duration = NA
   } else {
