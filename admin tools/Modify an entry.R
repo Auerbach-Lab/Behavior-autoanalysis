@@ -1,8 +1,15 @@
 
 # Find an entry -----------------------------------------------------------
-run_archive %>% rowid_to_column() %>% filter(date == "20230118" & rat_name == "BP3")
+row_to_modify = run_archive %>% rowid_to_column() %>% filter(date == "20230119" & rat_name == "RP5")
+print(row_to_modify)
+line_to_modify = row_to_modify$rowid
+
+# Assignment change -------------------------------------------------------
+run_archive[88,]$assignment[[1]]$task #= "Rxn"
 
 
-# Modify assignment -------------------------------------------------------
-run_archive[88,]$assignment[[1]]$task = "Rxn"
+# Weight change -----------------------------------------------------------
+
+run_archive[line_to_modify,]$weight #= 569
+
 
