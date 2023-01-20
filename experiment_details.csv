@@ -13,11 +13,10 @@ GD,,TTS,Tones,,Tones,Training,,Tones,Alone
 ,,GD,Gap Detection,,Tone-BBN,Background,,Tones,30 dB BBN
 ,,,,,Tone-BBN,Catch trials,,Octave,Normal
 ,,,,,Tone-BBN,Rotating,,Octave,Reversed
-,,,,,Tone-BBN,Uneven odds,,Tone-BBN,2-4
-,,,,,Tone-BBN,Uneven odds & Catch,,Tone-BBN,2-6
-,,,,,Tone-BBN,Saline,,Tone-BBN,3-5
-,,,,,Tone-BBN,Agent 21 (1mg/kg),,Tone-BBN,4-6
-,,,,,Tone-BBN,Agent 21 (3mg/kg),,,
-,,,,,Tone-BBN,CNO (3mg/kg),,,
-,,,,,Gap Detection,Training,,,
-,,,,,,,,,
+,,,,,Tone-BBN,Uneven odds,,Tone-BBN,4-Feb
+,,,,,Tone-BBN,Uneven odds & Catch,,Tone-BBN,6-Feb
+,,,,,Tone-BBN,Saline,,Tone-BBN,5-Mar
+,,,,,Tone-BBN,Agent 21 (1mg/kg),,Tone-BBN,6-Apr
+,,,,,Tone-BBN,Agent 21 (3mg/kg),,Gap Detection,None
+,,,,,Tone-BBN,CNO (3mg/kg),,Gap Detection,Single
+,,,,,Gap Detection,Training,,Gap Detection,Mixed
