@@ -1,7 +1,7 @@
 #TODO: make this work filter_arguments = 
 
 #check bad file
-Test = run_archive %>% filter(date == "20230117" & rat_name == "LP2")
+Test = run_archive %>% filter(date == "20230120" & rat_name == "Purple3")
 print(Test)
 
 #Get UUID
@@ -27,4 +27,4 @@ rm(list = get("variable_name"))
 run_archive = filter(run_archive, UUID != UUID_to_remove)
 save(run_archive, file = paste0(user_settings$projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
 
-rm(Test)
+rm(list = c("Test", "UUID_to_remove"))
