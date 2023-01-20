@@ -482,7 +482,7 @@ Workbook_Writer <- function() {
             df_Rxn = NULL
 
             df_TH_BBN = r %>% unnest(reaction) %>%
-              dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` == 0 & `Inten (dB)` == 40)
+              dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` == 0 & min(`Inten (dB)`))
 
             intensity = r %>% unnest(reaction) %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
