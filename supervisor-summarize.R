@@ -8,6 +8,7 @@ InitializeWriter <- function() {
   options(warn=1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
 
   source("Z:/Behavior-autoanalysis/settings.R")  # hardcoded user variables
+
   experiment_config_df <<- read.csv(paste0(user_settings$projects_folder, "experiment_details.csv"), na.strings = "N/A")
   experiment_config_df <<- Filter(function(x)!all(is.na(x)), experiment_config_df) # remove NA columns
 
@@ -498,7 +499,9 @@ Workbook_Writer <- function() {
             df_Rxn = NULL
 
             df_TH_BBN = r %>% unnest(reaction) %>%
-              dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` == 0 & min(`Inten (dB)`))
+              dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` == 0)  %>%
+              group_by(date) %>%
+              slice(which.min(`Inten (dB)`))
 
             intensity = r %>% unnest(reaction) %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
@@ -671,7 +674,7 @@ Workbook_Writer <- function() {
           ungroup() %>%
           mutate_all(~ifelse(is.nan(.), NA, .))
 
-        r = r %>% do(head(., 3)) %>%
+        r = r %>% arrange(desc(date)) %>% do(head(., 3)) %>%
           mutate(date = as.character(date))
 
         r = rbind(r, averages) %>%
@@ -854,7 +857,7 @@ Workbook_Writer <- function() {
   Define_Styles()
   Setup_Workbook()
 
-  # Add_Rat_To_Workbook(99)
+  # Add_Rat_To_Workbook(191)
   #OR
   lapply(rat_archive %>% filter(is.na(end_date)) %>% .$Rat_ID, Add_Rat_To_Workbook)
 
