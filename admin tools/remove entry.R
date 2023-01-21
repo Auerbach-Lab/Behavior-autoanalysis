@@ -1,7 +1,10 @@
 #TODO: make this work filter_arguments = 
 
+#Get current run_achive
+InitializeMain()
+
 #check bad file
-Bad_entry = run_archive %>% filter(date == "20230120" & rat_name == "Blue4")
+Bad_entry = run_archive %>% filter(date == "20230121" & rat_name == "TP3")
 print(Bad_entry)
 
 # Check but doesn't actually do anything other than keep you from blindly continuing
