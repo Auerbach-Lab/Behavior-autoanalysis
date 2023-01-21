@@ -1335,6 +1335,13 @@ Check_Weight <- function() {
 Add_to_Archives <- function() {
   Clear_Assignment <- function(rat_id) {
     cat("Rat... ")
+    #store assignment for 24 hours for rerun if necessary
+    rat_archive[rat_archive$Rat_ID == rat_id,]$Old_Assigned_Filename <<- rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Filename
+    rat_archive[rat_archive$Rat_ID == rat_id,]$Old_Assigned_Experiment <<- rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Experiment
+    rat_archive[rat_archive$Rat_ID == rat_id,]$Old_Assigned_Phase <<- rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Phase
+    rat_archive[rat_archive$Rat_ID == rat_id,]$Old_Assigned_Task <<- rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Task
+    rat_archive[rat_archive$Rat_ID == rat_id,]$Old_Assigned_Detail <<- rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Detail
+    
     rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Filename <<- NA
     rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Experiment <<- NA
     rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Phase <<- NA
@@ -1505,12 +1512,12 @@ Process_File <- function(file_to_load) {
 
 # set up environment
 InitializeMain()
+old_file = FALSE # removed from undergrad r script
 
 #### either:
 Process_File(file.choose())
 
 #### or:
-# old_file = TRUE
 # ignore_name_check = TRUE
 # directory = "A:\\Coding\\Behavior-autoanalysis\\Projects"  # slashes must be either / or \\
 # files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
