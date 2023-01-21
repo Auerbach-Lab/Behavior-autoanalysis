@@ -1,14 +1,17 @@
 #TODO: make this work filter_arguments = 
 
 #check bad file
-Test = run_archive %>% filter(date == "20230120" & rat_name == "Purple3")
-print(Test)
+Bad_entry = run_archive %>% filter(date == "20230120" & rat_name == "Blue4")
+print(Bad_entry)
+
+# Check but doesn't actually do anything other than keep you from blindly continuing
+menu(c("Yes", "No"), title=paste0("Do you want to DELETE the run from ", Bad_entry$date, " for ", Bad_entry$rat_name, "?"))
 
 #Get UUID
-UUID_to_remove = Test %>% .$UUID
+UUID_to_remove = Bad_entry %>% .$UUID
 
 #Wipe from trials archive:
-experiment = Test %>% .$assignment %>% .[[1]] %>% pluck("experiment")
+experiment = Bad_entry %>% .$assignment %>% .[[1]] %>% pluck("experiment")
 variable_name = paste0(experiment, "_archive")
 filename = paste0(user_settings$projects_folder, variable_name, ".Rdata")
 
@@ -27,4 +30,5 @@ rm(list = get("variable_name"))
 run_archive = filter(run_archive, UUID != UUID_to_remove)
 save(run_archive, file = paste0(user_settings$projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
 
-rm(list = c("Test", "UUID_to_remove"))
+rm(list = c("Bad_entry", "UUID_to_remove"))
+InitializeMain()
