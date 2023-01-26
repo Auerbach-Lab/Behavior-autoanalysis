@@ -544,7 +544,7 @@ Identify_Analysis_Type <- function() {
   
   ID_Gap <- function() {
     r = NULL
-    has_one_dB = run_properties$summary$dB_min == run_properties$summary$dB_max
+    has_one_dB = unique(run_properties$summary$dB_min) == unique(run_properties$summary$dB_max)
     has_multiple_durations = length(unique(run_properties$stim_encoding_table$`Dur (ms)`)) > 1
     
     # For gap detection files (training or otherwise)
