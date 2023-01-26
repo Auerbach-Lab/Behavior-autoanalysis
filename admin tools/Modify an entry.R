@@ -1,3 +1,4 @@
+InitializeMain()
 
 # Find an entry -----------------------------------------------------------
 row_to_modify = run_archive %>% rowid_to_column() %>% filter(date == "20230119" & rat_name == "Blue2")

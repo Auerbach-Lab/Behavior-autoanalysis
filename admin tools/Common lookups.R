@@ -5,6 +5,7 @@ run_archive %>% filter(rat_name %in% c("BP1")) %>%
   select(date, rat_name, stats) %>% 
   unnest_wider(stats) %>% 
   unnest(threshold) %>% 
+  arrange(desc(date)) %>%
   select(date, rat_name, TH)
 
 # Runs entered for today --------------------------------------------------
