@@ -8,6 +8,7 @@ InitializeWriter <- function() {
   options(warn=1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
 
   source("Z:/Behavior-autoanalysis/settings.R")  # hardcoded user variables
+
   experiment_config_df <<- read.csv(paste0(user_settings$projects_folder, "experiment_details.csv"), na.strings = "N/A")
   experiment_config_df <<- Filter(function(x)!all(is.na(x)), experiment_config_df) # remove NA columns
 
@@ -280,6 +281,19 @@ Workbook_Writer <- function() {
                       condition = "baseline",
                       .groups = "drop")
         }
+        
+        
+        # Gap Detection Training/Reset PreHL
+        if (phase_current == "Gap Detection" & task_current %in% c("Training", "Reset") & pre_HL) {
+          count_df = rat_runs %>%
+            tidyr::unnest_wider(assignment) %>%
+            dplyr::filter(phase == "Gap Detection" & detail == detail_current) %>%
+            group_by(task) %>%
+            summarise(task = unique(task), detail = unique(detail),
+                      date = tail(date, 1), n = n(),
+                      condition = "baseline",
+                      .groups = "drop")
+        }
 
 
         # Tones Rxn/TH PreHL
@@ -443,7 +457,7 @@ Workbook_Writer <- function() {
 
       Build_Table <- function() {
         # Common Columns ----------------------------------------------------------
-        columns = c("task", "detail", "date", "file_name", "weight", "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial", "threshold", "reaction", "FA_detailed", "warnings_list", "comments")
+        columns = c("task", "detail", "date", "file_name", "weight", "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial", "threshold", "reaction", "FA_detailed", "warnings_list", "comments", "analysis_type")
 
         r = rat_runs %>%
           dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
@@ -461,6 +475,9 @@ Workbook_Writer <- function() {
 
         #min_duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
         min_duration = r %>% unnest(reaction) %>% dplyr::filter(task == task_current & detail == detail_current) %>% .$`Dur (ms)` %>% unique() %>% min()
+        
+        # Needed to deal with the initial training
+        analysis_type = unique(r$analysis_type)
 
         # Task-specific RXN column ------------------------------------------------
 
@@ -469,7 +486,7 @@ Workbook_Writer <- function() {
             unnest(reaction) %>%
             group_by(date) %>%
             mutate(Rxn = mean(Rxn)) %>%
-            select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`) %>% #TODO check that Frequency is actually go tone postional data
+            select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`) %>% #TODO check that Frequency is actually go tone positional data
             distinct()
         } else {
           if (phase_current == "Octave") {
@@ -482,7 +499,9 @@ Workbook_Writer <- function() {
             df_Rxn = NULL
 
             df_TH_BBN = r %>% unnest(reaction) %>%
-              dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` == 0 & `Inten (dB)` == 40)
+              dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` == 0)  %>%
+              group_by(date) %>%
+              slice(which.min(`Inten (dB)`))
 
             intensity = r %>% unnest(reaction) %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
@@ -515,18 +534,30 @@ Workbook_Writer <- function() {
               distinct() %>%
               filter(! date %in% df_Temp$date) %>%
               rbind(df_Temp)
+            
+            r = rbind(df_TH_BBN, df_TH_tones, df_Rxn)
+            
+            if (analysis_type %in% c("Training - Gap", "Training - BBN")) {
+              r = r %>% rename(Dur = `Dur (ms)`, Freq = `Freq (kHz)`) %>% select(-`Inten (dB)`)
+            } else {
+              r = r %>% select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
+            }
 
-            r = rbind(df_TH_BBN, df_TH_tones, df_Rxn) %>%
-              select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`) %>%
-              distinct()
+            r = distinct(r)
           }
         }
 
-        r = r %>% relocate(Rxn, .before = mean_attempts_per_trial) %>%
+        r = r %>% select(-analysis_type) %>% relocate(Rxn, .before = mean_attempts_per_trial) %>%
           mutate(Spacer1 = NA)
 
         # Phase-specific Columns --------------------------------------------------------
-        if (phase_current == "BBN") {
+        if (analysis_type %in% c("Training - Gap", "Training - BBN")) {
+          # Training has no TH
+          r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>% select(-Freq, -Dur) %>%
+            group_by(task, detail) %>%
+            relocate(Spacer1, .after = mean_attempts_per_trial) %>%
+            select(-FA_detailed)
+        } else if (phase_current == "BBN") {
           r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>% select(-Freq, -Dur) %>%
             group_by(task, detail) %>%
             mutate(THrange = paste0(suppressWarnings(min(TH, na.rm = TRUE)) %>% round(digits = 0), "-", suppressWarnings(max(TH, na.rm = TRUE)) %>% round(digits = 0))) %>%
@@ -643,7 +674,7 @@ Workbook_Writer <- function() {
           ungroup() %>%
           mutate_all(~ifelse(is.nan(.), NA, .))
 
-        r = r %>% do(head(., 3)) %>%
+        r = r %>% arrange(desc(date)) %>% do(head(., 3)) %>%
           mutate(date = as.character(date))
 
         r = rbind(r, averages) %>%
@@ -662,7 +693,7 @@ Workbook_Writer <- function() {
         r = rbind(r, c("", "", "Date", "Filename", "Wt d%", "Trials", "Hit %", "FA %", "Rxn", "Atmpt")) %>% as.data.frame()
         r = cbind(r, NA) #spacer
 
-        if (phase_current == "BBN") {
+        if (phase_current == "BBN" | phase_current == "Gap Detection") {
           r = cbind(r, c("", "TH"))
           r = cbind(r, c("", "{TH}"))
         }
@@ -826,7 +857,7 @@ Workbook_Writer <- function() {
   Define_Styles()
   Setup_Workbook()
 
-  #Add_Rat_To_Workbook(139)
+  # Add_Rat_To_Workbook(191)
   #OR
   lapply(rat_archive %>% filter(is.na(end_date)) %>% .$Rat_ID, Add_Rat_To_Workbook)
 

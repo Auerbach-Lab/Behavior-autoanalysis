@@ -46,7 +46,8 @@ Import_Matlab <- function(file_to_load) {
         freq_current = unique(stim_encoding_table$`Freq (kHz)`)
         source_current = unique(stim_encoding_table$`Stim Source`)
 
-        if (xor(freq_current == 0, source_current == "BBN")) {
+        # Check for gap or BBN matching frequncy 0
+        if (xor(freq_current == 0, source_current %in% c("BBN", "gap"))) {
           warn = paste0("ACTION REQUIRED: Source (", source_current, ") does not match single Frequency (", freq_current, " kHz).")
           warning(paste0(warn, "\n"))
           warnings_list <<- append(warnings_list, warn)
@@ -260,9 +261,15 @@ Import_Matlab <- function(file_to_load) {
       misses_calc = run_data %>% dplyr::filter(Response == "Miss") %>% dplyr::count() %>% as.numeric()
       CRs_calc = run_data %>% dplyr::filter(Response == "CR") %>% dplyr::count() %>% as.numeric()
       FAs_calc = run_data %>% dplyr::filter(Response == "FA") %>% dplyr::count() %>% as.numeric()
-      hit_percent = (hits_calc / (hits_calc + misses_calc)) * 100
-      FA_percent = (FAs_calc / (FAs_calc + CRs_calc)) * 100
+      trial_count_go = run_data %>% dplyr::filter(Trial_type != 0) %>% dplyr::count() %>% as.numeric()
+      trial_count_nogo = run_data %>% dplyr::filter(Trial_type == 0) %>% dplyr::count() %>% as.numeric()
+      hit_percent = hits_calc / trial_count_go * 100
       
+      FA_from_all_trials = run_data %>% dplyr::filter(Trial_type == 5) %>% dplyr::count() %>% as.numeric() > 0 # catch oddball style where go trials can FA
+      if (trial_count_nogo > 0) FA_percent = FAs_calc / trial_count_nogo * 100
+      else if (FA_from_all_trials) FA_percent = FAs_calc / total_trials * 100
+      else FA_percent = NA
+
       # Added to compare to written record at request of Undergrads
       writeLines(paste0("\tTrials: ", total_trials, "\tHit%: ", round(hit_percent, digits = 1), "\tFA%: ", round(FA_percent, digits = 1)))
 
@@ -534,6 +541,19 @@ Identify_Analysis_Type <- function() {
     else r = "BBN (Standard)"
     return(r)
   }
+  
+  ID_Gap <- function() {
+    r = NULL
+    has_one_dB = unique(run_properties$summary$dB_min) == unique(run_properties$summary$dB_max)
+    has_multiple_durations = length(unique(run_properties$stim_encoding_table$`Dur (ms)`)) > 1
+    
+    # For gap detection files (training or otherwise)
+    # DO NOT CHANGE THE TEXTUAL DESCRIPTIONS OR YOU WILL BREAK COMPARISONS LATER
+    if (has_one_dB) r = "Training - Gap"
+    else if (has_multiple_durations) r = "Gap Mixed Duration"
+    else r = "Gap (Standard)"
+    return(r)
+  }
 
   ID_Oddball <- function() {
     r = NULL
@@ -560,13 +580,14 @@ Identify_Analysis_Type <- function() {
     dplyr::group_by(`Freq (kHz)`, `Delay (s)`, `Type`, `Repeat_number`) %>%
     dplyr::summarise(dB = unique(`Inten (dB)`), .groups = 'drop') # Get each unique dB
 
-  if (run_properties$stim_type == "BBN" | run_properties$stim_type == "tone") run_properties <<- append(run_properties, list(summary = Get_File_Summary_BBN_Tone()))
+  if (run_properties$stim_type == "BBN" | run_properties$stim_type == "tone" | run_properties$stim_type == "gap") run_properties <<- append(run_properties, list(summary = Get_File_Summary_BBN_Tone()))
   else if (run_properties$stim_type == "train") run_properties <<- append(run_properties, list(summary = Get_File_Summary_Oddball()))
   else stop(paste0("ABORT: Unknown stim type: ", run_properties$stim_type))
 
   r = NULL
   if (run_properties$stim_type == "tone") r = ID_Tonal()
   if (run_properties$stim_type == "BBN") r = ID_BBN()
+  if (run_properties$stim_type == "gap") r = ID_Gap()
   if (run_properties$stim_type == "train") r = ID_Oddball()
 
   if (is.null("r")) stop("ABORT: Unknown file type. Can not proceed with analysis")
@@ -738,6 +759,54 @@ Build_Filename <- function() {
     }
     return(computed_file_name)
   }
+  
+  Gap_Filename <- function() {
+    if (analysis$type == "Training - Gap") {
+      go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB_")
+      catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
+      delay = run_properties$delay %>% stringr::str_replace(" ", "-")
+      lockout = `if`(length(run_properties$lockout) > 0, run_properties$lockout, 0)
+      
+      computed_file_name = paste0("gap_", go_dB)
+      if (length(catch_number) == 0) {
+        computed_file_name = paste0(computed_file_name, delay, "s_0catch")
+        delay_in_filename <<- TRUE
+      }
+      else if (catch_number > 0) {
+        computed_file_name = paste0(computed_file_name, catch_number, "catch_", lockout, "s")
+        delay_in_filename <<- FALSE
+        
+        if (catch_number >= 3) {
+          analysis$minimum_trials <<- user_settings$minimum_trials$`Gap (Standard)`
+        }
+      }
+    }
+    else
+    {
+      go_dB_range = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_min %>% unique(), "-",
+                           run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_max %>% unique(), "dB")
+      
+      has_duration_range = nrow(unique(run_properties$duration)) > 1
+      if (has_duration_range) {
+        duration = paste0(min(run_properties$duration), "-",
+                          max(run_properties$duration), "")
+      } else {
+        duration = run_properties$duration
+      }
+      
+      response_window = unique(run_properties$stim_encoding_table["Nose Out TL (s)"]) %>% as.numeric()
+      has_Response_window = response_window != 2
+      has_TR = run_properties$trigger_sensitivity != 200
+
+      # Note there is not BG test here because there is expected to always be background in a Gap Detection file.
+      
+      computed_file_name = paste0("gap_", go_dB_range, "_", duration, "ms_", run_properties$lockout, "s")
+      if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
+      if (has_TR) computed_file_name = paste0(computed_file_name, "_", "TR", run_properties$trigger_sensitivity, "ms")
+      if (has_BG) computed_file_name = paste0(computed_file_name, "_", BG)
+    }
+    return(computed_file_name)
+  }
 
   Oddball_Filename <- function() {
     expected_delay <<- user_settings$delay_oddball
@@ -760,6 +829,7 @@ Build_Filename <- function() {
   computed_file_name = switch(run_properties$stim_type,
                               "tone" = Tonal_Filename(),
                               "BBN" = BBN_Filename(),
+                              "gap" = Gap_Filename(),
                               "train" = Oddball_Filename())
   if (is.null(computed_file_name)) stop("ABORT: Unknown file type. Can not create filename.")
 
@@ -948,6 +1018,8 @@ Calculate_Summary_Statistics <- function() {
 
     dprime_table = Format_for_Psycho(dprime_table)
     dprime_data = Calculate_dprime(dprime_table)
+    dprime <<- select(dprime_data, Freq, dB, Dur, dprime)
+    # save this to stats
 
     r = dprime_data %>%
       select(Freq, Dur, dB, dprime) %>%
@@ -1036,12 +1108,20 @@ Calculate_Summary_Statistics <- function() {
   misses = run_data %>% dplyr::filter(Response == "Miss") %>% dplyr::count() %>% as.numeric()
   CRs = run_data %>% dplyr::filter(Response == "CR") %>% dplyr::count() %>% as.numeric()
   FAs = run_data %>% dplyr::filter(Response == "FA") %>% dplyr::count() %>% as.numeric()
-  trial_count_go = hits + misses
-  trial_count_nogo = CRs + FAs
+  trial_count_go = run_data %>% dplyr::filter(Trial_type != 0) %>% dplyr::count() %>% as.numeric()
+  trial_count_nogo = run_data %>% dplyr::filter(Trial_type == 0) %>% dplyr::count() %>% as.numeric()
   hit_percent = hits / trial_count_go
-  FA_percent = FAs / trial_count_nogo
+  if (trial_count_nogo > 0) FA_percent = FAs / trial_count_nogo
+  else if (trial_count_nogo == 0 & analysis$type %in% c("Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) FA_percent = FAs / trial_count
+  else FA_percent = NA
   mean_attempts_per_trial = dplyr::summarise_at(run_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
-  if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
+  dprime = ifelse(trial_count_nogo == 0, NA, psycho::dprime(n_hit = hits,
+                                                                         n_fa = FAs,
+                                                                         n_miss = misses,
+                                                                         n_cr = CRs,
+                                                                         adjusted = TRUE) %>% .$dprime)
+  
+  if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
     TH_by_frequency_and_duration = NA
   } else {
     TH_by_frequency_and_duration = Calculate_Threshold()
@@ -1055,11 +1135,7 @@ Calculate_Summary_Statistics <- function() {
   }
   #overall_TH = Calculate_Threshold() #TODO overall calculation using trials archive
   reaction = Calculate_Reaction_Time() #NOTE this can take audible only (default false) or min time (default 0.015)
-  dprime = psycho::dprime(n_hit = hits,
-                           n_fa = FAs,
-                           n_miss = misses,
-                           n_cr = CRs,
-                           adjusted = TRUE) %>% .$dprime
+
 
   stats = list(
     trial_count = trial_count,
@@ -1070,7 +1146,7 @@ Calculate_Summary_Statistics <- function() {
     hit_percent = hit_percent,
     FA_percent = FA_percent,
     mean_attempts_per_trial = mean_attempts_per_trial,
-    dprime = dprime,
+    dprime = tibble(dprime),
     threshold = TH_by_frequency_and_duration,
     reaction = reaction,
     FA_detailed = FA_detailed
@@ -1094,10 +1170,12 @@ Check_Performance_Cutoffs <- function() {
     warnings_list <<- append(warnings_list, warn)
   }
 
-  if (analysis$stats$FA_percent > user_settings$maximum_FA_percent) {
-    warn = paste0("High false alarm (FA) rate: ", round(analysis$stats$FA_percent * 100, digits = 1), "%")
-    warning(paste0(warn, "\n"))
-    warnings_list <<- append(warnings_list, warn)
+  if(!is.na(analysis$stats$FA_percent)) {
+    if (analysis$stats$FA_percent > user_settings$maximum_FA_percent) {
+      warn = paste0("High false alarm (FA) rate: ", round(analysis$stats$FA_percent * 100, digits = 1), "%")
+      warning(paste0(warn, "\n"))
+      warnings_list <<- append(warnings_list, warn)
+    }
   }
 
   if (analysis$stats$mean_attempts_per_trial > user_settings$maximum_attempts_per_trial) {
@@ -1257,6 +1335,13 @@ Check_Weight <- function() {
 Add_to_Archives <- function() {
   Clear_Assignment <- function(rat_id) {
     cat("Rat... ")
+    #store assignment for 24 hours for rerun if necessary
+    rat_archive[rat_archive$Rat_ID == rat_id,]$Old_Assigned_Filename <<- rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Filename
+    rat_archive[rat_archive$Rat_ID == rat_id,]$Old_Assigned_Experiment <<- rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Experiment
+    rat_archive[rat_archive$Rat_ID == rat_id,]$Old_Assigned_Phase <<- rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Phase
+    rat_archive[rat_archive$Rat_ID == rat_id,]$Old_Assigned_Task <<- rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Task
+    rat_archive[rat_archive$Rat_ID == rat_id,]$Old_Assigned_Detail <<- rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Detail
+    
     rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Filename <<- NA
     rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Experiment <<- NA
     rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Phase <<- NA
@@ -1427,12 +1512,12 @@ Process_File <- function(file_to_load) {
 
 # set up environment
 InitializeMain()
+old_file = FALSE # removed from undergrad r script
 
 #### either:
 Process_File(file.choose())
 
 #### or:
-# old_file = TRUE
 # ignore_name_check = TRUE
 # directory = "A:\\Coding\\Behavior-autoanalysis\\Projects"  # slashes must be either / or \\
 # files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)

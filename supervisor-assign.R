@@ -5,7 +5,7 @@ library(R.matlab); library(openxlsx); library(xml2); library(zip);
 library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr); library(data.table)
 
 InitializeReader <- function() {
-  options(warn=1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
+  options(warn = 1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
   source("Z:/Behavior-autoanalysis/settings.R")  # hardcoded user variables
   rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
 }
@@ -28,7 +28,7 @@ Workbook_Reader <- function() {
     {
       r = dplyr::rows_update(rat_archive, assignments_df, by = "Rat_ID", unmatched = "error")
       tryCatch(
-        write.csv(rat_archive, paste0(user_settings$projects_folder, "rat_archive.csv"), row.names = FALSE),
+        write.csv(r, paste0(user_settings$projects_folder, "rat_archive.csv"), row.names = FALSE),
         finally = writeLines(paste0(nrow(assignments_df), " assignments were recorded in `rat_archive.csv`"))
       )
       return(r)
@@ -43,5 +43,5 @@ Workbook_Reader <- function() {
 }
 
 # Workflow -----------------------------------------------------------
-
+InitializeReader()
 Workbook_Reader()
