@@ -1,7 +1,8 @@
 user_settings = list(
   # The folder where the project subfolders are:
   # Note that the slashes have to be / (not \)
-  projects_folder = 'Z:/Behavior-autoanalysis/',
+  # MOVED TO UNDERGRADUATE.R FOR EASE OF USE
+  # projects_folder = "Z:/Behavior-autoanalysis/",
 
   # Number of runs per day (probably equals number of active rats)
   runs_per_day = 48,
@@ -34,7 +35,7 @@ user_settings = list(
     "Training - BBN" = 50,
     "BBN (Standard)" = 240,
     "BBN Mixed Duration" = 330,
-    
+
     "Training - Gap" = 50,
     "Gap (Standard)" = 240,
     "Gap Mixed Duration" = 330,

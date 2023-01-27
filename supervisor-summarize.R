@@ -7,7 +7,7 @@ library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stri
 InitializeWriter <- function() {
   options(warn=1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
 
-  source("Z:/Behavior-autoanalysis/settings.R")  # hardcoded user variables
+  source(paste0(projects_folder, "settings.R"))  # user variables
 
   experiment_config_df <<- read.csv(paste0(user_settings$projects_folder, "experiment_details.csv"), na.strings = "N/A")
   experiment_config_df <<- Filter(function(x)!all(is.na(x)), experiment_config_df) # remove NA columns
@@ -281,8 +281,8 @@ Workbook_Writer <- function() {
                       condition = "baseline",
                       .groups = "drop")
         }
-        
-        
+
+
         # Gap Detection Training/Reset PreHL
         if (phase_current == "Gap Detection" & task_current %in% c("Training", "Reset") & pre_HL) {
           count_df = rat_runs %>%
@@ -475,7 +475,7 @@ Workbook_Writer <- function() {
 
         #min_duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
         min_duration = r %>% unnest(reaction) %>% dplyr::filter(task == task_current & detail == detail_current) %>% .$`Dur (ms)` %>% unique() %>% min()
-        
+
         # Needed to deal with the initial training
         analysis_type = unique(r$analysis_type)
 
@@ -534,9 +534,9 @@ Workbook_Writer <- function() {
               distinct() %>%
               filter(! date %in% df_Temp$date) %>%
               rbind(df_Temp)
-            
+
             r = rbind(df_TH_BBN, df_TH_tones, df_Rxn)
-            
+
             if (analysis_type %in% c("Training - Gap", "Training - BBN")) {
               r = r %>% rename(Dur = `Dur (ms)`, Freq = `Freq (kHz)`) %>% select(-`Inten (dB)`)
             } else {

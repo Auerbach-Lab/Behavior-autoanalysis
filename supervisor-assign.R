@@ -6,7 +6,7 @@ library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stri
 
 InitializeReader <- function() {
   options(warn = 1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
-  source("Z:/Behavior-autoanalysis/settings.R")  # hardcoded user variables
+  source(paste0(projects_folder, "settings.R"))  # user variables
   rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
 }
 

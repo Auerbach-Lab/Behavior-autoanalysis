@@ -13,7 +13,7 @@ InitializeMain <- function() {
 
   Load_Packages()
   options(warn = 1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
-  source("Z:/Behavior-autoanalysis/settings.R")  # hardcoded user variables
+  source(paste0(projects_folder, "settings.R"))  # user variables
 
   rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
   load(paste0(user_settings$projects_folder, "run_archive.Rdata"), .GlobalEnv)
@@ -264,7 +264,7 @@ Import_Matlab <- function(file_to_load) {
       trial_count_go = run_data %>% dplyr::filter(Trial_type != 0) %>% dplyr::count() %>% as.numeric()
       trial_count_nogo = run_data %>% dplyr::filter(Trial_type == 0) %>% dplyr::count() %>% as.numeric()
       hit_percent = hits_calc / trial_count_go * 100
-      
+
       FA_from_all_trials = run_data %>% dplyr::filter(Trial_type == 5) %>% dplyr::count() %>% as.numeric() > 0 # catch oddball style where go trials can FA
       if (trial_count_nogo > 0) FA_percent = FAs_calc / trial_count_nogo * 100
       else if (FA_from_all_trials) FA_percent = FAs_calc / total_trials * 100
@@ -541,12 +541,12 @@ Identify_Analysis_Type <- function() {
     else r = "BBN (Standard)"
     return(r)
   }
-  
+
   ID_Gap <- function() {
     r = NULL
     has_one_dB = unique(run_properties$summary$dB_min) == unique(run_properties$summary$dB_max)
     has_multiple_durations = length(unique(run_properties$stim_encoding_table$`Dur (ms)`)) > 1
-    
+
     # For gap detection files (training or otherwise)
     # DO NOT CHANGE THE TEXTUAL DESCRIPTIONS OR YOU WILL BREAK COMPARISONS LATER
     if (has_one_dB) r = "Training - Gap"
@@ -759,14 +759,14 @@ Build_Filename <- function() {
     }
     return(computed_file_name)
   }
-  
+
   Gap_Filename <- function() {
     if (analysis$type == "Training - Gap") {
       go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB_")
       catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
       delay = run_properties$delay %>% stringr::str_replace(" ", "-")
       lockout = `if`(length(run_properties$lockout) > 0, run_properties$lockout, 0)
-      
+
       computed_file_name = paste0("gap_", go_dB)
       if (length(catch_number) == 0) {
         computed_file_name = paste0(computed_file_name, delay, "s_0catch")
@@ -775,7 +775,7 @@ Build_Filename <- function() {
       else if (catch_number > 0) {
         computed_file_name = paste0(computed_file_name, catch_number, "catch_", lockout, "s")
         delay_in_filename <<- FALSE
-        
+
         if (catch_number >= 3) {
           analysis$minimum_trials <<- user_settings$minimum_trials$`Gap (Standard)`
         }
@@ -785,7 +785,7 @@ Build_Filename <- function() {
     {
       go_dB_range = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_min %>% unique(), "-",
                            run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_max %>% unique(), "dB")
-      
+
       has_duration_range = nrow(unique(run_properties$duration)) > 1
       if (has_duration_range) {
         duration = paste0(min(run_properties$duration), "-",
@@ -793,13 +793,13 @@ Build_Filename <- function() {
       } else {
         duration = run_properties$duration
       }
-      
+
       response_window = unique(run_properties$stim_encoding_table["Nose Out TL (s)"]) %>% as.numeric()
       has_Response_window = response_window != 2
       has_TR = run_properties$trigger_sensitivity != 200
 
       # Note there is not BG test here because there is expected to always be background in a Gap Detection file.
-      
+
       computed_file_name = paste0("gap_", go_dB_range, "_", duration, "ms_", run_properties$lockout, "s")
       if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
       if (has_TR) computed_file_name = paste0(computed_file_name, "_", "TR", run_properties$trigger_sensitivity, "ms")
@@ -1120,7 +1120,7 @@ Calculate_Summary_Statistics <- function() {
                                                                          n_miss = misses,
                                                                          n_cr = CRs,
                                                                          adjusted = TRUE) %>% .$dprime)
-  
+
   if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
     TH_by_frequency_and_duration = NA
   } else {
@@ -1341,7 +1341,7 @@ Add_to_Archives <- function() {
     rat_archive[rat_archive$Rat_ID == rat_id,]$Old_Assigned_Phase <<- rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Phase
     rat_archive[rat_archive$Rat_ID == rat_id,]$Old_Assigned_Task <<- rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Task
     rat_archive[rat_archive$Rat_ID == rat_id,]$Old_Assigned_Detail <<- rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Detail
-    
+
     rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Filename <<- NA
     rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Experiment <<- NA
     rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Phase <<- NA

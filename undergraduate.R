@@ -20,5 +20,5 @@ weight = 583
 observations = "good hits"
 
 
-
-source("Z:/Behavior-autoanalysis/main.R")
+projects_folder = "Z:/Behavior-autoanalysis/"
+source(paste0(projects_folder, "main.R"))

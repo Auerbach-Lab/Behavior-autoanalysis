@@ -4,7 +4,7 @@ require(stringr)
 
 
 names = c("Date", "Filename", "Weight", "Comments/Observations", "Experiment", "Phase", "Task", "Detail", "rat_name")
-folder = "A:/Coding/Behavior-autoanalysis/Projects"
+folder = paste0(projects_folder, "Projects")
 
 readExcel <- function(filename, cols = c(1:3, 23, 28:31)) {
   filename = paste(folder, filename, sep = "/")
