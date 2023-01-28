@@ -4,11 +4,11 @@
 InitializeMain()
 
 #check bad file
-Bad_entry = run_archive %>% filter(date == "20230121" & rat_name == "TP3")
+Bad_entry = run_archive %>% filter(date == "20230127" & rat_name == "LP2")
 print(Bad_entry)
 
 # Check but doesn't actually do anything other than keep you from blindly continuing
-menu(c("Yes", "No"), title=paste0("Do you want to DELETE the run from ", Bad_entry$date, " for ", Bad_entry$rat_name, "?"))
+# menu(c("Yes", "No"), title=paste0("Do you want to DELETE the run from ", Bad_entry$date, " for ", Bad_entry$rat_name, "?"))
 
 #Get UUID
 UUID_to_remove = Bad_entry %>% .$UUID
@@ -33,5 +33,16 @@ rm(list = get("variable_name"))
 run_archive = filter(run_archive, UUID != UUID_to_remove)
 save(run_archive, file = paste0(user_settings$projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
 
+
+# Restore assignment ------------------------------------------------------
+rat_archive[rat_archive$Rat_name == Bad_entry$rat_name,]$Assigned_Filename <- rat_archive[rat_archive$Rat_name == Bad_entry$rat_name,]$Old_Assigned_Filename
+rat_archive[rat_archive$Rat_name == Bad_entry$rat_name,]$Assigned_Experiment <- rat_archive[rat_archive$Rat_name == Bad_entry$rat_name,]$Old_Assigned_Experiment
+rat_archive[rat_archive$Rat_name == Bad_entry$rat_name,]$Assigned_Phase <- rat_archive[rat_archive$Rat_name == Bad_entry$rat_name,]$Old_Assigned_Phase
+rat_archive[rat_archive$Rat_name == Bad_entry$rat_name,]$Assigned_Task <- rat_archive[rat_archive$Rat_name == Bad_entry$rat_name,]$Old_Assigned_Task
+rat_archive[rat_archive$Rat_name == Bad_entry$rat_name,]$Assigned_Detail <- rat_archive[rat_archive$Rat_name == Bad_entry$rat_name,]$Old_Assigned_Detail
+write.csv(rat_archive, paste0(user_settings$projects_folder, "rat_archive.csv"), row.names = FALSE)
+
+
 rm(list = c("Bad_entry", "UUID_to_remove"))
 InitializeMain()
+
