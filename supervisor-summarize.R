@@ -9,11 +9,11 @@ InitializeWriter <- function() {
 
   source(paste0(projects_folder, "settings.R"))  # user variables
 
-  experiment_config_df <<- read.csv(paste0(user_settings$projects_folder, "experiment_details.csv"), na.strings = "N/A")
+  experiment_config_df <<- read.csv(paste0(projects_folder, "experiment_details.csv"), na.strings = "N/A")
   experiment_config_df <<- Filter(function(x)!all(is.na(x)), experiment_config_df) # remove NA columns
 
-  rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
-  load(paste0(user_settings$projects_folder, "run_archive.Rdata"), .GlobalEnv)
+  rat_archive <<- read.csv(paste0(projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
+  load(paste0(projects_folder, "run_archive.Rdata"), .GlobalEnv)
 }
 
 Workbook_Writer <- function() {

@@ -15,8 +15,8 @@ InitializeMain <- function() {
   options(warn = 1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
   source(paste0(projects_folder, "settings.R"))  # user variables
 
-  rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
-  load(paste0(user_settings$projects_folder, "run_archive.Rdata"), .GlobalEnv)
+  rat_archive <<- read.csv(paste0(projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
+  load(paste0(projects_folder, "run_archive.Rdata"), .GlobalEnv)
 
   ignore_name_check <<- FALSE
 }
@@ -1347,14 +1347,14 @@ Add_to_Archives <- function() {
     rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Phase <<- NA
     rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Task <<- NA
     rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Detail <<- NA
-    write.csv(rat_archive, paste0(user_settings$projects_folder, "rat_archive.csv"), row.names = FALSE)
+    write.csv(rat_archive, paste0(projects_folder, "rat_archive.csv"), row.names = FALSE)
     #writeLines(paste0("Old assignment cleared for ", run_properties$rat_name, " (#", rat_id, ")."))
   }
 
   Add_to_Run_Archive <- function(rat_id, row_to_add) {
     cat("Run... ")
     run_archive <<- rbind(run_archive, row_to_add)
-    save(run_archive, file = paste0(user_settings$projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
+    save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
     #writeLines(paste0("Run ", row_to_add$UUID, " of ", run_properties$rat_name, " (#", rat_id, ") added to Run Archive."))
 
   }
@@ -1364,7 +1364,7 @@ Add_to_Archives <- function() {
     uuid = row_to_add$UUID
     experiment = row_to_add %>% .$assignment %>% .[[1]] %>% pluck("experiment")
     variable_name = paste0(experiment, "_archive")
-    filename = paste0(user_settings$projects_folder, variable_name, ".Rdata")
+    filename = paste0(projects_folder, variable_name, ".Rdata")
 
     if(file.exists(filename)){
       load(filename)
