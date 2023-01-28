@@ -104,7 +104,9 @@ Import_Matlab <- function(file_to_load) {
         tail (n = 1)
 
       r_compare = r %>% str_replace_all(" ", "") %>% str_to_lower()
-      name_compare = name %>% str_replace_all(" ", "") %>% str_to_lower() # from undergraduate.R
+      if(! ignore_name_check) {
+        name_compare = name %>% str_replace_all(" ", "") %>% str_to_lower() # from undergraduate.R
+      }
 
       if (rlang::is_empty(r)) stop("ERROR: system filename improper: ", file_to_load)
       if (!ignore_name_check && r_compare != name_compare) stop(paste0("ABORT: Rat name given (", name_compare, ") does not match chosen file (", r_compare, ")."))
@@ -1464,7 +1466,7 @@ Add_to_Archives <- function() {
   cat("Archiving ")
   Add_to_Run_Archive(rat_id, row_to_add)
   Add_to_Trial_Archive(rat_id, row_to_add)
-  Clear_Assignment(rat_id)
+  if(! old_file) {Clear_Assignment(rat_id)}
   writeLines("")
   writeLines(paste0("Run ", row_to_add$UUID, " of ", run_properties$rat_name, " (#", rat_id, ") successfully added to archives (in environment and on disk)."))
 }
@@ -1512,16 +1514,21 @@ Process_File <- function(file_to_load) {
 
 # set up environment
 InitializeMain()
-old_file = FALSE # removed from undergrad r script
 
 #### either:
+old_file = FALSE # removed from undergrad r script
 Process_File(file.choose())
 
 #### or:
+# old_file = TRUE
 # ignore_name_check = TRUE
-# directory = "A:\\Coding\\Behavior-autoanalysis\\Projects"  # slashes must be either / or \\
+# exclude_trials = ""
+# directory = "C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)"  # slashes must be either / or \\
 # files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
-# files = paste0(directory, "\\", files)
+# files = files[str_which(files, pattern = "^(?!.*(Archive|TTS))")] # Drop un-annotated files
+# files = files[str_which(files, pattern = ".*/data/20230103")] # Do 05 to 15
+# files = paste0(directory, "/", files)
 # lapply(files, Process_File)
-# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))
+# writeLines("Done with back date loading.")
+# # writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))
 
