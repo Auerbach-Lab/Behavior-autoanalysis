@@ -28,7 +28,7 @@ rat_archive %>% filter(is.na(end_date)) %>%
   filter(! Rat_name %in% c(run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>% .$rat_name %>% as.list)) %>%
   .$Rat_name
 
-# Assignment --------------------------------------------------------------
+# Single Rat Assignment History -------------------------------------------
 run_archive %>% filter(rat_name %in% c("TP3")) %>% 
   arrange(desc(date)) %>%
   select(date, rat_name, assignment) %>% 
