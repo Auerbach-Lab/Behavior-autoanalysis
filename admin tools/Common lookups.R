@@ -18,7 +18,8 @@ run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>%
 # Assignments -------------------------------------------------------------
 rat_archive %>% filter(is.na(end_date)) %>% 
   arrange(Box) %>%
-  select(Rat_name, Box, Assigned_Filename, Assigned_Experiment) %>%
+  mutate(Changed = ifelse(Assigned_Filename == Old_Assigned_Filename, "", "*")) %>%
+  select(Rat_name, Box, Assigned_Filename, Changed, Assigned_Experiment) %>%
   write.csv(paste0(user_settings$projects_folder, "files.csv"), row.names = FALSE)
 
 
