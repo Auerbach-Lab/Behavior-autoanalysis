@@ -15,7 +15,7 @@ run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>%
   select(date, rat_name, weight, trial_count, hit_percent, FA_percent, file_name, experiment, phase, task, detail) %>%
   View()
 
-# Assignments -------------------------------------------------------------
+# Assignments for tomorrow -------------------------------------------------
 rat_archive %>% filter(is.na(end_date)) %>% 
   arrange(Box) %>%
   select(Rat_name, Box, Assigned_Filename, Assigned_Experiment) %>%
