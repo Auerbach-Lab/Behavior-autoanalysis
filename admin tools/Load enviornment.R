@@ -20,4 +20,5 @@ InitializeMain <- function() {
 
 
 # MAIN ---------------------------------------------------------
+projects_folder = "Z:/Behavior-autoanalysis/"
 InitializeMain()
