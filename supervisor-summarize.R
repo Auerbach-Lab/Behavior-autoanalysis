@@ -870,4 +870,8 @@ Workbook_Writer <- function() {
 
 InitializeWriter()
 Workbook_Writer()
-
+rm(list = c("averages_style", "date_style", "experiment_config_df", "halign_center_style", 
+            "key_center", "key_merged_style", "key_style", "mandatory_input_accept_style", 
+            "mandatory_input_reject_style", "optional_input_style", "percent_style", 
+            "rat_header_style", "rat_name_style", "run_today", "table_header_style", 
+            "today_style", "warning_style", "wb"))
