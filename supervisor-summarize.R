@@ -857,12 +857,12 @@ Workbook_Writer <- function() {
   Define_Styles()
   Setup_Workbook()
 
-  # Add_Rat_To_Workbook(191)
+  # Add_Rat_To_Workbook(215)
   #OR
   lapply(rat_archive %>% filter(is.na(end_date)) %>% .$Rat_ID, Add_Rat_To_Workbook)
 
   saveWorkbook(wb, "supervisor.xlsx", overwrite = TRUE)
-  openXL(wb)
+  # openXL(wb)
 }
 
 
