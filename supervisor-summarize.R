@@ -477,7 +477,7 @@ Workbook_Writer <- function() {
         min_duration = r %>% unnest(reaction) %>% dplyr::filter(task == task_current & detail == detail_current) %>% .$`Dur (ms)` %>% unique() %>% min()
 
         # Needed to deal with the initial training
-        analysis_type = unique(r$analysis_type)
+        analysis_type = r %>% arrange(desc(date)) %>% head(1) %>% .$analysis_type
 
         # Task-specific RXN column ------------------------------------------------
 
@@ -875,3 +875,4 @@ rm(list = c("averages_style", "date_style", "experiment_config_df", "halign_cent
             "mandatory_input_reject_style", "optional_input_style", "percent_style", 
             "rat_header_style", "rat_name_style", "run_today", "table_header_style", 
             "today_style", "warning_style", "wb"))
+
