@@ -465,11 +465,10 @@ Workbook_Writer <- function() {
           tidyr::unnest_wider(assignment) %>%
           tidyr::unnest_wider(stats) %>%
           tidyr::unnest_wider(summary) %>%
-          dplyr::arrange(dplyr::desc(date)) %>%
           dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
           group_by(task, detail) %>%
           do(
-            dplyr::select(., all_of(columns))
+            dplyr::arrange(., dplyr::desc(date)) %>% dplyr::select(all_of(columns))
           )
 
         weight_max = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
