@@ -858,11 +858,17 @@ Workbook_Writer <- function() {
   Define_Styles()
   Setup_Workbook()
 
-  # Add_Rat_To_Workbook(215)
+  # Add_Rat_To_Workbook(145)
   #OR
   lapply(rat_archive %>% filter(is.na(end_date)) %>% .$Rat_ID, Add_Rat_To_Workbook)
+  
+  old_wd = getwd()
+  setwd(projects_folder)
 
   saveWorkbook(wb, "supervisor.xlsx", overwrite = TRUE)
+  openXL(paste0(projects_folder, "supervisor.xlsx"))
+  
+  setwd(old_wd)
   # openXL(wb)
 }
 
@@ -875,5 +881,5 @@ rm(list = c("averages_style", "date_style", "experiment_config_df", "halign_cent
             "key_center", "key_merged_style", "key_style", "mandatory_input_accept_style", 
             "mandatory_input_reject_style", "optional_input_style", "percent_style", 
             "rat_header_style", "rat_name_style", "run_today", "table_header_style", 
-            "today_style", "warning_style", "wb"))
+            "today_style", "warning_style", "wb", "old_wd"))
 
