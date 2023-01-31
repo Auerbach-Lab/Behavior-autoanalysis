@@ -1417,6 +1417,8 @@ Add_to_Archives <- function() {
         task = old_data$Task,
         detail = old_data$Detail
       )
+      if(old_data$Invalid == "TRUE") invalid = "TRUE"
+      
       if(rlang::is_empty(assignment$experiment) || rlang::is_empty(assignment$phase)) {
         warn = paste0("No experiment/phase found in excel document for ", run_properties$rat_name, " on ", date, ".")
         warnings_list <<- append(warnings_list, warn)
