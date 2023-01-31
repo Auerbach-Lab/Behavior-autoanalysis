@@ -1022,13 +1022,31 @@ Calculate_Summary_Statistics <- function() {
     dprime_data = Calculate_dprime(dprime_table)
     dprime <<- select(dprime_data, Freq, dB, Dur, dprime)
     # save this to stats
-
-    r = dprime_data %>%
-      select(Freq, Dur, dB, dprime) %>%
-      group_by(Freq, Dur) %>%
-      nest() %>%
-      mutate(TH = map_dbl(data, Calculate_TH)) %>%
-      select(-data)
+    
+    # Check for to small a dataset to calculate TH
+    less_than_one_block = is.na(run_data %>% #TODO add a way to calculate using full trials archive history
+                                  dplyr::filter(Block_number != 1) %>% .$complete_block_number %>% unique() %>% head(1))
+    if(less_than_one_block){
+      r = dprime_data %>%
+        select(Freq, Dur, dB, dprime) %>%
+        group_by(Freq, Dur) %>%
+        nest() %>%
+        mutate(TH = NA_integer_) %>%
+        select(-data)
+      
+      # Warning
+      warn = paste0("Can not caluclate TH due to < 1 block of trials.")
+      warning(paste0(warn, "\n"))
+      warnings_list <<- append(warnings_list, warn)
+      
+    } else {
+      r = dprime_data %>%
+        select(Freq, Dur, dB, dprime) %>%
+        group_by(Freq, Dur) %>%
+        nest() %>%
+        mutate(TH = map_dbl(data, Calculate_TH)) %>%
+        select(-data)
+    }
 
     return(r)
   }
