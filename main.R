@@ -268,8 +268,8 @@ Import_Matlab <- function(file_to_load) {
       hit_percent = hits_calc / trial_count_go * 100
 
       FA_from_all_trials = run_data %>% dplyr::filter(Trial_type == 5) %>% dplyr::count() %>% as.numeric() > 0 # catch oddball style where go trials can FA
-      if (trial_count_nogo > 0) FA_percent = FAs_calc / trial_count_nogo * 100
-      else if (FA_from_all_trials) FA_percent = FAs_calc / total_trials * 100
+      if (FA_from_all_trials) FA_percent = FAs_calc / total_trials * 100
+      else if (trial_count_nogo > 0) FA_percent = FAs_calc / trial_count_nogo * 100
       else FA_percent = NA
 
       # Added to compare to written record at request of Undergrads
@@ -1113,8 +1113,8 @@ Calculate_Summary_Statistics <- function() {
   trial_count_go = run_data %>% dplyr::filter(Trial_type != 0) %>% dplyr::count() %>% as.numeric()
   trial_count_nogo = run_data %>% dplyr::filter(Trial_type == 0) %>% dplyr::count() %>% as.numeric()
   hit_percent = hits / trial_count_go
-  if (trial_count_nogo > 0) FA_percent = FAs / trial_count_nogo
-  else if (trial_count_nogo == 0 & analysis$type %in% c("Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) FA_percent = FAs / trial_count
+  if (analysis$type %in% c("Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) FA_percent = FAs / trial_count
+  else if (trial_count_nogo > 0) FA_percent = FAs / trial_count_nogo
   else FA_percent = NA
   mean_attempts_per_trial = dplyr::summarise_at(run_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
   dprime = ifelse(trial_count_nogo == 0, NA, psycho::dprime(n_hit = hits,
