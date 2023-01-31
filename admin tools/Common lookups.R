@@ -15,18 +15,19 @@ run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>%
   select(date, rat_name, weight, trial_count, hit_percent, FA_percent, file_name, experiment, phase, task, detail) %>%
   View()
 
-# Assignments for tomorrow -------------------------------------------------
-rat_archive %>% filter(is.na(end_date)) %>% 
-  arrange(Box) %>%
-  select(Rat_name, Box, Assigned_Filename, Assigned_Experiment) %>%
-  write.csv(paste0(projects_folder, "files.csv"), row.names = FALSE)
-
-
-
 # Not loaded today --------------------------------------------------------
 rat_archive %>% filter(is.na(end_date)) %>%
   filter(! Rat_name %in% c(run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>% .$rat_name %>% as.list)) %>%
   .$Rat_name
+
+# Assignments for tomorrow -------------------------------------------------
+rat_archive %>% filter(is.na(end_date)) %>% 
+  arrange(Box) %>%
+  mutate(Changed = ifelse(Assigned_Filename == Old_Assigned_Filename, "", "*")) %>%
+  select(Rat_name, Box, Assigned_Filename, Changed, Assigned_Experiment) #%>%
+  # write.csv(paste0(user_settings$projects_folder, "files.csv"), row.names = FALSE)
+
+
 
 # Single Rat Assignment History -------------------------------------------
 run_archive %>% filter(rat_name %in% c("TP3")) %>% 
