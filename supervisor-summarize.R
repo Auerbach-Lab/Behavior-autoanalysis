@@ -465,12 +465,9 @@ Workbook_Writer <- function() {
           tidyr::unnest_wider(assignment) %>%
           tidyr::unnest_wider(stats) %>%
           tidyr::unnest_wider(summary) %>%
-          dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
-          group_by(task, detail) %>%
-          do(
-            dplyr::arrange(., dplyr::desc(date)) %>% dplyr::select(all_of(columns))
-          )
-
+          dplyr::select(all_of(columns)) %>%
+          arrange(desc(date), .by_group = F)
+        
         weight_max = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
 
         #min_duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
@@ -610,7 +607,6 @@ Workbook_Writer <- function() {
             tidyr::unnest_wider(assignment) %>%
             tidyr::unnest(summary) %>%
             select(task, detail, date, `Freq (kHz)`, dB_min, dB_max) %>%
-            dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
             group_by(date, task, detail, `Freq (kHz)`) %>% #do(print(.))
             mutate(Spacer3 = NA,
                    Stimrange = paste0(unique(dB_min), "-", unique(dB_max))) %>%
@@ -673,17 +669,25 @@ Workbook_Writer <- function() {
           dplyr::relocate(date, file_name, .before = weight) %>%
           ungroup() %>%
           mutate_all(~ifelse(is.nan(.), NA, .))
+        
+        order = r %>% arrange(desc(date)) %>% group_by(task) %>% do(head(., 1)) %>% arrange(desc(date)) %>% .$task
 
-        r = r %>% arrange(desc(date)) %>% do(head(., 3)) %>%
+        r = r %>% arrange(desc(date)) %>% group_by(task) %>% 
+          do(if (unique(.$task) %in% c("TH", "CNO 3mg/kg")) head(., 10)
+             else head(., 3)) %>%
+          arrange(match(task, order)) %>% 
+          dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
           mutate(date = as.character(date))
+        
+        columns = names(r)
 
-        r = rbind(r, averages) %>%
+        r = bind_rows(averages, r) %>%
+          select(columns) %>%
           mutate(weight = (weight - weight_max)/weight_max)
 
         r[, (length(r) + 1):29] = NA # add columns to reach 29
 
-        r = r %>% relocate(warnings_list, comments, .after = last_col()) %>%
-          arrange(desc(date))
+        r = r %>% relocate(warnings_list, comments, .after = last_col())
 
         return(as.data.frame(r))  #shed the grouping that prevents rbinding later on
       }
@@ -857,7 +861,7 @@ Workbook_Writer <- function() {
   Define_Styles()
   Setup_Workbook()
 
-  # Add_Rat_To_Workbook(145)
+  # Add_Rat_To_Workbook(98)
   #OR
   lapply(rat_archive %>% filter(is.na(end_date)) %>% .$Rat_ID, Add_Rat_To_Workbook)
   
@@ -868,7 +872,6 @@ Workbook_Writer <- function() {
   openXL(paste0(projects_folder, "supervisor.xlsx"))
   
   setwd(old_wd)
-  # openXL(wb)
 }
 
 
