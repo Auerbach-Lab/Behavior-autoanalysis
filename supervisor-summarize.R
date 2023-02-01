@@ -9,11 +9,11 @@ InitializeWriter <- function() {
 
   source(paste0(projects_folder, "settings.R"))  # user variables
 
-  experiment_config_df <<- read.csv(paste0(user_settings$projects_folder, "experiment_details.csv"), na.strings = "N/A")
+  experiment_config_df <<- read.csv(paste0(projects_folder, "experiment_details.csv"), na.strings = "N/A")
   experiment_config_df <<- Filter(function(x)!all(is.na(x)), experiment_config_df) # remove NA columns
 
-  rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
-  load(paste0(user_settings$projects_folder, "run_archive.Rdata"), .GlobalEnv)
+  rat_archive <<- read.csv(paste0(projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
+  load(paste0(projects_folder, "run_archive.Rdata"), .GlobalEnv)
 }
 
 Workbook_Writer <- function() {
@@ -465,19 +465,16 @@ Workbook_Writer <- function() {
           tidyr::unnest_wider(assignment) %>%
           tidyr::unnest_wider(stats) %>%
           tidyr::unnest_wider(summary) %>%
-          dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
-          group_by(task, detail) %>%
-          do(
-            dplyr::arrange(., dplyr::desc(date)) %>% dplyr::select(all_of(columns))
-          )
-
+          dplyr::select(all_of(columns)) %>%
+          arrange(desc(date), .by_group = F)
+        
         weight_max = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
 
         #min_duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
         min_duration = r %>% unnest(reaction) %>% dplyr::filter(task == task_current & detail == detail_current) %>% .$`Dur (ms)` %>% unique() %>% min()
 
         # Needed to deal with the initial training
-        analysis_type = unique(r$analysis_type)
+        analysis_type = r %>% arrange(desc(date)) %>% head(1) %>% .$analysis_type
 
         # Task-specific RXN column ------------------------------------------------
 
@@ -610,7 +607,6 @@ Workbook_Writer <- function() {
             tidyr::unnest_wider(assignment) %>%
             tidyr::unnest(summary) %>%
             select(task, detail, date, `Freq (kHz)`, dB_min, dB_max) %>%
-            dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
             group_by(date, task, detail, `Freq (kHz)`) %>% #do(print(.))
             mutate(Spacer3 = NA,
                    Stimrange = paste0(unique(dB_min), "-", unique(dB_max))) %>%
@@ -673,17 +669,25 @@ Workbook_Writer <- function() {
           dplyr::relocate(date, file_name, .before = weight) %>%
           ungroup() %>%
           mutate_all(~ifelse(is.nan(.), NA, .))
+        
+        order = r %>% arrange(desc(date)) %>% group_by(task) %>% do(head(., 1)) %>% arrange(desc(date)) %>% .$task
 
-        r = r %>% arrange(desc(date)) %>% do(head(., 3)) %>%
+        r = r %>% arrange(desc(date)) %>% group_by(task) %>% 
+          do(if (unique(.$task) %in% c("TH", "CNO 3mg/kg")) head(., 10)
+             else head(., 3)) %>%
+          arrange(match(task, order)) %>% 
+          dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
           mutate(date = as.character(date))
+        
+        columns = names(r)
 
-        r = rbind(r, averages) %>%
+        r = bind_rows(averages, r) %>%
+          select(columns) %>%
           mutate(weight = (weight - weight_max)/weight_max)
 
         r[, (length(r) + 1):29] = NA # add columns to reach 29
 
-        r = r %>% relocate(warnings_list, comments, .after = last_col()) %>%
-          arrange(desc(date))
+        r = r %>% relocate(warnings_list, comments, .after = last_col())
 
         return(as.data.frame(r))  #shed the grouping that prevents rbinding later on
       }
@@ -857,12 +861,17 @@ Workbook_Writer <- function() {
   Define_Styles()
   Setup_Workbook()
 
-  # Add_Rat_To_Workbook(215)
+  # Add_Rat_To_Workbook(98)
   #OR
   lapply(rat_archive %>% filter(is.na(end_date)) %>% .$Rat_ID, Add_Rat_To_Workbook)
+  
+  old_wd = getwd()
+  setwd(projects_folder)
 
   saveWorkbook(wb, "supervisor.xlsx", overwrite = TRUE)
-  openXL(file = "supervisor.xlsx")
+  openXL(paste0(projects_folder, "supervisor.xlsx"))
+  
+  setwd(old_wd)
 }
 
 
@@ -870,4 +879,9 @@ Workbook_Writer <- function() {
 
 InitializeWriter()
 Workbook_Writer()
+rm(list = c("averages_style", "date_style", "experiment_config_df", "halign_center_style", 
+            "key_center", "key_merged_style", "key_style", "mandatory_input_accept_style", 
+            "mandatory_input_reject_style", "optional_input_style", "percent_style", 
+            "rat_header_style", "rat_name_style", "run_today", "table_header_style", 
+            "today_style", "warning_style", "wb"))
 

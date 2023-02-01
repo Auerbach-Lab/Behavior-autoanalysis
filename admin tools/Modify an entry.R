@@ -13,7 +13,7 @@ run_archive[line_to_modify,]$invalid #= "TRUE"
 
 # Assignment change -------------------------------------------------------
 run_archive[line_to_modify,]$assignment[[1]]$task #= "Rxn"
-run_archive[line_to_modify,]$assignment[[1]]$detail = "Mixed"
+run_archive[line_to_modify,]$assignment[[1]]$detail #= "Mixed"
 
 
 # Weight change -----------------------------------------------------------
@@ -21,7 +21,7 @@ run_archive[line_to_modify,]$weight #= 239
 
 
 # Save modification -------------------------------------------------------
-save(run_archive, file = paste0(user_settings$projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
+save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
 
 rm(list = c("row_to_modify", "line_to_modify"))
 InitializeMain()

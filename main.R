@@ -15,8 +15,8 @@ InitializeMain <- function() {
   options(warn = 1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
   source(paste0(projects_folder, "settings.R"))  # user variables
 
-  rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
-  load(paste0(user_settings$projects_folder, "run_archive.Rdata"), .GlobalEnv)
+  rat_archive <<- read.csv(paste0(projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
+  load(paste0(projects_folder, "run_archive.Rdata"), .GlobalEnv)
 
   ignore_name_check <<- FALSE
 }
@@ -104,7 +104,9 @@ Import_Matlab <- function(file_to_load) {
         tail (n = 1)
 
       r_compare = r %>% str_replace_all(" ", "") %>% str_to_lower()
-      name_compare = name %>% str_replace_all(" ", "") %>% str_to_lower() # from undergraduate.R
+      if(! ignore_name_check) {
+        name_compare = name %>% str_replace_all(" ", "") %>% str_to_lower() # from undergraduate.R
+      }
 
       if (rlang::is_empty(r)) stop("ERROR: system filename improper: ", file_to_load)
       if (!ignore_name_check && r_compare != name_compare) stop(paste0("ABORT: Rat name given (", name_compare, ") does not match chosen file (", r_compare, ")."))
@@ -266,8 +268,8 @@ Import_Matlab <- function(file_to_load) {
       hit_percent = hits_calc / trial_count_go * 100
 
       FA_from_all_trials = run_data %>% dplyr::filter(Trial_type == 5) %>% dplyr::count() %>% as.numeric() > 0 # catch oddball style where go trials can FA
-      if (trial_count_nogo > 0) FA_percent = FAs_calc / trial_count_nogo * 100
-      else if (FA_from_all_trials) FA_percent = FAs_calc / total_trials * 100
+      if (FA_from_all_trials) FA_percent = FAs_calc / total_trials * 100
+      else if (trial_count_nogo > 0) FA_percent = FAs_calc / trial_count_nogo * 100
       else FA_percent = NA
 
       # Added to compare to written record at request of Undergrads
@@ -1020,13 +1022,31 @@ Calculate_Summary_Statistics <- function() {
     dprime_data = Calculate_dprime(dprime_table)
     dprime <<- select(dprime_data, Freq, dB, Dur, dprime)
     # save this to stats
-
-    r = dprime_data %>%
-      select(Freq, Dur, dB, dprime) %>%
-      group_by(Freq, Dur) %>%
-      nest() %>%
-      mutate(TH = map_dbl(data, Calculate_TH)) %>%
-      select(-data)
+    
+    # Check for to small a dataset to calculate TH
+    less_than_one_block = is.na(run_data %>% #TODO add a way to calculate using full trials archive history
+                                  dplyr::filter(Block_number != 1) %>% .$complete_block_number %>% unique() %>% head(1))
+    if(less_than_one_block){
+      r = dprime_data %>%
+        select(Freq, Dur, dB, dprime) %>%
+        group_by(Freq, Dur) %>%
+        nest() %>%
+        mutate(TH = NA_integer_) %>%
+        select(-data)
+      
+      # Warning
+      warn = paste0("Can not caluclate TH due to < 1 block of trials.")
+      warning(paste0(warn, "\n"))
+      warnings_list <<- append(warnings_list, warn)
+      
+    } else {
+      r = dprime_data %>%
+        select(Freq, Dur, dB, dprime) %>%
+        group_by(Freq, Dur) %>%
+        nest() %>%
+        mutate(TH = map_dbl(data, Calculate_TH)) %>%
+        select(-data)
+    }
 
     return(r)
   }
@@ -1111,8 +1131,8 @@ Calculate_Summary_Statistics <- function() {
   trial_count_go = run_data %>% dplyr::filter(Trial_type != 0) %>% dplyr::count() %>% as.numeric()
   trial_count_nogo = run_data %>% dplyr::filter(Trial_type == 0) %>% dplyr::count() %>% as.numeric()
   hit_percent = hits / trial_count_go
-  if (trial_count_nogo > 0) FA_percent = FAs / trial_count_nogo
-  else if (trial_count_nogo == 0 & analysis$type %in% c("Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) FA_percent = FAs / trial_count
+  if (analysis$type %in% c("Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) FA_percent = FAs / trial_count
+  else if (trial_count_nogo > 0) FA_percent = FAs / trial_count_nogo
   else FA_percent = NA
   mean_attempts_per_trial = dplyr::summarise_at(run_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
   dprime = ifelse(trial_count_nogo == 0, NA, psycho::dprime(n_hit = hits,
@@ -1347,14 +1367,14 @@ Add_to_Archives <- function() {
     rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Phase <<- NA
     rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Task <<- NA
     rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Detail <<- NA
-    write.csv(rat_archive, paste0(user_settings$projects_folder, "rat_archive.csv"), row.names = FALSE)
+    write.csv(rat_archive, paste0(projects_folder, "rat_archive.csv"), row.names = FALSE)
     #writeLines(paste0("Old assignment cleared for ", run_properties$rat_name, " (#", rat_id, ")."))
   }
 
   Add_to_Run_Archive <- function(rat_id, row_to_add) {
     cat("Run... ")
     run_archive <<- rbind(run_archive, row_to_add)
-    save(run_archive, file = paste0(user_settings$projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
+    save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
     #writeLines(paste0("Run ", row_to_add$UUID, " of ", run_properties$rat_name, " (#", rat_id, ") added to Run Archive."))
 
   }
@@ -1364,7 +1384,7 @@ Add_to_Archives <- function() {
     uuid = row_to_add$UUID
     experiment = row_to_add %>% .$assignment %>% .[[1]] %>% pluck("experiment")
     variable_name = paste0(experiment, "_archive")
-    filename = paste0(user_settings$projects_folder, variable_name, ".Rdata")
+    filename = paste0(projects_folder, variable_name, ".Rdata")
 
     if(file.exists(filename)){
       load(filename)
@@ -1397,6 +1417,8 @@ Add_to_Archives <- function() {
         task = old_data$Task,
         detail = old_data$Detail
       )
+      if(old_data$Invalid == "TRUE") invalid = "TRUE"
+      
       if(rlang::is_empty(assignment$experiment) || rlang::is_empty(assignment$phase)) {
         warn = paste0("No experiment/phase found in excel document for ", run_properties$rat_name, " on ", date, ".")
         warnings_list <<- append(warnings_list, warn)
@@ -1464,7 +1486,7 @@ Add_to_Archives <- function() {
   cat("Archiving ")
   Add_to_Run_Archive(rat_id, row_to_add)
   Add_to_Trial_Archive(rat_id, row_to_add)
-  Clear_Assignment(rat_id)
+  if(! old_file) {Clear_Assignment(rat_id)}
   writeLines("")
   writeLines(paste0("Run ", row_to_add$UUID, " of ", run_properties$rat_name, " (#", rat_id, ") successfully added to archives (in environment and on disk)."))
 }
@@ -1512,16 +1534,21 @@ Process_File <- function(file_to_load) {
 
 # set up environment
 InitializeMain()
-old_file = FALSE # removed from undergrad r script
 
 #### either:
+old_file = FALSE # removed from undergrad r script
 Process_File(file.choose())
 
 #### or:
+# old_file = TRUE
 # ignore_name_check = TRUE
-# directory = "A:\\Coding\\Behavior-autoanalysis\\Projects"  # slashes must be either / or \\
+# exclude_trials = ""
+# directory = "C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)"  # slashes must be either / or \\
 # files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
-# files = paste0(directory, "\\", files)
+# files = files[str_which(files, pattern = "^(?!.*(Archive|TTS))")] # Drop un-annotated files
+# files = files[str_which(files, pattern = ".*/data/20230103")] # Do 05 to 15
+# files = paste0(directory, "/", files)
 # lapply(files, Process_File)
-# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))
+# writeLines("Done with back date loading.")
+# # writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))
 

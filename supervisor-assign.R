@@ -7,11 +7,11 @@ library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stri
 InitializeReader <- function() {
   options(warn = 1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
   source(paste0(projects_folder, "settings.R"))  # user variables
-  rat_archive <<- read.csv(paste0(user_settings$projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
+  rat_archive <<- read.csv(paste0(projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
 }
 
 Workbook_Reader <- function() {
-  assignments_df = readWorkbook(xlsxFile = "supervisor.xlsx", sheet = 1, cols = c(4, 6, 9, 12, 15, 18, 30), colNames = FALSE)
+  assignments_df = readWorkbook(xlsxFile = paste0(projects_folder, "supervisor.xlsx"), sheet = 1, cols = c(4, 6, 9, 12, 15, 18, 30), colNames = FALSE)
   colnames(assignments_df) = c("Assigned_Filename", "Assigned_Experiment", "Assigned_Phase", "Assigned_Task", "Assigned_Detail", "Persistent_Comment", "Rat_ID")
   assignments_df = assignments_df %>% dplyr::filter(!is.na(Rat_ID))
   assignments_df$Rat_ID = assignments_df$Rat_ID %>% stringr::str_sub(start = 2) %>% as.numeric() # trim off pound sign added for humans, coerce to numeric since that's what rat_archive uses
@@ -28,7 +28,7 @@ Workbook_Reader <- function() {
     {
       r = dplyr::rows_update(rat_archive, assignments_df, by = "Rat_ID", unmatched = "error")
       tryCatch(
-        write.csv(r, paste0(user_settings$projects_folder, "rat_archive.csv"), row.names = FALSE),
+        write.csv(r, paste0(projects_folder, "rat_archive.csv"), row.names = FALSE),
         finally = writeLines(paste0(nrow(assignments_df), " assignments were recorded in `rat_archive.csv`"))
       )
       return(r)
