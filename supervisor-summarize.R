@@ -862,7 +862,7 @@ Workbook_Writer <- function() {
   lapply(rat_archive %>% filter(is.na(end_date)) %>% .$Rat_ID, Add_Rat_To_Workbook)
 
   saveWorkbook(wb, "supervisor.xlsx", overwrite = TRUE)
-  # openXL(wb)
+  openXL(file = "supervisor.xlsx")
 }
 
 
