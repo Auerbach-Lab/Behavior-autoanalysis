@@ -1025,7 +1025,7 @@ Calculate_Summary_Statistics <- function() {
     
     # Check for to small a dataset to calculate TH
     less_than_one_block = is.na(run_data %>% #TODO add a way to calculate using full trials archive history
-                                  dplyr::filter(Block_number != 1) %>% .$complete_block_number %>% unique() %>% head(1))
+                                  dplyr::filter(Block_number != 1) %>% .$complete_block_number %>% unique() %>% {if(is_empty(.)) {NA} else {head(1)} })
     if(less_than_one_block){
       r = dprime_data %>%
         select(Freq, Dur, dB, dprime) %>%
@@ -1536,19 +1536,23 @@ Process_File <- function(file_to_load) {
 InitializeMain()
 
 #### either:
-old_file = FALSE # removed from undergrad r script
-Process_File(file.choose())
+# old_file = FALSE # removed from undergrad r script
+# Process_File(file.choose())
 
 #### or:
-# old_file = TRUE
-# ignore_name_check = TRUE
-# exclude_trials = ""
-# directory = "C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)"  # slashes must be either / or \\
-# files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
-# files = files[str_which(files, pattern = "^(?!.*(Archive|TTS))")] # Drop un-annotated files
-# files = files[str_which(files, pattern = ".*/data/20230103")] # Do 05 to 15
-# files = paste0(directory, "/", files)
-# lapply(files, Process_File)
-# writeLines("Done with back date loading.")
-# # writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))# writeLines(paste("", "|||||", paste0("||||| Done - all files in `", directory, "` processed."), "|||||", sep="\n"))
+old_file = TRUE
+ignore_name_check = TRUE
+exclude_trials = ""
+load(paste0(projects_folder, "old_excel_archive.Rdata"))
+directory = "C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)"  # slashes must be either / or \\
+files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
+files = files[str_which(files, pattern = "^(?!.*(Archive|TTS|Oddball))")] # Drop un-annotated files
+files = files[str_which(files, pattern = ".*/data/202208..")]
+# files = files[str_which(files, pattern = ".*/data/20220609/RP1.*")] # select a specific rat on a specific day
+# files = files[str_which(files, pattern = ".*/data/(?!(2022060(9|7)/RP1.*))")] # Bad second file for RP1 on 6/9/22 - dprime giving error but transiently
+# files = files[str_which(files, pattern = ".*/data/202207(?!(06))")] # Bad data on 7/6/22 - no creation date.
+files = paste0(directory, "/", files)
+writeLines(paste0("Loading ", length(files), " files.\n\n"))
+lapply(files, Process_File)
+writeLines(paste0("Done with back date loading. ", length(files), " files added."))
 
