@@ -3,8 +3,14 @@
 #Get current run_achive
 InitializeMain()
 
+#Test or check files to be removed
+run_archive %>% filter(date == "20230130" & rat_name %in% c("Purple3", "Purple4")) %>% select(date, rat_name, weight, comments) #%>% write.csv(paste0(projects_folder, "to be fixed or removed.csv"), row.names = FALSE)
+#TODO lapply with the following being a function triggered by the entry of:
+# Check but doesn't actually do anything other than keep you from blindly continuing
+switch(menu(c("Yes", "No"), title=paste0("Do you want to DELETE the run from ", Bad_entry$date, " for ", Bad_entry$rat_name, "?"), graphics = FALSE), print("Yes"), print("No"))
+
 #check bad file
-Bad_entry = run_archive %>% filter(date == "20230127" & rat_name == "LP2")
+Bad_entry = run_archive %>% filter(date == "20230130" & rat_name == "Purple3")
 print(Bad_entry)
 
 # Check but doesn't actually do anything other than keep you from blindly continuing
