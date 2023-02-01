@@ -31,7 +31,7 @@ Workbook_Reader <- function() {
         write.csv(r, paste0(projects_folder, "rat_archive.csv"), row.names = FALSE),
         finally = writeLines(paste0(nrow(assignments_df), " assignments were recorded in `rat_archive.csv`"))
       )
-      r # this should NOT be a return, even though this is the value we want returned, because that will return from the whole function and skip the global assignment above
+      r # this should NOT be a return, because that will return from the whole function and skip the global assignment above. We do actual returns from the error handlers because those are themselves functions.
     },
     error = function(e) { # this function name is specific to tryCatch and cannot be changed
       warning("A rat id (column AD) from the supervisor spreadsheet was not found in the rat archive (or other error, see below)")
