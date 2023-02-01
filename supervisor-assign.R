@@ -63,11 +63,16 @@ Assignments_Writer <- function() {
   # formatting - make printable
   pageSetup(wb, 1, top = 0.5, bottom = 0.5, header = 0, footer = 0, fitToHeight = TRUE)
 
+  # working directory preservation
+  old_wd = getwd()
+  setwd(projects_folder)
+
   saveWorkbook(wb, "assignments.xlsx", overwrite = TRUE)
   openXL(file = "assignments.xlsx")
 
   # cleanup
   options("openxlsx.minWidth" = 3) # return to default
+  setwd(old_wd)
 }
 
 
