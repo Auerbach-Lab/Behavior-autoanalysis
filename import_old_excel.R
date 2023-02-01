@@ -22,8 +22,8 @@ old_excel_archive = setNames(data.frame(matrix(ncol = 10, nrow = 0)), names) %>%
   # rbind(readExcel("Noise_TTS_Gp1_Green-Orange.xlsx")) %>%
   rbind(readExcel("Fmr1-LE_Grp1_BP_LP_Purple.xlsx")) %>%
   rbind(readExcel("Tsc2_Eker_Gp1_RP_GP_TP.xlsx")) %>%
-  rbind(readExcel("GD_Grp1_Red_Teal.xlsx")) %>%
-  rbind(readExcel("Oddball Pilot1 Blue1-4.xlsx", cols = c(1:3, 36, 48:52)))
+  rbind(readExcel("GD_Grp1_Red_Teal.xlsx"))
+  # rbind(readExcel("Oddball Pilot1 Blue1-4.xlsx", cols = c(1:3, 36, 48:52)))
 
 old_excel_archive = old_excel_archive %>%
   dplyr::mutate(Invalid = dplyr::if_else(! is.na(Invalid), "TRUE", "", missing = "")) %>%
