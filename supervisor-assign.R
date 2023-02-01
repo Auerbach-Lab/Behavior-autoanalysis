@@ -14,6 +14,7 @@ Workbook_Reader <- function() {
   assignments_df = readWorkbook(xlsxFile = paste0(projects_folder, "supervisor.xlsx"), sheet = 1, cols = c(4, 6, 9, 12, 15, 18, 30), colNames = FALSE)
   colnames(assignments_df) = c("Assigned_Filename", "Assigned_Experiment", "Assigned_Phase", "Assigned_Task", "Assigned_Detail", "Persistent_Comment", "Rat_ID")
   assignments_df = assignments_df %>% dplyr::filter(!is.na(Rat_ID))
+  # TODO need to abort if we find [] in experiment/phase/task/detail but not in filename
   assignments_df$Rat_ID = assignments_df$Rat_ID %>% stringr::str_sub(start = 2) %>% as.numeric() # trim off pound sign added for humans, coerce to numeric since that's what rat_archive uses
   if (nrow(assignments_df) != user_settings$runs_per_day) {
     warn = paste0("Only ", nrow(assignments_df), " assignments were found. (Expected ", user_settings$runs_per_day, ")")
