@@ -42,6 +42,36 @@ Workbook_Reader <- function() {
   )
 }
 
+Assignments_Writer <- function() {
+  wb = createWorkbook()
+  modifyBaseFont(wb, fontSize = 12, fontName = "Calibri")
+  addWorksheet(wb, sheetName = "Files Summary")
+  data_table = rat_archive %>% filter(is.na(end_date)) %>%
+    arrange(Box) %>%
+    mutate(Changed = ifelse(Assigned_Filename == Old_Assigned_Filename, "", "*")) %>%
+    select(Rat_name, Box, Assigned_Filename, Changed, Assigned_Experiment)
+  writeDataTable(wb, 1, x = data_table, startRow = 1, colNames = TRUE, rowNames = FALSE, bandedRows = TRUE, tableStyle = "TableStyleMedium2", na.string = "")
+
+  # formatting - widths
+  options("openxlsx.minWidth" = 6)
+  setColWidths(wb, 1, cols = 1:5, widths = "auto")
+
+  # formatting - alignment
+  center_style <<- createStyle(halign = "center")
+  addStyle(wb, 1, center_style, rows = 1:50, cols = c(2,4), gridExpand = TRUE, stack = TRUE)
+
+  # formatting - make printable
+  pageSetup(wb, 1, top = 0.5, bottom = 0.5, header = 0, footer = 0, fitToHeight = TRUE)
+
+  saveWorkbook(wb, "assignments.xlsx", overwrite = TRUE)
+  openXL(file = "assignments.xlsx")
+
+  # cleanup
+  options("openxlsx.minWidth" = 3) # return to default
+}
+
+
 # Workflow -----------------------------------------------------------
 InitializeReader()
 Workbook_Reader()
+Assignments_Writer()

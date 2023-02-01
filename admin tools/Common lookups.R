@@ -15,6 +15,7 @@ run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>%
   select(date, rat_name, weight, trial_count, hit_percent, FA_percent, file_name, experiment, phase, task, detail) %>%
   View()
 
+
 # Not loaded today --------------------------------------------------------
 rat_archive %>% filter(is.na(end_date)) %>%
   filter(! Rat_name %in% c(run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>% .$rat_name %>% as.list)) %>%
