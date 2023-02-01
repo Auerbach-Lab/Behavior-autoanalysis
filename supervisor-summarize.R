@@ -467,7 +467,7 @@ Workbook_Writer <- function() {
           tidyr::unnest_wider(summary) %>%
           dplyr::select(all_of(columns)) %>%
           arrange(desc(date), .by_group = F)
-        
+
         weight_max = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
 
         #min_duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
@@ -669,16 +669,16 @@ Workbook_Writer <- function() {
           dplyr::relocate(date, file_name, .before = weight) %>%
           ungroup() %>%
           mutate_all(~ifelse(is.nan(.), NA, .))
-        
+
         order = r %>% arrange(desc(date)) %>% group_by(task) %>% do(head(., 1)) %>% arrange(desc(date)) %>% .$task
 
-        r = r %>% arrange(desc(date)) %>% group_by(task) %>% 
+        r = r %>% arrange(desc(date)) %>% group_by(task) %>%
           do(if (unique(.$task) %in% c("TH", "CNO 3mg/kg")) head(., 10)
              else head(., 3)) %>%
-          arrange(match(task, order)) %>% 
+          arrange(match(task, order)) %>%
           dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
           mutate(date = as.character(date))
-        
+
         columns = names(r)
 
         r = bind_rows(averages, r) %>%
@@ -863,14 +863,16 @@ Workbook_Writer <- function() {
 
   # Add_Rat_To_Workbook(98)
   #OR
-  lapply(rat_archive %>% filter(is.na(end_date)) %>% .$Rat_ID, Add_Rat_To_Workbook)
-  
+  rat_archive %>%
+    filter(is.na(end_date)) %>%
+    filter(is.na(Assigned_Filename)) %>%
+    .$Rat_ID %>%
+    lapply(Add_Rat_To_Workbook)
+
   old_wd = getwd()
   setwd(projects_folder)
-
   saveWorkbook(wb, "supervisor.xlsx", overwrite = TRUE)
   openXL(paste0(projects_folder, "supervisor.xlsx"))
-  
   setwd(old_wd)
 }
 
@@ -879,9 +881,9 @@ Workbook_Writer <- function() {
 
 InitializeWriter()
 Workbook_Writer()
-rm(list = c("averages_style", "date_style", "experiment_config_df", "halign_center_style", 
-            "key_center", "key_merged_style", "key_style", "mandatory_input_accept_style", 
-            "mandatory_input_reject_style", "optional_input_style", "percent_style", 
-            "rat_header_style", "rat_name_style", "run_today", "table_header_style", 
+rm(list = c("averages_style", "date_style", "experiment_config_df", "halign_center_style",
+            "key_center", "key_merged_style", "key_style", "mandatory_input_accept_style",
+            "mandatory_input_reject_style", "optional_input_style", "percent_style",
+            "rat_header_style", "rat_name_style", "run_today", "table_header_style",
             "today_style", "warning_style", "wb"))
 
