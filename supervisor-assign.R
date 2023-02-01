@@ -45,3 +45,10 @@ Workbook_Reader <- function() {
 # Workflow -----------------------------------------------------------
 InitializeReader()
 Workbook_Reader()
+
+InitializeMain()
+rat_archive %>% filter(is.na(end_date)) %>% 
+  arrange(Box) %>%
+  mutate(Changed = ifelse(Assigned_Filename == Old_Assigned_Filename, "", "*")) %>%
+  select(Rat_name, Box, Assigned_Filename, Changed, Assigned_Experiment) %>%
+  write.csv(paste0(projects_folder, "files.csv"), row.names = FALSE)
