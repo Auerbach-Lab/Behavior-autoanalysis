@@ -11,9 +11,10 @@ InitializeReader <- function() {
 }
 
 Workbook_Reader <- function() {
-  assignments_df = readWorkbook(xlsxFile = paste0(projects_folder, "supervisor.xlsx"), sheet = 1, cols = c(4, 6, 9, 12, 15, 18, 30), colNames = FALSE)
+  assignments_df = readWorkbook(xlsxFile = paste0(projects_folder, "supervisor.xlsx"), sheet = 1, cols = c(4, 6, 9, 12, 15, 18, 30), colNames = FALSE,
+                                na.strings = c("[Tomorrow's Filename]", "[Experiment]", "[Phase]", "[Task]", "[Detail]", "[Persistent comment field e.g. week-ahead informal plan for this rat]"))
   colnames(assignments_df) = c("Assigned_Filename", "Assigned_Experiment", "Assigned_Phase", "Assigned_Task", "Assigned_Detail", "Persistent_Comment", "Rat_ID")
-  assignments_df = assignments_df %>% dplyr::filter(!is.na(Rat_ID))
+  assignments_df = assignments_df %>% dplyr::filter(!is.na(Rat_ID)) %>% filter(!is.na(Assigned_Filename))
   assignments_df$Rat_ID = assignments_df$Rat_ID %>% stringr::str_sub(start = 2) %>% as.numeric() # trim off pound sign added for humans, coerce to numeric since that's what rat_archive uses
   if (nrow(assignments_df) != user_settings$runs_per_day) {
     warn = paste0("Only ", nrow(assignments_df), " assignments were found. (Expected ", user_settings$runs_per_day, ")")
@@ -31,7 +32,7 @@ Workbook_Reader <- function() {
         write.csv(r, paste0(projects_folder, "rat_archive.csv"), row.names = FALSE),
         finally = writeLines(paste0(nrow(assignments_df), " assignments were recorded in `rat_archive.csv`"))
       )
-      return(r)
+      r # this should NOT be a return, because that will return from the whole function and skip the global assignment above. We do actual returns from the error handlers because those are themselves functions.
     },
     error = function(e) { # this function name is specific to tryCatch and cannot be changed
       warning("A rat id (column AD) from the supervisor spreadsheet was not found in the rat archive (or other error, see below)")
@@ -42,6 +43,41 @@ Workbook_Reader <- function() {
   )
 }
 
+Assignments_Writer <- function() {
+  wb = createWorkbook()
+  modifyBaseFont(wb, fontSize = 12, fontName = "Calibri")
+  addWorksheet(wb, sheetName = "Files Summary")
+  data_table = rat_archive %>% filter(is.na(end_date)) %>%
+    arrange(Box) %>%
+    mutate(Changed = ifelse(Assigned_Filename == Old_Assigned_Filename, "", "*")) %>%
+    select(Rat_name, Box, Assigned_Filename, Changed, Assigned_Experiment)
+  writeDataTable(wb, 1, x = data_table, startRow = 1, colNames = TRUE, rowNames = FALSE, bandedRows = TRUE, tableStyle = "TableStyleMedium2", na.string = "")
+
+  # formatting - widths
+  options("openxlsx.minWidth" = 6)
+  setColWidths(wb, 1, cols = 1:5, widths = "auto")
+
+  # formatting - alignment
+  center_style <<- createStyle(halign = "center")
+  addStyle(wb, 1, center_style, rows = 1:50, cols = c(2,4), gridExpand = TRUE, stack = TRUE)
+
+  # formatting - make printable
+  pageSetup(wb, 1, top = 0.5, bottom = 0.5, header = 0, footer = 0, fitToHeight = TRUE)
+
+  # working directory preservation
+  old_wd = getwd()
+  setwd(projects_folder)
+
+  saveWorkbook(wb, "assignments.xlsx", overwrite = TRUE)
+  openXL(file = "assignments.xlsx")
+
+  # cleanup
+  options("openxlsx.minWidth" = 3) # return to default
+  setwd(old_wd)
+}
+
+
 # Workflow -----------------------------------------------------------
 InitializeReader()
 Workbook_Reader()
+Assignments_Writer()
