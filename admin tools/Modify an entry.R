@@ -13,7 +13,7 @@ run_archive[line_to_modify,]$invalid #= "TRUE"
 
 # Assignment change -------------------------------------------------------
 run_archive[line_to_modify,]$assignment[[1]]$task #= "Rxn"
-run_archive[line_to_modify,]$assignment[[1]]$detail = "Mixed"
+run_archive[line_to_modify,]$assignment[[1]]$detail #= "Mixed"
 
 
 # Weight change -----------------------------------------------------------
