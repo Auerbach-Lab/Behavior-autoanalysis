@@ -69,6 +69,13 @@ The `supervisor-assign.R` file, combined with the summary .xlsx file, also acts 
 
 #### Other files
 - `settings.R` - contains settings used by the main and supervisor scripts, such as the TH Cutoff, the desired minimum number of completed trials, or the amount of weight change required to trigger a warning message.
-- `import_old_excel.R` - This is a utility to read a directory tree and import information from the old experimental excel sheets that PiedPiper is designed to replace.
 - `experiment_details.csv` - This file lists the active experiments, the phases that correspond to each experiment, and the tasks and details that correspond to each phase. Combined, this nomenclature specifies most of the parameters used to create the configuration files that are loaded into the matlab control program that specify the behavior of the experimental boxes. Future work is intended to use these parameters to generate the matlab configuration files directly; in 0.1-ALPHA these values are used for post-run validation instead.
+
+#### Admin Tools
+Several small scripts are available for those comfortable with R. Note that these have *not* been made user friendly or robust. **Use at your own risk.**
+- `Load enviornment.R` - This should be used following a cleaning of the global environment. *It can be out of sync from main*
+- `Common lookups.R` - This contain short scripts that filter run_archive or rat_archive for information that I have looked up several times. These have not been made into functions.
+- `Modify an entry.R` - This contains a quick way to set a run invalid, change the weight or assignment. It should be kept in the **safe** state i.e. comment out from = to the new value.
+- `remove entry.R` and `Clean NA_archive entries.R` - These are used to clean poor entries. They are under active development to make them safe for others to use.
+- `import_old_excel.R` - This is a utility to read a directory tree and import information from the old experimental excel sheets that PiedPiper is designed to replace.
 
