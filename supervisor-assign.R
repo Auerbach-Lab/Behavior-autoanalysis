@@ -58,7 +58,7 @@ Assignments_Writer <- function() {
   setColWidths(wb, 1, cols = 1:5, widths = "auto")
 
   # formatting - alignment
-  center_style <<- createStyle(halign = "center")
+  center_style <- createStyle(halign = "center")
   addStyle(wb, 1, center_style, rows = 1:50, cols = c(2,4), gridExpand = TRUE, stack = TRUE)
 
   # formatting - make printable
