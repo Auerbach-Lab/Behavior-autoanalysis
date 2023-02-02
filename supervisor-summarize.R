@@ -567,39 +567,26 @@ Workbook_Writer <- function() {
           has_all_kHz = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>%
             .$Freq %>% unique() %>% length() == 4
 
-          if (has_all_kHz) {
-            r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>%
-              group_by(task, detail, Freq) %>%
-              mutate(THrange = paste0(suppressWarnings(min(TH, na.rm = TRUE)) %>% round(digits = 0), "-", suppressWarnings(max(TH, na.rm = TRUE)) %>% round(digits = 0))) %>%
-              relocate(THrange, .after = TH) %>%
-              gather(variable, value, (TH:THrange)) %>%
-              unite(temp, variable, Freq) %>%
-              pivot_wider(names_from = temp, values_from = value) %>%
-              mutate(Spacer2 = NA) %>%
-              relocate(Spacer2, .after = TH_32) %>%
-              mutate_at(vars(starts_with("TH_")), as.numeric)
-          } else {
-            r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>%
-              group_by(task, detail, Freq) %>%
-              mutate(THrange = paste0(suppressWarnings(min(TH, na.rm = TRUE)) %>% round(digits = 0), "-", suppressWarnings(max(TH, na.rm = TRUE)) %>% round(digits = 0))) %>%
-              relocate(THrange, .after = TH) %>%
-              gather(variable, value, (TH:THrange)) %>%
-              unite(temp, variable, Freq) %>%
-              pivot_wider(names_from = temp, values_from = value) %>%
-              select(-Dur, -FA_detailed) %>%
-              relocate(warnings_list, comments, .after = last_col())
+          r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>%
+            group_by(task, detail, Freq) %>%
+            mutate(THrange = paste0(suppressWarnings(min(TH, na.rm = TRUE)) %>% round(digits = 0), "-", suppressWarnings(max(TH, na.rm = TRUE)) %>% round(digits = 0))) %>%
+            relocate(THrange, .after = TH) %>%
+            gather(variable, value, (TH:THrange)) %>%
+            unite(temp, variable, Freq) %>%
+            pivot_wider(names_from = temp, values_from = value)
 
-            # Adding missing columns without overwriting extant THs and THranges
-            df = tibble(TH_4 = NA, TH_8 = NA, TH_16 = NA, TH_32 = NA,
-                        THrange_4 = NA, THrange_8 = NA, THrange_16 = NA, THrange_32 = NA)
-            r = add_column(r, !!!df[setdiff(names(df), names(r))]) %>%
-              relocate(TH_4, TH_8, TH_16, TH_32, THrange_4, THrange_8, THrange_16, THrange_32, .after = Spacer1)
+          r = r %>%
+            select(-Dur, -FA_detailed) %>%
+            relocate(warnings_list, comments, .after = last_col())
 
-            r = r %>% mutate(Spacer2 = NA) %>%
-              relocate(Spacer2, .after = TH_32) %>%
-              mutate_at(vars(starts_with("TH_")), as.numeric)
-          }
-
+          # Adding missing columns without overwriting extant THs and THranges
+          df = tibble(TH_4 = NA, TH_8 = NA, TH_16 = NA, TH_32 = NA,
+                      THrange_4 = NA, THrange_8 = NA, THrange_16 = NA, THrange_32 = NA)
+          r = add_column(r, !!!df[setdiff(names(df), names(r))]) %>%
+            relocate(TH_4, TH_8, TH_16, TH_32, THrange_4, THrange_8, THrange_16, THrange_32, .after = Spacer1) %>%
+            mutate(Spacer2 = NA) %>%
+            relocate(Spacer2, .after = TH_32) %>%
+            mutate_at(vars(starts_with("TH_")), as.numeric)
 
           x = rat_runs %>%
             dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
