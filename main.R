@@ -8,7 +8,7 @@ InitializeMain <- function() {
     library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr); library(lubridate);
 
     # analysis & visualization
-    library(psycho); library(ggplot2); library(hrbrthemes);
+    library(psycho); library(ggplot2); library(hrbrthemes); library(shiny);
   }
 
   Load_Packages()
@@ -18,7 +18,7 @@ InitializeMain <- function() {
   rat_archive <<- read.csv(paste0(projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
   load(paste0(projects_folder, "run_archive.Rdata"), .GlobalEnv)
 
-  ignore_name_check <<- FALSE
+  ignore_name_check <<- TRUE
 }
 
 Import_Matlab <- function(file_to_load) {
@@ -1558,22 +1558,22 @@ InitializeMain()
 
 #### either:
 # old_file = FALSE # removed from undergrad r script
-# Process_File(file.choose())
+Process_File(file.choose())
 
 #### or:
-old_file = TRUE
-ignore_name_check = TRUE
-exclude_trials = ""
-load(paste0(projects_folder, "old_excel_archive.Rdata"))
-directory = "C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)"  # slashes must be either / or \\
-files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
-files = files[str_which(files, pattern = "^(?!.*(Archive|TTS|Oddball))")] # Drop un-annotated files
-files = files[str_which(files, pattern = ".*/data/202208..")]
-# files = files[str_which(files, pattern = ".*/data/20220609/RP1.*")] # select a specific rat on a specific day
-# files = files[str_which(files, pattern = ".*/data/(?!(2022060(9|7)/RP1.*))")] # Bad second file for RP1 on 6/9/22 - dprime giving error but transiently
-# files = files[str_which(files, pattern = ".*/data/202207(?!(06))")] # Bad data on 7/6/22 - no creation date.
-files = paste0(directory, "/", files)
-writeLines(paste0("Loading ", length(files), " files.\n\n"))
-lapply(files, Process_File)
-writeLines(paste0("Done with back date loading. ", length(files), " files added."))
+# old_file = TRUE
+# ignore_name_check = TRUE
+# exclude_trials = ""
+# load(paste0(projects_folder, "old_excel_archive.Rdata"))
+# directory = "C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)"  # slashes must be either / or \\
+# files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
+# files = files[str_which(files, pattern = "^(?!.*(Archive|TTS|Oddball))")] # Drop un-annotated files
+# files = files[str_which(files, pattern = ".*/data/202208..")]
+# # files = files[str_which(files, pattern = ".*/data/20220609/RP1.*")] # select a specific rat on a specific day
+# # files = files[str_which(files, pattern = ".*/data/(?!(2022060(9|7)/RP1.*))")] # Bad second file for RP1 on 6/9/22 - dprime giving error but transiently
+# # files = files[str_which(files, pattern = ".*/data/202207(?!(06))")] # Bad data on 7/6/22 - no creation date.
+# files = paste0(directory, "/", files)
+# writeLines(paste0("Loading ", length(files), " files.\n\n"))
+# lapply(files, Process_File)
+# writeLines(paste0("Done with back date loading. ", length(files), " files added."))
 
