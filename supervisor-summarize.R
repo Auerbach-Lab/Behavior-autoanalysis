@@ -562,8 +562,8 @@ Workbook_Writer <- function() {
             relocate(Spacer1, .after = mean_attempts_per_trial) %>%
             select(-FA_detailed)
         } else if (phase_current == "Tones") {
-          
-          r = r %>% unnest(threshold) %>% 
+
+          r = r %>% unnest(threshold) %>%
             filter(Freq != 0 & Dur == min_duration) %>%
             group_by(task, detail, Freq) %>%
             mutate(THrange = paste0(suppressWarnings(min(TH, na.rm = TRUE)) %>% round(digits = 0), "-", suppressWarnings(max(TH, na.rm = TRUE)) %>% round(digits = 0))) %>%
@@ -845,13 +845,13 @@ Workbook_Writer <- function() {
   Define_Styles()
   Setup_Workbook()
 
-  Add_Rat_To_Workbook(186)
+  #Add_Rat_To_Workbook(186)
   #OR
-  # rat_archive %>%
-  #   filter(is.na(end_date)) %>%
-  #   filter(is.na(Assigned_Filename)) %>%
-  #   .$Rat_ID %>%
-  #   lapply(Add_Rat_To_Workbook)
+  rat_archive %>%
+    filter(is.na(end_date)) %>%
+    filter(is.na(Assigned_Filename)) %>%
+    .$Rat_ID %>%
+    lapply(Add_Rat_To_Workbook)
 
   old_wd = getwd()
   setwd(projects_folder)
