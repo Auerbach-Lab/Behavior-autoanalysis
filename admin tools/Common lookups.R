@@ -44,5 +44,12 @@ run_archive %>% filter(rat_name %in% c("TP2")) %>%
   select(date, rat_name, weight)
 
 
+# Bad Files Yesterday -----------------------------------------------------
+
+run_archive %>% filter(date == "20230201")  %>% 
+  filter(str_detect(warnings_list, pattern = "wrong file", negate = FALSE)) %>%
+  select(date, rat_name, assignment, warnings_list) %>% 
+  unnest_wider(assignment) %>% unnest(warnings_list) %>% View
+
 
 
