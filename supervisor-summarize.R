@@ -682,7 +682,7 @@ Workbook_Writer <- function() {
         columns = names(r)
 
         r = bind_rows(averages, r) %>%
-          select(columns) %>%
+          select(all_of(columns)) %>%
           mutate(weight = (weight - weight_max)/weight_max)
 
         r[, (length(r) + 1):29] = NA # add columns to reach 29
