@@ -1022,7 +1022,7 @@ Calculate_Summary_Statistics <- function() {
     dprime_data = Calculate_dprime(dprime_table)
     dprime <<- select(dprime_data, Freq, dB, Dur, dprime)
     # save this to stats
-    
+
     # Check for to small a dataset to calculate TH
     less_than_one_block = is.na(run_data %>% #TODO add a way to calculate using full trials archive history
                                   dplyr::filter(Block_number != 1) %>% .$complete_block_number %>% unique() %>% {if(is_empty(.)) {NA} else {head(1)} })
@@ -1033,12 +1033,12 @@ Calculate_Summary_Statistics <- function() {
         nest() %>%
         mutate(TH = NA_integer_) %>%
         select(-data)
-      
+
       # Warning
       warn = paste0("Can not caluclate TH due to < 1 block of trials.")
       warning(paste0(warn, "\n"))
       warnings_list <<- append(warnings_list, warn)
-      
+
     } else {
       r = dprime_data %>%
         select(Freq, Dur, dB, dprime) %>%
@@ -1418,7 +1418,7 @@ Add_to_Archives <- function() {
         detail = old_data$Detail
       )
       if(old_data$Invalid == "TRUE") invalid = "TRUE"
-      
+
       if(rlang::is_empty(assignment$experiment) || rlang::is_empty(assignment$phase)) {
         warn = paste0("No experiment/phase found in excel document for ", run_properties$rat_name, " on ", date, ".")
         warnings_list <<- append(warnings_list, warn)
@@ -1478,17 +1478,36 @@ Add_to_Archives <- function() {
   # Add to Archive Workflow -------------------------------------------------
 
   row_to_add = Construct_Run_Entry()
-  if(nrow(row_to_add) != 1) stop("ABORT: Problem building row to add to Run Archive.")
+  if (nrow(row_to_add) != 1) stop("ABORT: Problem building row to add to Run Archive.")
 
   rat_id = Get_Rat_ID(run_properties$rat_name)
-  if(length(rat_id) == 0) stop("ABORT: Unknown rat ID.")
+  if (length(rat_id) == 0) stop("ABORT: Unknown rat ID.")
 
   cat("Archiving ")
-  Add_to_Run_Archive(rat_id, row_to_add)
-  Add_to_Trial_Archive(rat_id, row_to_add)
-  if(! old_file) {Clear_Assignment(rat_id)}
+#  Add_to_Run_Archive(rat_id, row_to_add)
+#  Add_to_Trial_Archive(rat_id, row_to_add)
+#  if (!old_file) {Clear_Assignment(rat_id)}
   writeLines("")
   writeLines(paste0("Run ", row_to_add$UUID, " of ", run_properties$rat_name, " (#", rat_id, ") successfully added to archives (in environment and on disk)."))
+}
+
+Generate_Chart <- function() {
+  library(hrbrthemes)
+  library(lubridate)
+  ratID = Get_Rat_ID(run_properties$rat_name)
+  rat_runs <- run_archive %>% dplyr::filter(rat_ID == ratID) %>% dplyr::arrange(date)
+  rat_runs = rat_runs %>% mutate(date_asDate = lubridate::ymd(date))
+  # thoughts - will want to standardize y axis to e.g. 80%-105% of baseline weight so that 'low' looks the same for everyone
+  # I'm not bothering to figure out how to customize the axis labels right now.
+  weight_chart =
+    ggplot(rat_runs, aes(x = date_asDate, y = weight)) +
+    geom_line(color = "grey", linewidth = 2) +
+    geom_point(shape=21, color="black", fill="#69b3a2", size=5) +
+    ggtitle(paste0(run_properties$rat_name, " Weight")) +
+    theme_ipsum_es()
+  dev.new()
+  dev.new(width = 10, height = 6, noRStudioGD = TRUE)
+  print(weight_chart, vp = NULL)
 }
 
 # MAIN ---------------------------------------------------------
@@ -1523,6 +1542,8 @@ Process_File <- function(file_to_load) {
     # curate data prior to folding in, adding disqualifier flags etc (but omitted trials are always totally gone)
     # Report_Warnings_and_Confirm()
     Add_to_Archives()
+
+    Generate_Chart()
   }
 
   # do analyses
