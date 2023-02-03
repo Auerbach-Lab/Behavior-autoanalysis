@@ -1506,7 +1506,14 @@ Generate_Chart <- function() {
   #dev.new() # this just lands inside the RStudio 'plots' window? Sometimes it needs 2, sometimes it doesn't. Weird.
   dev.new(width = 10, height = 6, noRStudioGD = TRUE) # This actually pops out. Size is ignored unless you tell RStudio not to help with the noRstudioGD argument.
   print(weight_chart, vp = NULL)
-  weight_response <- readline(prompt="Does this weight look OK? ")
+  writeLines("")
+  writeLines("Does this weight look OK? ")
+  #weight_ok <- menu(c("Yes", "No"), graphics = TRUE, title = "Does this weight look OK?")
+  weight_ok <- if(menu(c("Yes", "No")) == 1) TRUE else FALSE
+  if (!weight_ok) {
+    readline(prompt = "Please describe the problem: ")
+  }
+  readline(prompt = "Your initials: ")
   dev.off()
 }
 
