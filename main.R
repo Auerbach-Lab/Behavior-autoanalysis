@@ -1022,7 +1022,7 @@ Calculate_Summary_Statistics <- function() {
     dprime_data = Calculate_dprime(dprime_table)
     dprime <<- select(dprime_data, Freq, dB, Dur, dprime)
     # save this to stats
-    
+
     # Check for to small a dataset to calculate TH
     less_than_one_block = is.na(run_data %>% #TODO add a way to calculate using full trials archive history
                                   dplyr::filter(Block_number != 1) %>% .$complete_block_number %>% unique() %>% {if(is_empty(.)) {NA} else {head(1)} })
@@ -1033,12 +1033,12 @@ Calculate_Summary_Statistics <- function() {
         nest() %>%
         mutate(TH = NA_integer_) %>%
         select(-data)
-      
+
       # Warning
       warn = paste0("Can not caluclate TH due to < 1 block of trials.")
       warning(paste0(warn, "\n"))
       warnings_list <<- append(warnings_list, warn)
-      
+
     } else {
       r = dprime_data %>%
         select(Freq, Dur, dB, dprime) %>%
@@ -1374,7 +1374,9 @@ Add_to_Archives <- function() {
   Add_to_Run_Archive <- function(rat_id, row_to_add) {
     cat("Run... ")
     run_archive <<- rbind(run_archive, row_to_add)
-    save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
+    filename = paste0(projects_folder, "run_archive.Rdata")
+    file.copy(filename, paste0(filename, ".backup"), overwrite = TRUE)
+    save(run_archive, file = filename, ascii = TRUE, compress = FALSE)
     #writeLines(paste0("Run ", row_to_add$UUID, " of ", run_properties$rat_name, " (#", rat_id, ") added to Run Archive."))
 
   }
@@ -1387,6 +1389,7 @@ Add_to_Archives <- function() {
     filename = paste0(projects_folder, variable_name, ".Rdata")
 
     if(file.exists(filename)){
+      file.copy(filename, paste0(filename, ".backup"), overwrite = TRUE)
       load(filename)
       assign(variable_name, rbind(get(variable_name), cbind(run_data, UUID = uuid))) # tack UUID onto row and add row to existing dynamically-named archive
     } else {
@@ -1418,7 +1421,7 @@ Add_to_Archives <- function() {
         detail = old_data$Detail
       )
       if(old_data$Invalid == "TRUE") invalid = "TRUE"
-      
+
       if(rlang::is_empty(assignment$experiment) || rlang::is_empty(assignment$phase)) {
         warn = paste0("No experiment/phase found in excel document for ", run_properties$rat_name, " on ", date, ".")
         warnings_list <<- append(warnings_list, warn)
