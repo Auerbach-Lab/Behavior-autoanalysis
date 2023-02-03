@@ -1495,7 +1495,8 @@ Generate_Chart <- function() {
   ratID = Get_Rat_ID(run_properties$rat_name)
   rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID)
   rat_runs = rat_runs %>% mutate(date_asDate = lubridate::ymd(date))
-  # thoughts - will want to standardize y axis to e.g. 80%-105% of baseline weight so that 'low' looks the same for everyone
+  # thoughts - will want to standardize y axis to e.g. 80%-105% of baseline weight so that 'low' looks the same for everyone?
+  # -- one problem with that is that if another rat's weight IS entered instead, it could be drastically above or below those bounds
   # I'm not bothering to figure out how to customize the axis labels right now.
   weight_chart =
     ggplot(rat_runs, aes(x = date_asDate, y = weight)) +
@@ -1510,10 +1511,11 @@ Generate_Chart <- function() {
   writeLines("Does this weight look OK? ")
   #weight_ok <- menu(c("Yes", "No"), graphics = TRUE, title = "Does this weight look OK?")
   weight_ok <- if(menu(c("Yes", "No")) == 1) TRUE else FALSE
+  problem <- NA
   if (!weight_ok) {
-    readline(prompt = "Please describe the problem: ")
+    problem <- readline(prompt = "Please describe the problem: ")
   }
-  readline(prompt = "Your initials: ")
+  initials <- readline(prompt = "Your initials: ")
   dev.off()
 }
 
