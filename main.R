@@ -1553,7 +1553,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     writeLines("")
     writeLines(paste0("Run ", run_properties$UUID, " of ", run_properties$rat_name, " (#", Get_Rat_ID(run_properties$rat_name), ") successfully added to archives (in environment and on disk)."))
 
-    Generate_Chart()
+    #Generate_Chart()
   }
 
   # do analyses
