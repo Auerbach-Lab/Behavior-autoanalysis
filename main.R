@@ -1368,11 +1368,13 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       #writeLines(paste0("Old assignment cleared for ", run_properties$rat_name, " (#", rat_id, ")."))
     }
 
-    Add_to_Run_Archive <- function(rat_id, row_to_add) {
-      cat("Run... ")
-      run_archive <<- rbind(run_archive, row_to_add)
-      save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
-      #writeLines(paste0("Run ", row_to_add$UUID, " of ", run_properties$rat_name, " (#", rat_id, ") added to Run Archive."))
+  Add_to_Run_Archive <- function(rat_id, row_to_add) {
+    cat("Run... ")
+    run_archive <<- rbind(run_archive, row_to_add)
+    filename = paste0(projects_folder, "run_archive.Rdata")
+    file.copy(filename, paste0(filename, ".backup"), overwrite = TRUE)
+    save(run_archive, file = filename, ascii = TRUE, compress = FALSE)
+    #writeLines(paste0("Run ", row_to_add$UUID, " of ", run_properties$rat_name, " (#", rat_id, ") added to Run Archive."))
 
     }
 
@@ -1383,12 +1385,14 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       variable_name = paste0(experiment, "_archive")
       filename = paste0(projects_folder, variable_name, ".Rdata")
 
-      if(file.exists(filename)){
-        load(filename)
-        assign(variable_name, rbind(get(variable_name), cbind(trial_data, UUID = uuid))) # tack UUID onto row and add row to existing dynamically-named archive
-      } else {
-        assign(variable_name, cbind(trial_data, UUID = uuid))
-      }
+    if(file.exists(filename)){
+      file.copy(filename, paste0(filename, ".backup"), overwrite = TRUE)
+      load(filename)
+      assign(variable_name, rbind(get(variable_name), cbind(run_data, UUID = uuid))) # tack UUID onto row and add row to existing dynamically-named archive
+    } else {
+      assign(variable_name, cbind(run_data, UUID = uuid))
+    }
+
 
       save(list = get("variable_name"), file = filename, ascii = TRUE, compress = FALSE)
     }
@@ -1438,6 +1442,29 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         )
         # also need to blank these fields from rat_archive after the import so they're never incorporated twice
         # --- must not do that here, instead do that down below, where we modify other archives so we don't blank until all chances for errors are past
+
+    # get excel data for run, if it exists
+    if(old_file) {
+      # need to fetch from old_excel_archive
+      date_asDate = paste0(stringr::str_sub(date, 1, 4), "-", stringr::str_sub(date, 5, 6), "-", stringr::str_sub(date, 7, 8)) %>% as.Date()
+      old_data = old_excel_archive %>% dplyr::filter(Date == date_asDate & rat_name == run_properties$rat_name)
+      if(rlang::is_empty(old_data)) {
+        warn = paste0("No data found in excel document for ", run_properties$rat_name, " on ", date, ".")
+        warnings_list <<- append(warnings_list, warn)
+      }
+      observations = old_data$`Comments/Observations`
+      assignment = list(
+        assigned_file_name = old_data$Filename,
+        experiment = old_data$Experiment,
+        phase = old_data$Phase,
+        task = old_data$Task,
+        detail = old_data$Detail
+      )
+      if(old_data$Invalid == "TRUE") invalid = "TRUE"
+
+      if(rlang::is_empty(assignment$experiment) || rlang::is_empty(assignment$phase)) {
+        warn = paste0("No experiment/phase found in excel document for ", run_properties$rat_name, " on ", date, ".")
+        warnings_list <<- append(warnings_list, warn)
 
       }
 
