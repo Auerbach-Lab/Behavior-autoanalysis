@@ -22,4 +22,4 @@ observations = "good hits"
 
 projects_folder = "Z:/Behavior-autoanalysis/"
 source(paste0(projects_folder, "main.R"))
-Process_File(file.choose(), name, exclude_trials, weight, observations)
+Process_File(file.choose(), name, weight, observations, exclude_trials)
