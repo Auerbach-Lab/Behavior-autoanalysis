@@ -1,5 +1,8 @@
 InitializeMain()
 
+Tsc_rats = c("RP1", "RP2", "RP3", "RP4", "RP5", "RP6", "TP1", "TP2", "TP3", "TP4", "TP5", "TP6", "GP1", "GP2", "GP3", "GP4", "GP5", "GP6")
+Fmr_rats = c("BP1", "BP2", "BP3", "BP4", "BP5", "BP6", "LP1", "LP2", "LP3", "LP4", "LP5", "LP6", "Purple1", "Purple2", "Purple3", "Purple4")
+
 # Thresholds --------------------------------------------------------------
 run_archive %>% filter(rat_name %in% c("BP1")) %>% 
   select(date, rat_name, stats) %>% 
