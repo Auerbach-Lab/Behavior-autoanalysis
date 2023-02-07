@@ -4,7 +4,7 @@ library(shinythemes)
 library(dplyr, warn.conflicts = FALSE)
 library(thematic)
 library(stringr)
-browseVignettes(package = "shinyFeedback")
+library(glue)
 
 ui <- fluidPage(
   useShinyFeedback(),
@@ -49,6 +49,30 @@ server <- function(input, output, session) {
     }
   })
 
+  # debug output
+  output$text1 <- renderText({
+    is.na(input$weight)
+  })
+
+  # Weight validation
+  last_weight <- reactive({
+    #req(name_clean() %in% rats, cancelOutput = TRUE)
+    run_archive %>% dplyr::filter(rat_ID == id_good()) %>% dplyr::arrange(date) %>% tail(1) %>% .$weight
+  })
+  weight_change_percent <- reactive({
+    if(is.na(input$weight) || input$weight == 0) -1 else abs((input$weight - last_weight()) / last_weight())
+  })
+  observeEvent(weight_change_percent(), {
+    if(weight_change_percent() == -1) {
+      hideFeedback("weight")
+    } else if(weight_change_percent() > user_settings$maximum_weight_change_daily_percent) {
+      hideFeedback("weight")
+      showFeedbackWarning("weight", glue("Differs by {round(weight_change_percent() * 100, digits = 0)}% from prior {last_weight()}g."))
+    } else {
+      hideFeedback("weight")
+      showFeedbackSuccess("weight", glue("Within {user_settings$maximum_weight_change_daily_percent * 100}% of prior {last_weight()}g."))
+    }
+  })
 
 
 
