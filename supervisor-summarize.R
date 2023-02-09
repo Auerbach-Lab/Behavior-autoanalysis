@@ -595,8 +595,9 @@ Workbook_Writer <- function() {
             select(task, detail, date, Spacer3, `Freq (kHz)`, Stimrange)
 
           r = left_join(r, x, by = c("task", "detail", "date")) %>%
+            unique() %>%
             pivot_wider(names_from = `Freq (kHz)`, values_from = Stimrange)
-
+          
           # Adding missing columns without overwriting extant THs and THranges
           df = tibble(`4` = NA, `8` = NA, `16` = NA, `32` = NA)
           r = add_column(r, !!!df[setdiff(names(df), names(r))]) %>%
