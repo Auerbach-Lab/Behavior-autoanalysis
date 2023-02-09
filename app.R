@@ -5,6 +5,8 @@ library(dplyr, warn.conflicts = FALSE)
 library(thematic)
 library(stringr)
 library(glue)
+library(ggplot2)
+library(hrbrthemes)
 
 ui <- fluidPage(
   useShinyFeedback(),
@@ -24,16 +26,16 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   # Name validation
-  rats = rat_archive$Rat_name %>% str_to_lower()
+  rats = rat_archive$Rat_name %>% str_to_upper()
   name_clean <- reactive({
-    input$name %>% str_trim %>% str_replace_all(" ", "") %>% str_to_lower()
+    input$name %>% str_trim %>% str_replace_all(" ", "") %>% str_to_upper()
   })
   name_good <- reactive({
     req(name_clean() %in% rats, cancelOutput = TRUE)
     name_clean()
   })
   id_good <- reactive({
-    rat_archive %>% dplyr::filter(str_to_lower(Rat_name) == name_good()) %>% .$Rat_ID
+    rat_archive %>% dplyr::filter(str_to_upper(Rat_name) == name_good()) %>% .$Rat_ID
   })
   observeEvent(input$name, {
     alnum = name_clean() %>% str_detect("^[:alnum:]*$")
@@ -49,14 +51,8 @@ server <- function(input, output, session) {
     }
   })
 
-  # debug output
-  output$text1 <- renderText({
-    is.na(input$weight)
-  })
-
   # Weight validation
   last_weight <- reactive({
-    #req(name_clean() %in% rats, cancelOutput = TRUE)
     run_archive %>% dplyr::filter(rat_ID == id_good()) %>% dplyr::arrange(date) %>% tail(1) %>% .$weight
   })
   weight_change_percent <- reactive({
@@ -74,8 +70,63 @@ server <- function(input, output, session) {
     }
   })
 
+  # File validation
+  matname_clean <- reactive({
+    stringr::str_match_all(input$matfile$name, pattern="^.+?(?=_)") %>%
+      unlist(recursive = TRUE) %>%
+      tail (n = 1) %>%
+      str_trim %>% str_replace_all(" ", "") %>% str_to_upper()
+  })
 
 
+  # output$text2 <- renderText({
+  #   req(input$name)
+  #   req(input$matfile)
+  #
+  #   if(tools::file_ext(input$matfile$datapath) != "mat") {
+  #     hideFeedback("matfile")
+  #     showFeedbackDanger("matfile", "The file must be .mat format.")
+  #   } else if(name_clean() == matname_clean()) {
+  #     hideFeedback("matfile")
+  #     showFeedbackSuccess("matfile", "Filename appears to match rat name.")
+  #   } else {
+  #     hideFeedback("matfile")
+  #     showFeedbackWarning("matfile", glue("Is this the correct file for {input$name}?"))
+  #   }
+  # })
+
+  observeEvent(ignoreInit = TRUE, c(input$name, input$matfile), {
+    req(input$name)
+    req(input$matfile)
+    if(tools::file_ext(input$matfile$datapath) != "mat") {
+      hideFeedback("matfile")
+      showFeedbackDanger("matfile", "The file must be .mat format.")
+    } else if(name_clean() == matname_clean()) {
+      hideFeedback("matfile")
+      showFeedbackSuccess("matfile", "Filename agrees with rat name.")
+    } else {
+      hideFeedback("matfile")
+      showFeedbackWarning("matfile", glue("This file appears to belong to {matname_clean()}, not {name_clean()}."))
+    }
+  })
+
+  observeEvent(input$matfile, {
+    if(tools::file_ext(input$matfile$datapath) != "mat") {
+      hideFeedback("matfile")
+      showFeedbackDanger("matfile", "The file must be .mat format.")
+    }
+    else {
+      hideFeedback("matfile")
+    }
+  })
+
+  # debug output
+  output$text1 <- renderText({
+    name_clean()
+  })
+  # output$text2 <- renderText({
+  #   matname_clean()
+  # })
 
 }
 
