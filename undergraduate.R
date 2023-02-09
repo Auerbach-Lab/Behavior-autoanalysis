@@ -1,7 +1,7 @@
 # Rat name
 # Capitalization and spaces do not matter
 # Example: rat_name = "Orange11"
-name = "Blue4"
+name = "GP5"
 
 # Trials to exclude from the next file.
 # A comma-separated list of numbers or ranges inside quotation marks.
@@ -22,3 +22,4 @@ observations = "good hits"
 
 projects_folder = "Z:/Behavior-autoanalysis/"
 source(paste0(projects_folder, "main.R"))
+Process_File(file.choose(), name, weight, observations, exclude_trials)

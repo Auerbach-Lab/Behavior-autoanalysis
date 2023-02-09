@@ -334,9 +334,7 @@ Workbook_Writer <- function() {
             ))
 
           # get the duration that was used in today's run
-          duration_current = df %>%
-            filter(phase == phase_current & task == task_current & detail == detail_current) %>%
-            .$duration %>% unique()
+          duration_current = df %>% arrange(desc(date)) %>% head(1) %>% .$duration
 
           # count number of pre-HL TH runs, and number of post-HL runs by detail
           BBN_counts = df %>%
