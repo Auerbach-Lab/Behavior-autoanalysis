@@ -20,8 +20,9 @@ ui <- fluidPage(
     textInput("skip", "Trials to skip (e.g. not performed by rat)", placeholder = "2, 120-126, 201 (may leave blank)"),
     fileInput("matfile", "Select .mat file:", buttonLabel = "Browse...", accept = c(".mat"), width = "600px"),
   ),
+  actionButton("analyze", "Analyze", icon = icon("chart-line")),
+  textOutput("requirements"),
   textOutput("text1"),
-  textOutput("text2")
 )
 
 server <- function(input, output, session) {
@@ -37,13 +38,15 @@ server <- function(input, output, session) {
   id_good <- reactive({
     rat_archive %>% dplyr::filter(str_to_upper(Rat_name) == name_good()) %>% .$Rat_ID
   })
+  known_rat <- reactive ({
+    name_clean() %in% rats
+  })
   observeEvent(input$name, {
     alnum = name_clean() %>% str_detect("^[:alnum:]*$")
-    knownrat = name_clean() %in% rats
     if(!alnum) {
       hideFeedback("name")
       showFeedbackWarning("name", "Must contain only letters, numbers, and spaces.")
-    } else if (knownrat) {
+    } else if (known_rat()) {
       hideFeedback("name")
       showFeedbackSuccess("name", "Rat exists in Rat Archive.")
     } else {
@@ -78,23 +81,6 @@ server <- function(input, output, session) {
       str_trim %>% str_replace_all(" ", "") %>% str_to_upper()
   })
 
-
-  # output$text2 <- renderText({
-  #   req(input$name)
-  #   req(input$matfile)
-  #
-  #   if(tools::file_ext(input$matfile$datapath) != "mat") {
-  #     hideFeedback("matfile")
-  #     showFeedbackDanger("matfile", "The file must be .mat format.")
-  #   } else if(name_clean() == matname_clean()) {
-  #     hideFeedback("matfile")
-  #     showFeedbackSuccess("matfile", "Filename appears to match rat name.")
-  #   } else {
-  #     hideFeedback("matfile")
-  #     showFeedbackWarning("matfile", glue("Is this the correct file for {input$name}?"))
-  #   }
-  # })
-
   observeEvent(ignoreInit = TRUE, c(input$name, input$matfile), {
     req(input$name)
     req(input$matfile)
@@ -120,13 +106,39 @@ server <- function(input, output, session) {
     }
   })
 
-  # debug output
-  output$text1 <- renderText({
-    name_clean()
+  # Submit validation
+  v <- reactiveValues(pushed = FALSE)
+
+  requirements <- reactive({
+    validate(
+      need(input$name, "Rat name is required."),
+      need(input$weight > 0, "Weight must be greater than zero."),
+      need(input$observations, "Observations must be provided."),
+      need(input$matfile, "No file selected!")
+    )
+    "Ready for analysis."
   })
-  # output$text2 <- renderText({
-  #   matname_clean()
-  # })
+
+  observeEvent(input$analyze, {
+    v$pushed = FALSE
+    if (requirements() == "Ready for analysis.") {
+      v$pushed = TRUE
+    }
+  })
+
+  output$requirements <- renderText({
+    req(input$analyze)
+    requirements()
+    if(isolate(v$pushed)) {
+      v$pushed = FALSE
+      "Ok Go"
+    }
+    else(requirements())
+  })
+
+
+
+
 
 }
 
