@@ -20,6 +20,7 @@ run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>%
 
 
 # Not loaded today --------------------------------------------------------
+InitializeMain()
 rat_archive %>% filter(is.na(end_date)) %>%
   filter(! Rat_name %in% c(run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>% .$rat_name %>% as.list)) %>%
   .$Rat_name
