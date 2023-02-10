@@ -7,22 +7,66 @@ library(stringr)
 library(glue)
 library(ggplot2)
 library(hrbrthemes)
+library(shinycustomloader)
 
 ui <- fluidPage(
   useShinyFeedback(),
+  useShinyjs(),
   theme = shinythemes::shinytheme("cerulean"),
+  #shinythemes::themeSelector(),
   titlePanel("PiedPiper", windowTitle = "PiedPiper"),
-  verticalLayout(
-    textInput("name", "Rat name", placeholder = "Blue4"),
-    numericInput("weight", "Weight (g)", value = 0, min = 0),
-    textAreaInput("observations", "Observations from run", rows = 3,
-                  placeholder = "Good hits. Good misses. Only real FAs.\n2 CRs back to back.\nBreak from 35-47m, with no jams."),
-    textInput("skip", "Trials to skip (e.g. not performed by rat)", placeholder = "2, 120-126, 201 (may leave blank)"),
-    fileInput("matfile", "Select .mat file:", buttonLabel = "Browse...", accept = c(".mat"), width = "600px"),
+  sidebarLayout(
+    sidebarPanel(width = 3,
+      textInput("name", "Rat name", placeholder = "Blue4"),
+      numericInput("weight", "Weight (g)", value = 0, min = 0),
+      textAreaInput("observations", "Observations from run", rows = 5,
+                    placeholder = "Good hits. Good misses. Only real FAs.\n2 CRs back to back.\nBreak from 35-47m, with no jams."),
+      textInput("exclude_trials", "Trials to skip", placeholder = "2, 120-126, 201 (or blank)")
+    ),
+    mainPanel(width = 9,
+      fillRow(width = "1250px", # want 625 for file input plus margin, so 625 x2 = 1250
+        fileInput("matfile", "Select .mat file:", buttonLabel = "Browse...", accept = c(".mat"), width = "600px"),
+        actionButton("btnAnalyze", span("Analyze", id="UpdateAnimate", class=""), class = "btn btn-primary", style = "margin-top: 25px;", width = "150px"),
+      ),
+      textOutput("requirements"),
+      textOutput("text1"),
+      textOutput("text2"),
+      textOutput("text3"),
+      withLoader(tableOutput('row'), type = "html", loader = "dnaspin")
+    )
   ),
-  actionButton("analyze", "Analyze", icon = icon("chart-line")),
-  textOutput("requirements"),
-  textOutput("text1"),
+  tags$style(HTML("tbody { color: #DD0000; font-family: monospace; white-space: pre}")),
+  # button animation
+  tags$head(tags$style(type="text/css", '
+            .loading {
+                display: inline-block;
+                overflow: hidden;
+                height: 1.3em;
+                margin-top: -0.3em;
+                line-height: 1.5em;
+                vertical-align: text-bottom;
+                box-sizing: border-box;
+            }
+            .loading.dots::after {
+                text-rendering: geometricPrecision;
+                content: "⠋\\A⠙\\A⠹\\A⠸\\A⠼\\A⠴\\A⠦\\A⠧\\A⠇\\A⠏";
+                animation: spin10 1s steps(10) infinite;
+                animation-duration: 1s;
+                animation-timing-function: steps(10);
+                animation-delay: 0s;
+                animation-iteration-count: infinite;
+                animation-direction: normal;
+                animation-fill-mode: none;
+                animation-play-state: running;
+                animation-name: spin10;
+            }
+            .loading::after {
+                display: inline-table;
+                white-space: pre;
+                text-align: left;
+            }
+            @keyframes spin10 { to { transform: translateY(-15.0em); } }
+            '))
 )
 
 server <- function(input, output, session) {
@@ -96,6 +140,10 @@ server <- function(input, output, session) {
     }
   })
 
+  observeEvent(ignoreInit = TRUE, input$observations, {
+    if (input$observations != "") hideFeedback("observations")
+  })
+
   observeEvent(input$matfile, {
     if(tools::file_ext(input$matfile$datapath) != "mat") {
       hideFeedback("matfile")
@@ -107,9 +155,25 @@ server <- function(input, output, session) {
   })
 
   # Submit validation
-  v <- reactiveValues(pushed = FALSE)
+  v <- reactiveValues(pushed = FALSE, row = NULL, finished = FALSE)
 
   requirements <- reactive({
+    if(input$name == "") {
+      hideFeedback("name")
+      showFeedbackDanger("name", "Required.")
+    }
+    if(is.na(input$weight) || input$weight < 1) {
+      hideFeedback("weight")
+      showFeedbackDanger("weight", "Must be >0.")
+    }
+    if(input$observations == "") {
+      hideFeedback("observations")
+      showFeedbackDanger("observations", "Required.")
+    }
+    if(is.null(input$matfile)) {
+      hideFeedback("matfile")
+      showFeedbackDanger("matfile", "No file selected!")
+    }
     validate(
       need(input$name, "Rat name is required."),
       need(input$weight > 0, "Weight must be greater than zero."),
@@ -119,26 +183,45 @@ server <- function(input, output, session) {
     "Ready for analysis."
   })
 
-  observeEvent(input$analyze, {
+  observeEvent(input$btnAnalyze, {
     v$pushed = FALSE
     if (requirements() == "Ready for analysis.") {
       v$pushed = TRUE
+
+      # start animation and disable button
+      shinyjs::addClass(id = "UpdateAnimate", class = "loading dots")
+      shinyjs::disable("btnAnalyze")
     }
   })
 
   output$requirements <- renderText({
-    req(input$analyze)
+    req(input$btnAnalyze)
     requirements()
     if(isolate(v$pushed)) {
       v$pushed = FALSE
-      "Ok Go"
+      v$row = Process_File(file_to_load = input$matfile$datapath, name = input$name, weight = input$weight, observations = input$observations, exclude_trials = input$exclude_trials, file_name_override = input$matfile$name, use_shiny = TRUE)
+      "Finished."
+      # stop animation and reenable button
+      shinyjs::enable("btnAnalyze")
+      shinyjs::removeClass(id = "UpdateAnimate", class = "loading dots")
     }
     else(requirements())
   })
 
+  # output$text2 <- renderText({
+  #   input$matfile$datapath
+  # })
 
+  # output$text3 <- renderText({
+  #   input$matfile$name
+  # })
 
-
+  output$row <- renderTable(striped = TRUE, hover = TRUE, sanitize.text.function = identity,
+  {
+    req(input$btnAnalyze)
+    req(v$row)
+    v$row %>% .$warnings_list %>% unlist() %>% data.frame(Warnings = .) %>% mutate(Warnings = str_replace_all(Warnings, "\\n", "<br> "))
+  })
 
 }
 

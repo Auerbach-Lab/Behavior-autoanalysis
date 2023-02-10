@@ -19,7 +19,7 @@ InitializeMain <- function() {
   load(paste0(projects_folder, "run_archive.Rdata"), .GlobalEnv)
 }
 
-Process_File <- function(file_to_load, name, weight, observations, exclude_trials = "", old_file = FALSE, ignore_name_check = FALSE, file_name_override = NULL) {
+Process_File <- function(file_to_load, name, weight, observations, exclude_trials = "", old_file = FALSE, ignore_name_check = FALSE, use_shiny = FALSE, file_name_override = NULL) {
 
   Import_Matlab <- function(file_to_load) {
     Unlist_Matlab_To_Dataframe <- function(li) {
@@ -88,6 +88,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           # remove excess info (i.e. .mat and then file location)
           stringr::str_remove(pattern = ".mat @ .*$", string = .)
         cat("Stim file:", r, sep = "\t", fill = TRUE)
+        if (use_shiny) shiny::showNotification(glue("{r}"))
         return(r)
       }
 
@@ -293,6 +294,9 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
         # Added to compare to written record at request of Undergrads
         writeLines(paste0("Trials: ", total_trials, "\tHit%: ", round(hit_percent, digits = 1), "\tFA%: ", round(FA_percent, digits = 1)))
+        if (use_shiny) shiny::showNotification(glue("Trials: {total_trials}"))
+        if (use_shiny) shiny::showNotification(glue("Hit%: {round(hit_percent, digits = 1)}"))
+        if (use_shiny) shiny::showNotification(glue("FA%: {round(FA_percent, digits = 1)}"))
 
         if (results_total_trials == 0 | run_properties$stim_type == "train") {
           cat("Validate_Mat_Summary: Skipped (no summary)", sep = "\t", fill = TRUE)
@@ -1538,27 +1542,32 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
   if(Check_UUID()) {
     # identify analysis type
     analysis <- Identify_Analysis_Type()
-    cat("Analysis type:", analysis$type, sep = "\t", fill = TRUE)
+    writeLines(glue("Analysis type: {analysis$type}"))
+    if (use_shiny) shiny::showNotification(glue("{analysis$type}"))
 
     # summary statistics
     analysis$stats <- Calculate_Summary_Statistics()
     writeLines("Calculated run statistics.")
+    if (use_shiny) shiny::showNotification(glue("Calculated run statistics."))
 
     # calculate canonical filename
     analysis$prepend_name <- FALSE
     analysis$computed_file_name <- Build_Filename()
     Check_Assigned_Filename()
-    cat("Filename checks complete.", sep = "\t", fill = TRUE)
+    writeLines("Filename checks complete.")
+    if (use_shiny) shiny::showNotification(glue("Filename checks complete."))
 
     # handle weight
     Check_Weight()
-    cat("Weight checks complete.", sep = "\t", fill = TRUE)
+    writeLines("Weight checks complete.")
+    if (use_shiny) shiny::showNotification(glue("Weight checks complete."))
 
     # check run performance against user-settings cutoffs
     Check_Performance_Cutoffs()
     # check run performance against past performance for this rat in this experimental phase
     # Check_Performance_Consistency
-    cat("Performance checks complete.", sep = "\t", fill = TRUE)
+    writeLines("Performance checks complete.")
+    if (use_shiny) shiny::showNotification(glue("Performance checks complete."))
 
     # commit to folding in - display warnings and get user input to override them (and submit to master dataframe), or give option to commit to invalid/storage-only dataframe
     # curate data prior to folding in, adding disqualifier flags etc (but omitted trials are always totally gone)
