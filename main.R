@@ -1364,19 +1364,16 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Phase <<- NA
       rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Task <<- NA
       rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Detail <<- NA
-      write.csv(rat_archive, paste0(projects_folder, "rat_archive.csv"), row.names = FALSE)
-      #writeLines(paste0("Old assignment cleared for ", run_properties$rat_name, " (#", rat_id, ")."))
+#APP      write.csv(rat_archive, paste0(projects_folder, "rat_archive.csv"), row.names = FALSE)
     }
 
-    Add_to_Run_Archive <- function(rat_id, row_to_add) {
+    Add_to_Run_Archive <- function(row_to_add) {
       cat("Run... ")
       run_archive <<- rbind(run_archive, row_to_add)
-      save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
-      #writeLines(paste0("Run ", row_to_add$UUID, " of ", run_properties$rat_name, " (#", rat_id, ") added to Run Archive."))
-
+#APP      save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
     }
 
-    Add_to_Trial_Archive <- function(rat_id, row_to_add) {
+    Add_to_Trial_Archive <- function(row_to_add) {
       cat("Trials... ")
       uuid = row_to_add$UUID
       experiment = row_to_add %>% .$assignment %>% .[[1]] %>% pluck("experiment")
@@ -1390,7 +1387,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         assign(variable_name, cbind(trial_data, UUID = uuid))
       }
 
-      save(list = get("variable_name"), file = filename, ascii = TRUE, compress = FALSE)
+#APP      save(list = get("variable_name"), file = filename, ascii = TRUE, compress = FALSE)
     }
 
     Construct_Run_Entry <- function() {
@@ -1477,13 +1474,10 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     row_to_add = Construct_Run_Entry()
     if (nrow(row_to_add) != 1) stop("ABORT: Problem building row to add to Run Archive.")
 
-    rat_id = Get_Rat_ID(run_properties$rat_name)
-    if (length(rat_id) == 0) stop("ABORT: Unknown rat ID.")
-
     cat("Archiving ")
-    Add_to_Run_Archive(rat_id, row_to_add)
-    Add_to_Trial_Archive(rat_id, row_to_add)
-    if (!old_file) {Clear_Assignment(rat_id)}
+    Add_to_Run_Archive(row_to_add)
+    Add_to_Trial_Archive(row_to_add)
+    if (!old_file) {Clear_Assignment(row_to_add$rat_ID)}
   }
 
   Generate_Chart <- function() {
