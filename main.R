@@ -1583,6 +1583,10 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
   # pop up charts and stuff for undergrads to sign off on (where do the comments they provide on 'no' get saved? text file alongside individual exported graph image? dedicated df? master df in one long appended cell for all comments to graphs?)
 
   writeLines("") #TODO change all cats to writelines
+  if(!exists("row_added")) {
+    return(tibble(warnings_list = list(warnings_list),
+                  UUID = run_properties$UUID))
+  }
   return(row_added)
 }
 

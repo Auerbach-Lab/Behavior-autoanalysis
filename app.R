@@ -8,6 +8,7 @@ library(glue)
 library(ggplot2)
 library(hrbrthemes)
 library(shinycustomloader)
+library(shinyjs)
 
 ui <- fluidPage(
   useShinyFeedback(),
@@ -24,7 +25,7 @@ ui <- fluidPage(
       textInput("exclude_trials", "Trials to skip", placeholder = "2, 120-126, 201 (or blank)")
     ),
     mainPanel(width = 9,
-      fillRow(width = "1250px", # want 625 for file input plus margin, so 625 x2 = 1250
+      fillRow(height = "100px", width = "1250px", # want 625 for file input plus margin, so 625 x2 = 1250
         fileInput("matfile", "Select .mat file:", buttonLabel = "Browse...", accept = c(".mat"), width = "600px"),
         actionButton("btnAnalyze", span("Analyze", id="UpdateAnimate", class=""), class = "btn btn-primary", style = "margin-top: 25px;", width = "150px"),
       ),
@@ -202,8 +203,8 @@ server <- function(input, output, session) {
       v$row = Process_File(file_to_load = input$matfile$datapath, name = input$name, weight = input$weight, observations = input$observations, exclude_trials = input$exclude_trials, file_name_override = input$matfile$name, use_shiny = TRUE)
       "Finished."
       # stop animation and reenable button
-      shinyjs::enable("btnAnalyze")
       shinyjs::removeClass(id = "UpdateAnimate", class = "loading dots")
+      # shinyjs::enable("btnAnalyze")
     }
     else(requirements())
   })
