@@ -1376,12 +1376,12 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     Add_to_Trial_Archive <- function(row_to_add) {
       cat("Trials... ")
       uuid = row_to_add$UUID
-      experiment = row_to_add %>% .$assignment %>% .[[1]] %>% pluck("experiment")
+      experiment = row_to_add$assignment %>% .[[1]] %>% pluck("experiment")
       variable_name = paste0(experiment, "_archive")
       filename = paste0(projects_folder, variable_name, ".Rdata")
 
       if(file.exists(filename)){
-        load(filename)
+        load(filename, .GlobalEnv)
         assign(variable_name, rbind(get(variable_name), cbind(trial_data, UUID = uuid))) # tack UUID onto row and add row to existing dynamically-named archive
       } else {
         assign(variable_name, cbind(trial_data, UUID = uuid))
@@ -1559,7 +1559,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 }
 
 WriteToArchive <- function(row_added) {
-  experiment = row_added %>% .$assignment %>% .[[1]] %>% pluck("experiment")
+  experiment = row_added$assignment %>% .[[1]] %>% pluck("experiment")
   variable_name = paste0(experiment, "_archive")
   filename = paste0(projects_folder, variable_name, ".Rdata")
 
@@ -1573,6 +1573,8 @@ WriteToArchive <- function(row_added) {
 
 # set up environment
 InitializeMain()
+r = Process_File(file.choose(), name, weight, observations, exclude_trials)
+WriteToArchive(r)
 
 #### either:
 # old_file = FALSE # removed from undergrad r script
