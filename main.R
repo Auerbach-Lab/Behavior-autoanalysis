@@ -19,7 +19,7 @@ InitializeMain <- function() {
   load(paste0(projects_folder, "run_archive.Rdata"), .GlobalEnv)
 }
 
-Process_File <- function(file_to_load, name, weight, observations, exclude_trials = "", old_file = FALSE, ignore_name_check = FALSE) {
+Process_File <- function(file_to_load, name, weight, observations, exclude_trials = "", old_file = FALSE, ignore_name_check = FALSE, file_name_override = NULL) {
 
   Import_Matlab <- function(file_to_load) {
     Unlist_Matlab_To_Dataframe <- function(li) {
@@ -92,39 +92,58 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       }
 
       Get_Rat_Name <- function() {
-        # greedy group: (.*) to strip off as much as possible
-        # then the main capture group which contains
+        if (is.null(file_name_override)) {
+          # greedy group: (.*) to strip off as much as possible
+          # then the main capture group which contains
           # lookbehind for either \ (escaped once because R, and then again cause regex, to \\\\) or / character, specified length 1 because r: (?<=[\\/]{1})
           # important! \\\\ is specific to R, for testing this pattern in e.g. RegExr you have to use \\ but remember to change it back to \\\\ for r!
           # capture of the rat name, lazy to avoid underscores: .+?
           # lookahead for a _: (?=_)
-        print(file_to_load)
-        r = stringr::str_match_all(file_to_load, pattern="(.*)((?<=[\\\\/]{1}).+?(?=_))") %>%
-          unlist(recursive = TRUE) %>%
-          tail (n = 1)
+          pattern = "(.*)((?<=[\\\\/]{1}).+?(?=_))"
+          filename = file_to_load
+        } else {
+          # shiny app provides a path to a temporary file and renames the file itself, so we have to work around that behavior
+          # we could alternatively use the system file loader, but that has other downsides - it's difficult to get it to remember the current folder, and it doesn't give feedback of a file selected
+          pattern = "^.+?(?=_)" # beginning up to underscore, lazy
+          filename = file_name_override
+          ignore_name_check = TRUE
+        }
+        print(filename)
 
-        r_compare = r %>% str_replace_all(" ", "") %>% str_to_lower()
-        if(! ignore_name_check) {
+        r = stringr::str_match_all(filename, pattern = pattern) %>%
+          unlist(recursive = TRUE) %>%
+          tail(n = 1)
+        r_compare = r %>%
+          str_replace_all(" ", "") %>%
+          str_to_lower()
+
+        if (!ignore_name_check) {
           name_compare = name %>% str_replace_all(" ", "") %>% str_to_lower() # from undergraduate.R
         }
 
-        if (rlang::is_empty(r)) stop("ERROR: system filename improper: ", file_to_load)
+        if (rlang::is_empty(r)) stop("ERROR: system filename improper: ", filename)
         if (!ignore_name_check && r_compare != name_compare) stop(paste0("ABORT: Rat name given (", name_compare, ") does not match chosen file (", r_compare, ")."))
 
         return(r)
       }
 
       Get_Box_Number <- function() {
+        if (is.null(file_name_override)) {
+          filename = file_to_load
+        } else {
+          filename = file_name_override
+        }
+
         # greedy group: (.*) to strip off as much as possible
         # then the main capture group which contains
         # lookbehind for a _BOX#: (?<=_BOX#)
         # capture of the box number: [:digit:]+
         # lookahead for the extension: (?=.mat)
-        r = stringr::str_match_all(file_to_load, pattern="(.*)((?<=_BOX#)[:digit:]+(?=.mat))") %>%
+        r = stringr::str_match_all(filename, pattern="(.*)((?<=_BOX#)[:digit:]+(?=.mat))") %>%
           unlist(recursive = TRUE) %>%
           tail (n = 1) %>%
           as.numeric()
-        if(rlang::is_empty(r)) stop("ERROR: system filename improper: ", file_to_load)
+        if(rlang::is_empty(r)) stop("ERROR: system filename improper: ", filename)
         return(r)
       }
 
@@ -1248,7 +1267,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
   Get_Rat_ID = function(check_name) {
     date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
     rats_with_name <- rat_archive %>%
-      dplyr::filter(Rat_name == check_name)
+      dplyr::filter(Rat_name %>% str_to_upper() == check_name %>% str_to_upper())
     if(nrow(rats_with_name) == 0) {
       stop(paste0("ABORT: No rats with name ", check_name, " found in archive."))
     } else {
