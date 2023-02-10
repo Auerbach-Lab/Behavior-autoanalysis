@@ -1478,6 +1478,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     Add_to_Run_Archive(row_to_add)
     Add_to_Trial_Archive(row_to_add)
     if (!old_file) {Clear_Assignment(row_to_add$rat_ID)}
+    return(row_to_add)
   }
 
   Generate_Chart <- function() {
@@ -1543,9 +1544,9 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     # commit to folding in - display warnings and get user input to override them (and submit to master dataframe), or give option to commit to invalid/storage-only dataframe
     # curate data prior to folding in, adding disqualifier flags etc (but omitted trials are always totally gone)
     # Report_Warnings_and_Confirm()
-    Add_to_Archives()
+    row_added = Add_to_Archives()
     writeLines("")
-    writeLines(paste0("Run ", run_properties$UUID, " of ", run_properties$rat_name, " (#", Get_Rat_ID(run_properties$rat_name), ") successfully added to archives (in environment and on disk)."))
+    writeLines(paste0("Run ", row_added$UUID, " of ", row_added$rat_name, " (#", row_added$rat_ID, ") added to archives (in environment ONLY)."))
 
     #Generate_Chart()
   }
@@ -1554,7 +1555,18 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
   # pop up charts and stuff for undergrads to sign off on (where do the comments they provide on 'no' get saved? text file alongside individual exported graph image? dedicated df? master df in one long appended cell for all comments to graphs?)
 
   writeLines("") #TODO change all cats to writelines
-  return(invisible(NULL))
+  return(row_added)
+}
+
+WriteToArchive <- function(row_added) {
+  experiment = row_added %>% .$assignment %>% .[[1]] %>% pluck("experiment")
+  variable_name = paste0(experiment, "_archive")
+  filename = paste0(projects_folder, variable_name, ".Rdata")
+
+  write.csv(rat_archive, paste0(projects_folder, "rat_archive.csv"), row.names = FALSE)
+  save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
+  save(list = get("variable_name"), file = filename, ascii = TRUE, compress = FALSE)
+  writeLines(paste0("Run ", row_added$UUID, " of ", row_added$rat_name, " (#", row_added$rat_ID, ") saved to disk."))
 }
 
 # MAIN workflow ---------------------------------------------------------
