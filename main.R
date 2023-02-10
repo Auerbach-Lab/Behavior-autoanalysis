@@ -1573,8 +1573,8 @@ WriteToArchive <- function(row_added) {
 
 # set up environment
 InitializeMain()
-r = Process_File(file.choose(), name, weight, observations, exclude_trials)
-WriteToArchive(r)
+#r = Process_File(file.choose(), name, weight, observations, exclude_trials)
+#WriteToArchive(r)
 
 #### either:
 # old_file = FALSE # removed from undergrad r script
