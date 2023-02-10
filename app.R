@@ -13,7 +13,7 @@ library(shinyjs)
 ui <- fluidPage(
   useShinyFeedback(),
   useShinyjs(),
-  theme = shinythemes::shinytheme("cerulean"),
+  theme = shinythemes::shinytheme("spacelab"),
   #shinythemes::themeSelector(),
   titlePanel("PiedPiper", windowTitle = "PiedPiper"),
   sidebarLayout(
@@ -21,7 +21,7 @@ ui <- fluidPage(
       textInput("name", "Rat name", placeholder = "Blue4"),
       numericInput("weight", "Weight (g)", value = 0, min = 0),
       textAreaInput("observations", "Observations from run", rows = 5,
-                    placeholder = "Good hits. Good misses. Only real FAs.\n2 CRs back to back.\nBreak from 35-47m, with no jams."),
+                    placeholder = "Good hits. Good misses.\nOnly real FAs.\n2 CRs back to back.\nBreak 35-47m with no jams."),
       textInput("exclude_trials", "Trials to skip", placeholder = "2, 120-126, 201 (or blank)")
     ),
     mainPanel(width = 9,
