@@ -1575,11 +1575,32 @@ Generate_Chart <- function(rat_name, ratID) {
     ggplot(rat_runs, aes(x = date_asDate, y = weight)) +
     geom_line(color = "grey", linewidth = 2) +
     geom_point(shape=21, color="black", fill="#69b3a2", size=5) +
+    scale_x_date(date_breaks = "1 month", date_labels = "%b%n%y") +
     ggtitle(paste0(rat_name, " Weight")) +
     theme_ipsum_es() +
     labs(x = NULL, y = NULL)
   #dev.new(width = 10, height = 6, noRStudioGD = TRUE) # This actually pops out. Size is ignored unless you tell RStudio not to help with the noRstudioGD argument.
   #print(weight_chart, vp = NULL) # vp is viewport https://ggplot2.tidyverse.org/reference/print.ggplot.html
+  
+  # Weight vs. Trials
+  weight_and_trials_chart =
+    rat_runs %>% unnest_wider(stats) %>% filter(date > str_remove_all(Sys.Date()-30, "-")) %>%
+      ggplot( aes(x = date_asDate, y = weight)) +
+      geom_smooth(color = "grey", linewidth = 2,
+                  se = FALSE, na.rm = TRUE, method = "lm", formula= y~x) +
+      geom_point(shape=21, color="black", fill="#69b3a2", size=5) +
+      geom_text(aes(x = min(date_asDate) + 1, y = max(weight) + 10), label = "Weight", color="#69b3a2")+
+      geom_smooth(aes(x = date_asDate, y = trial_count),
+                  color = "black", linewidth = 2,
+                  se = FALSE, na.rm = TRUE, method = "lm", formula= y~x) +
+      # Generally these points aren't helpful and just distort the graph
+      # geom_point(aes(x = date_asDate, y = trial_count),
+      #            shape=24, color="black", fill="steelblue", size=5) +
+      geom_text(aes(x = min(date_asDate) + 1, y = mean(trial_count) + 3), label = "Trial trend")+
+      ggtitle(paste0(rat_name1, " 2 week Weight vs. Trail count")) +
+      scale_y_continuous(expand = c(0.3, 0)) +
+      theme_ipsum_es() +
+      labs(x = NULL, y = NULL)
 
   # writeLines("")
   # writeLines("Does this weight look OK? ")
