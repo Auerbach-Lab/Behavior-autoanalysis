@@ -33,7 +33,8 @@ ui <- fluidPage(
       textOutput("text1"),
       textOutput("text2"),
       textOutput("text3"),
-      withLoader(tableOutput('row'), type = "html", loader = "dnaspin")
+      withLoader(tableOutput("warnings"), type = "html", loader = "dnaspin"),
+      plotOutput("plotWeight")
     )
   ),
   tags$style(HTML("tbody { color: #DD0000; font-family: monospace; white-space: pre}")),
@@ -189,9 +190,14 @@ server <- function(input, output, session) {
     if (requirements() == "Ready for analysis.") {
       v$pushed = TRUE
 
-      # start animation and disable button
+      # start animation and disable inputs
       shinyjs::addClass(id = "UpdateAnimate", class = "loading dots")
       shinyjs::disable("btnAnalyze")
+      shinyjs::disable("name")
+      shinyjs::disable("weight")
+      shinyjs::disable("observations")
+      shinyjs::disable("exclude_trials")
+      shinyjs::disable("matfile")
     }
   })
 
@@ -217,11 +223,19 @@ server <- function(input, output, session) {
   #   input$matfile$name
   # })
 
-  output$row <- renderTable(striped = TRUE, hover = TRUE, sanitize.text.function = identity,
+  output$warnings <- renderTable(striped = TRUE, hover = TRUE, sanitize.text.function = identity,
   {
     req(input$btnAnalyze)
     req(v$row)
     v$row %>% .$warnings_list %>% unlist() %>% data.frame(Warnings = .) %>% mutate(Warnings = str_replace_all(Warnings, "\\n", "<br> "))
+  })
+
+  output$plotWeight <- renderPlot({
+    req(input$btnAnalyze)
+    req(v$row) #TODO at the moment I'm constructing a fake vrow to feed to warnings for when the file is already loaded, but this thinks it has a real one and dies. Check existence of columns or something and skip evaluation if they're absent.
+    rat_name = v$row %>% .$rat_name
+    rat_ID = v$row %>% .$rat_ID
+    Generate_Chart(rat_name, rat_ID)
   })
 
 }
