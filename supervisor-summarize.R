@@ -606,14 +606,21 @@ Workbook_Writer <- function() {
 
         } else if (phase_current == "Octave") {
           r = r %>% select(-threshold)
+          
 
           #TODO NOT MVP convert to 1/12 of octaves based on summary kHz range
           df_discrimination = r %>% filter(task != "Training") %>%
-            unnest(FA_detailed) %>%
-            group_by(date) %>%
-            do(mutate(., Oct = c(1:6), dprime = max(dprime))) %>% # mutate(Oct_position = c(1:6)) %>% print) %>%
-            select(-FA, -trials, -`Freq (kHz)`) %>%
-            pivot_wider(names_from = Oct, values_from = FA_percent_detailed)
+            unnest(FA_detailed)
+          
+          if(nrow(df_discrimination) > 0){
+            df_discrimination = 
+              df_discrimination %>%
+              group_by(date) %>%
+              do(mutate(., Oct = c(1:6), dprime = max(dprime))) %>% # mutate(Oct_position = c(1:6)) %>% print) %>%
+              select(-FA, -trials, -`Freq (kHz)`) %>%
+              pivot_wider(names_from = Oct, values_from = FA_percent_detailed)
+          }
+
 
           df_training = r %>% filter(task == "Training") %>% select(-FA_detailed)
 
@@ -622,8 +629,7 @@ Workbook_Writer <- function() {
             dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
             tidyr::unnest_wider(assignment) %>%
             tidyr::unnest_wider(stats) %>%
-            select(task, detail, date, dprime) %>%
-            dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4)))
+            select(task, detail, date, dprime)
 
           df_training = left_join(df_training, x, by = c("task", "detail", "date"))
 
@@ -844,7 +850,7 @@ Workbook_Writer <- function() {
   Define_Styles()
   Setup_Workbook()
 
-  #Add_Rat_To_Workbook(186)
+  # Add_Rat_To_Workbook(141)
   #OR
   rat_archive %>%
     filter(is.na(end_date)) %>%
