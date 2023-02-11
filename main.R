@@ -1585,22 +1585,63 @@ Generate_Chart <- function(rat_name, ratID) {
   # Weight vs. Trials
   weight_and_trials_chart =
     rat_runs %>% unnest_wider(stats) %>% filter(date > str_remove_all(Sys.Date()-30, "-")) %>%
-      ggplot( aes(x = date_asDate, y = weight)) +
-      geom_smooth(color = "grey", linewidth = 2,
-                  se = FALSE, na.rm = TRUE, method = "lm", formula= y~x) +
-      geom_point(shape=21, color="black", fill="#69b3a2", size=5) +
-      geom_text(aes(x = min(date_asDate) + 1, y = max(weight) + 10), label = "Weight", color="#69b3a2")+
-      geom_smooth(aes(x = date_asDate, y = trial_count),
-                  color = "black", linewidth = 2,
-                  se = FALSE, na.rm = TRUE, method = "lm", formula= y~x) +
-      # Generally these points aren't helpful and just distort the graph
-      # geom_point(aes(x = date_asDate, y = trial_count),
-      #            shape=24, color="black", fill="steelblue", size=5) +
-      geom_text(aes(x = min(date_asDate) + 1, y = mean(trial_count) + 3), label = "Trial trend")+
-      ggtitle(paste0(rat_name1, " 2 week Weight vs. Trail count")) +
-      scale_y_continuous(expand = c(0.3, 0)) +
-      theme_ipsum_es() +
-      labs(x = NULL, y = NULL)
+    ggplot() +
+    geom_smooth(aes(x = date_asDate, y = weight, color = "Weight"),
+                color = "grey", linewidth = 2,
+                se = FALSE, na.rm = TRUE, method = "lm", formula= y~x,
+                show.legend = TRUE) +
+    geom_point(aes(x = date_asDate, y = weight),
+               shape=21, color="black", fill="#69b3a2", size=5) +
+    geom_text(aes(x = min(date_asDate) + 1, y = max(weight) + 15), label = "Weight", color="#69b3a2")+
+    geom_smooth(aes(x = date_asDate, y = trial_count, color = "Trials"),
+                color = "black", linewidth = 2, fill="steelblue",
+                se = FALSE, na.rm = TRUE, method = "lm", formula= y~x,
+                show.legend = TRUE) +
+    geom_text(aes(x = min(date_asDate) + 1, y = head(trial_count, n = 1)), label = "Trial trend")+
+    ggtitle(paste0(name, " 30 days Weight vs. Trail count")) +
+    theme_ipsum_es() +
+    labs(x = NULL, y = NULL)
+  
+  
+  # Reaction time graph
+  Rxn_today = 
+    run_archive %>% dplyr::filter(rat_name == name) %>%
+    arrange(desc(date)) %>%
+    head(n = 1) %>%
+    unnest_wider(stats) %>% 
+    unnest(reaction) %>%
+    mutate(Rxn = Rxn * 1000)
+  
+  test_graph_Rxn =
+    run_archive %>% dplyr::filter(rat_name == name) %>%
+    unnest_wider(stats) %>% 
+    # Omit invalid days
+    filter(invalid != "TRUE") %>%
+    # Match today's frequency
+    unnest_wider(summary) %>%
+    arrange(desc(date)) %>%
+    filter(`Freq (kHz)` %in% Rxn_today$`Freq (kHz)`) %>%
+    # Omit days with > 45% FA, i.e. guessing
+    filter(FA_percent < user_settings$FA_cutoff) %>%
+    # Get Reaction times:
+    select(all_of(c("date", "rat_name", "rat_ID", "reaction"))) %>%
+    unnest(reaction) %>%
+    mutate(Rxn = Rxn * 1000) %>%
+    ggplot(aes(x = `Inten (dB)`, y = Rxn)) +
+    stat_summary(aes(color = "Average"),
+                 fun = mean,
+                 fun.min = function(x) mean(x) - sd(x),
+                 fun.max = function(x) mean(x) + sd(x),
+                 geom = "errorbar", linewidth = 2, width = 1.5) +
+    stat_summary(aes(color = "Average"), fun = mean, geom = "line", linewidth = 2) +
+    stat_summary(fun = mean, geom = "point", shape=24, color="black", fill="black", size=5) +
+    geom_line(data = Rxn_today, aes(color = "Today"), linewidth = 1.5) +
+    geom_point(data = Rxn_today, shape=21, color="black", fill = "#69b3a2", size = 5) +
+    ggtitle(paste0(name, " Reaction Curve Check")) +
+    scale_color_manual(values = c("Today" = "#69b3a2", "Average" = "black"), name = "") +
+    theme_ipsum_es() +
+    theme(legend.position = "bottom") +
+    labs(x = NULL, y = NULL)
 
   # writeLines("")
   # writeLines("Does this weight look OK? ")

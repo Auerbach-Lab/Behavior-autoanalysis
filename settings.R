@@ -48,10 +48,13 @@ user_settings = list(
   minimum_hit_percent = 0.850,
   maximum_FA_percent = 0.200,
   maximum_attempts_per_trial = 2.0,
+  
+  # FA cutoff for analysis
+  FA_cutoff = .40
 
   # weight change as percent of bodyweight
   maximum_weight_change_daily_percent = 0.05,
-  maximum_weight_change_overall_percent = 0.25,
+  maximum_weight_change_overall_percent = 0.15,
 
   # positions for the supporting elements in the supervisor spreadsheet
   dynamic_list_length = 7,
