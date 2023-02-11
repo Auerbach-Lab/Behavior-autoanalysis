@@ -1504,32 +1504,6 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     return(row_to_add)
   }
 
-  Generate_Chart <- function() {
-    ratID = Get_Rat_ID(run_properties$rat_name)
-    rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID)
-    rat_runs = rat_runs %>% mutate(date_asDate = lubridate::ymd(date))
-    # thoughts - will want to standardize y axis to e.g. 80%-105% of baseline weight so that 'low' looks the same for everyone?
-    # -- one problem with that is that if another rat's weight IS entered instead, it could be drastically above or below those bounds
-    # I'm not bothering to figure out how to customize the axis labels right now.
-    weight_chart =
-      ggplot(rat_runs, aes(x = date_asDate, y = weight)) +
-      geom_line(color = "grey", linewidth = 2) +
-      geom_point(shape=21, color="black", fill="#69b3a2", size=5) +
-      ggtitle(paste0(run_properties$rat_name, " Weight")) +
-      theme_ipsum_es()
-    dev.new(width = 10, height = 6, noRStudioGD = TRUE) # This actually pops out. Size is ignored unless you tell RStudio not to help with the noRstudioGD argument.
-    print(weight_chart, vp = NULL)
-    # writeLines("")
-    # writeLines("Does this weight look OK? ")
-    # weight_ok <- if(menu(c("Yes", "No")) == 1) TRUE else FALSE
-    # problem <- NA
-    # if (!weight_ok) {
-    #   problem <- readline(prompt = "Please describe the problem: ")
-    # }
-    # initials <- readline(prompt = "Your initials: ")
-    # dev.off()
-  }
-
 # PROCESS FILE workflow ---------------------------------------------------------
   warnings_list <- list()
 
@@ -1588,6 +1562,35 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
                   UUID = run_properties$UUID))
   }
   return(row_added)
+}
+
+Generate_Chart <- function(rat_name, ratID) {
+  #ratID = Get_Rat_ID(run_properties$rat_name)
+  rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID)
+  rat_runs = rat_runs %>% mutate(date_asDate = lubridate::ymd(date))
+  # thoughts - will want to standardize y axis to e.g. 80%-105% of baseline weight so that 'low' looks the same for everyone?
+  # -- one problem with that is that if another rat's weight IS entered instead, it could be drastically above or below those bounds
+  # I'm not bothering to figure out how to customize the axis labels right now.
+  weight_chart =
+    ggplot(rat_runs, aes(x = date_asDate, y = weight)) +
+    geom_line(color = "grey", linewidth = 2) +
+    geom_point(shape=21, color="black", fill="#69b3a2", size=5) +
+    ggtitle(paste0(rat_name, " Weight")) +
+    theme_ipsum_es() +
+    labs(x = NULL, y = NULL)
+  #dev.new(width = 10, height = 6, noRStudioGD = TRUE) # This actually pops out. Size is ignored unless you tell RStudio not to help with the noRstudioGD argument.
+  #print(weight_chart, vp = NULL) # vp is viewport https://ggplot2.tidyverse.org/reference/print.ggplot.html
+
+  # writeLines("")
+  # writeLines("Does this weight look OK? ")
+  # weight_ok <- if(menu(c("Yes", "No")) == 1) TRUE else FALSE
+  # problem <- NA
+  # if (!weight_ok) {
+  #   problem <- readline(prompt = "Please describe the problem: ")
+  # }
+  # initials <- readline(prompt = "Your initials: ")
+  # dev.off()
+  return(weight_chart)
 }
 
 WriteToArchive <- function(row_added) {
