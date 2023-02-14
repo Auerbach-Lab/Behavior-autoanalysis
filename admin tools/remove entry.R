@@ -1,22 +1,27 @@
 #TODO: make this work filter_arguments = 
 bad_rats = c("Purple4")
 bad_date = "20230203"
+# Restore assignment from the 'old' setting
 restore = TRUE
+# Backs up loseable data such as comments, weight, omit list
+backup_data = TRUE
 
 
-# Functions ---------------------------------------------------------------
+# Function ---------------------------------------------------------------_
 clean_archives <- function(entry) {
   df = run_archive %>% filter(UUID == entry)
   writeLines(paste0("Cleaning ", df$rat_name, "'s entry on ", df$date, " ..."))
   
-# Backup loseable data
-  key_data = df %>% select(all_of(c("date", "rat_ID", "rat_name", "weight", "omit_list", "comments"))) %>% 
-    mutate(date_removed = Sys.Date() %>% as.character(),
-           omit_list = as.character(omit_list))
-  deleted_entries = read.csv(paste0(projects_folder, "deleted_entries.csv"))
-  deleted_entries = bind_rows(deleted_entries, key_data)
-  write.csv(deleted_entries, paste0(projects_folder, "deleted_entries.csv"), row.names = FALSE)
-  writeLines("\tData backed up")
+# Backup lose-able data
+  if(backup_data) {
+    key_data = df %>% select(all_of(c("date", "rat_ID", "rat_name", "weight", "omit_list", "comments"))) %>% 
+      mutate(date_removed = Sys.Date() %>% as.character(),
+             omit_list = as.character(omit_list))
+    deleted_entries = read.csv(paste0(projects_folder, "deleted_entries.csv"))
+    deleted_entries = bind_rows(deleted_entries, key_data)
+    write.csv(deleted_entries, paste0(projects_folder, "deleted_entries.csv"), row.names = FALSE)
+    writeLines("\tData backed up")
+  }
   
 # Wipe from trials archive:
   experiment = df$assignment %>% .[[1]] %>% pluck("experiment")
