@@ -1581,7 +1581,7 @@ Generate_Chart <- function(rat_name, ratID) {
     labs(x = NULL, y = NULL)
   #dev.new(width = 10, height = 6, noRStudioGD = TRUE) # This actually pops out. Size is ignored unless you tell RStudio not to help with the noRstudioGD argument.
   #print(weight_chart, vp = NULL) # vp is viewport https://ggplot2.tidyverse.org/reference/print.ggplot.html
-  
+
   # Weight vs. Trials
   weight_and_trials_chart =
     rat_runs %>% unnest_wider(stats) %>% filter(date > str_remove_all(Sys.Date()-30, "-")) %>%
@@ -1601,20 +1601,20 @@ Generate_Chart <- function(rat_name, ratID) {
     ggtitle(paste0(name, " 30 days Weight vs. Trail count")) +
     theme_ipsum_es() +
     labs(x = NULL, y = NULL)
-  
-  
+
+
   # Reaction time graph
-  Rxn_today = 
+  Rxn_today =
     run_archive %>% dplyr::filter(rat_name == name) %>%
     arrange(desc(date)) %>%
     head(n = 1) %>%
-    unnest_wider(stats) %>% 
+    unnest_wider(stats) %>%
     unnest(reaction) %>%
     mutate(Rxn = Rxn * 1000)
-  
+
   test_graph_Rxn =
     run_archive %>% dplyr::filter(rat_name == name) %>%
-    unnest_wider(stats) %>% 
+    unnest_wider(stats) %>%
     # Omit invalid days
     filter(invalid != "TRUE") %>%
     # Match today's frequency
@@ -1652,7 +1652,7 @@ Generate_Chart <- function(rat_name, ratID) {
   # }
   # initials <- readline(prompt = "Your initials: ")
   # dev.off()
-  return(weight_chart)
+  return(weight_and_trials_chart)
 }
 
 WriteToArchive <- function(row_added) {

@@ -238,7 +238,10 @@ server <- function(input, output, session) {
     Generate_Chart(rat_name, rat_ID)
   })
 
+  # TODO next steps are providing a way for them to sign off on weight looking good with initials and comment field (where will this information go?)
 }
 
+
 source(paste0(projects_folder, "main.R"))
+options(shiny.host = "192.168.1.113")
 shinyApp(ui, server)
