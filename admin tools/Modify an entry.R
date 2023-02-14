@@ -21,6 +21,10 @@ run_archive[line_to_modify,]$assignment[[1]]$detail #= "Mixed"
 run_archive[line_to_modify,]$weight #= 239
 
 
+# Warnings list modification ----------------------------------------------
+run_archive[line_to_modify,]$warnings_list[[1]] #= run_archive[line_to_modify,]$warnings_list[[1]][-1]
+
+
 # Save modification -------------------------------------------------------
 save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
 
