@@ -629,6 +629,7 @@ Workbook_Writer <- function() {
             dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
             tidyr::unnest_wider(assignment) %>%
             tidyr::unnest_wider(stats) %>%
+            unnest(dprime) %>%
             select(task, detail, date, dprime)
 
           df_training = left_join(df_training, x, by = c("task", "detail", "date"))
@@ -850,13 +851,13 @@ Workbook_Writer <- function() {
   Define_Styles()
   Setup_Workbook()
 
-  # Add_Rat_To_Workbook(141)
+  Add_Rat_To_Workbook(141)
   #OR
-  rat_archive %>%
-    filter(is.na(end_date)) %>%
-    filter(is.na(Assigned_Filename)) %>%
-    .$Rat_ID %>%
-    lapply(Add_Rat_To_Workbook)
+  # rat_archive %>%
+  #   filter(is.na(end_date)) %>%
+  #   filter(is.na(Assigned_Filename)) %>%
+  #   .$Rat_ID %>%
+  #   lapply(Add_Rat_To_Workbook)
 
   old_wd = getwd()
   setwd(projects_folder)
