@@ -40,6 +40,7 @@ user_settings = list(
     "Gap (Standard)" = 240,
     "Gap Mixed Duration" = 330,
 
+    "Training - Oddball" = 240,
     "Oddball (Standard)" = 330,
     "Oddball (Uneven Odds)" = 330,
     "Oddball (Uneven Odds & Catch)" = 330,

@@ -168,8 +168,13 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       if (nrow(stim_type) > 1) {
         if ("train" %in% stim_type$`Stim Source`) {
           stim_type = "train"
+        } 
+        else {
+          warn = paste0("WARNING: Multiple non-oddball stim types: ", stim_type)
+          warning(paste0(warn, "\n"))
+          warnings_list <<- append(warnings_list, warn)
+          stim_type = stim_encoding_table %>% filter(Type == "1") %>% .$`Stim Source`
         }
-        else stop(paste0("ABORT: Multiple non-oddball stim types: ", stim_type))
       } else {
         stim_type = stim_type %>% as.character()
       }
@@ -518,13 +523,16 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       has_only_one_frequency = length(unique(run_properties$stim_encoding_table$`Freq (kHz)`)) == 1
       # Does the file have only a single intensity (dB), i.e. training
       has_one_dB = unique(run_properties$summary$dB_min == run_properties$summary$dB_max)
+      # 50ms is used for Oddball training while 300ms is used for Octave training
+      short_duration = run_properties$summary %>% unnest(duration) %>% .$`Dur (ms)` %>% unique == 50
 
       # For tonal files (octaves, or mainly 4-32kHz)
       # DO NOT CHANGE THE TEXTUAL DESCRIPTIONS OR YOU WILL BREAK COMPARISONS LATER
       if (!has_audible_NoGo & has_different_dB_ranges_for_frequencies) r = "Tone (Thresholding)"
       else if (has_one_dB & has_only_one_frequency) r = "Training - Tone"
       else if (has_audible_NoGo & has_more_than_one_NoGo) r = "Octave"
-      else if (has_audible_NoGo & !has_more_than_one_NoGo) r = "Training - Octave"
+      else if (has_audible_NoGo & !has_more_than_one_NoGo & short_duration) r = "Training - Oddball"
+      else if (has_audible_NoGo & !has_more_than_one_NoGo & !short_duration) r = "Training - Octave"
       else if (!has_audible_NoGo & has_only_one_frequency ) r = "Tone (Single)"
       else if (!has_audible_NoGo) r =  "Tone (Standard)"
       else (stop("ABORT: Unknown tonal file type."))
@@ -643,6 +651,21 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         else stop("ABORT: Tone (Thresholding): Unrecognized dB_step_size (", dB_step_size,"). Aborting.")
         rat_ID = stringr::str_split(run_properties$stim_filename, "_") %>% unlist() %>% .[1]
         computed_file_name = paste0(rat_ID, "_", go_kHz_range, "_", go_dB_range, "_", run_properties$duration, "ms_", run_properties$lockout, "s")
+      }
+      else if (analysis$type == "Training - Oddball")
+      {
+        go_kHz = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)`, "kHz_")
+        nogo = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$`Freq (kHz)`)
+        nogo_kHz = if_else(nogo == 0, "BBN_", paste0(nogo, "kHz_")) 
+        go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB_")
+        nogo_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$`Inten (dB)`, "dB_")
+        catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number)
+        
+        computed_file_name = paste0(go_kHz, go_dB, nogo_kHz, nogo_dB, run_properties$duration, "ms_", run_properties$lockout, "s")
+        if (catch_number != 3) computed_file_name = paste0(computed_file_name, "_c", catch_number)
+        if (run_properties$nogo_max_touching != 1) computed_file_name = paste0(computed_file_name, "_NG", run_properties$nogo_max_touching)
+        
+        analysis$minimum_trials <<- user_settings$minimum_trials$`Training - Oddball`
       }
 
       else if (analysis$type == "Training - Tone") {
@@ -1147,7 +1170,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
                                                                            n_cr = CRs,
                                                                            adjusted = TRUE) %>% .$dprime)
 
-    if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
+    if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Training - Oddball", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
       TH_by_frequency_and_duration = NA
     } else {
       TH_by_frequency_and_duration = Calculate_Threshold()
@@ -1567,5 +1590,5 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 # set up environment
 InitializeMain()
 
-# Process_File(file.choose(), name = name, weight = weight, observations = observations, exclude_trials = exclude_trials)
+Process_File(file.choose(), name = name, weight = weight, observations = observations, exclude_trials = exclude_trials)
 
