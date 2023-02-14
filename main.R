@@ -658,7 +658,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           delay_in_filename <<- TRUE
         }
         else if (catch_number > 0) {
-          if(rat_archive[rat_archive$Rat_name == run_properties$rat_name,] == "Oddball") {
+          if(rat_archive[rat_archive$Rat_name == run_properties$rat_name,]$Assigned_Detail == "Oddball" | rat_archive[rat_archive$Rat_name == run_properties$rat_name,]$Assigned_Phase == "Octave" ) {
             computed_file_name = paste0(computed_file_name, run_properties$duration, "ms_", lockout, "s")
             delay_in_filename <<- FALSE
             analysis$minimum_trials <<- user_settings$minimum_trials$`Tone (Single)`
