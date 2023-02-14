@@ -851,13 +851,13 @@ Workbook_Writer <- function() {
   Define_Styles()
   Setup_Workbook()
 
-  Add_Rat_To_Workbook(141)
+  # Add_Rat_To_Workbook(141)
   #OR
-  # rat_archive %>%
-  #   filter(is.na(end_date)) %>%
-  #   filter(is.na(Assigned_Filename)) %>%
-  #   .$Rat_ID %>%
-  #   lapply(Add_Rat_To_Workbook)
+  rat_archive %>%
+    filter(is.na(end_date)) %>%
+    filter(is.na(Assigned_Filename)) %>%
+    .$Rat_ID %>%
+    lapply(Add_Rat_To_Workbook)
 
   old_wd = getwd()
   setwd(projects_folder)
