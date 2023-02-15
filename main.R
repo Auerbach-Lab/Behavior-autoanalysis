@@ -815,13 +815,14 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       }
       else
       {
-        go_dB_range = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_min %>% unique(), "-",
-                             run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_max %>% unique(), "dB")
-
+        go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)` %>% unique(), "dB")
+        
         has_duration_range = nrow(unique(run_properties$duration)) > 1
         if (has_duration_range) {
-          duration = paste0(min(run_properties$duration), "-",
-                            max(run_properties$duration), "")
+          duration = run_properties$stim_encoding_table %>%
+            filter(Type != 0) %>%
+            transmute(x = paste0(min(`Dur (ms)`), "-",
+                                 max(`Dur (ms)`), "")) %>% .$x %>% unique()
         } else {
           duration = run_properties$duration
         }
@@ -832,10 +833,9 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
         # Note there is not BG test here because there is expected to always be background in a Gap Detection file.
 
-        computed_file_name = paste0("gap_", go_dB_range, "_", duration, "ms_", run_properties$lockout, "s")
+        computed_file_name = paste0("gap_", go_dB, "_", duration, "ms_", run_properties$lockout, "s")
         if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
         if (has_TR) computed_file_name = paste0(computed_file_name, "_", "TR", run_properties$trigger_sensitivity, "ms")
-        if (has_BG) computed_file_name = paste0(computed_file_name, "_", BG)
       }
       return(computed_file_name)
     }
@@ -1150,6 +1150,30 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
       return(r)
     }
+    
+    Calculate_FA_Detailed_Gap <- function() {
+      dprime_table <-
+        trial_data %>%
+        dplyr::filter(Block_number != 1) %>%
+        group_by(`Dur (ms)`, Type, `Freq (kHz)`, `Inten (dB)`, Response) %>%
+        summarise(count = n(), .groups = "keep") %>%
+        spread(Response, count) %>% #View
+        ungroup()
+      
+      dprime_table = Format_for_Psycho(dprime_table) # type = 0 for inverted (no-go) d'
+      dprime_data = Calculate_dprime(dprime_table) %>%
+        rename(`Freq (kHz)` = Freq)
+      
+      r = trial_data %>%
+        filter(Trial_type == 0) %>% # select no-go trials
+        group_by(`Freq (kHz)`) %>%
+        summarise(FA = sum(Response == 'FA'),
+                  trials = n(),
+                  FA_percent_detailed = FA/trials) %>%
+        left_join(dprime_data %>% select(`Freq (kHz)`, dprime), by = "Freq (kHz)")
+      
+      return(r)
+    }
 
 
     # Statistics Workflow -----------------------------------------------------
@@ -1172,7 +1196,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
                                                                            n_cr = CRs,
                                                                            adjusted = TRUE) %>% .$dprime)
 
-    if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Training - Oddball", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
+    if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Training - Oddball", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)", "Gap (Standard)")) {
       TH_by_frequency_and_duration = NA
     } else {
       TH_by_frequency_and_duration = Calculate_Threshold()
@@ -1181,6 +1205,8 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       FA_detailed = Calculate_FA_Detailed_Octave()
     } else if(analysis$type %in% c("Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
       FA_detailed = Calculate_FA_Detailed_Oddball()
+    } else if(analysis$type %in% c("Gap (Standard)")) {
+      FA_detailed = Calculate_FA_Detailed_Gap()
     } else {
       FA_detailed = NA
     }
