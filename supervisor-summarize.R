@@ -410,6 +410,19 @@ Workbook_Writer <- function() {
                         .groups = "drop")
           }
         }
+        
+        
+        # Oddball Training/Reset PreHL
+        if (phase_current == "Tones" & task_current %in% c("Training", "Reset") & pre_HL & detail_current == "Oddball") {
+          count_df = rat_runs %>%
+            tidyr::unnest_wider(assignment) %>%
+            dplyr::filter(detail == "Oddball") %>% # keeping all tasks
+            group_by(task) %>%
+            summarise(task = unique(task), detail = detail_current,
+                      date = tail(date, 1), n = n(),
+                      condition = "baseline",
+                      .groups = "drop")
+        }
 
         # Oddball
         # df_basecase = length of most recent streak with task==basecase
@@ -484,7 +497,7 @@ Workbook_Writer <- function() {
             select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`) %>% #TODO check that Frequency is actually go tone positional data
             distinct()
         } else {
-          if (phase_current == "Octave") {
+          if (phase_current == "Octave" | detail_current == "Oddball") {
             r = r %>% unnest(reaction) %>%
               select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
           } else {
@@ -559,7 +572,7 @@ Workbook_Writer <- function() {
             relocate(THrange, .after = TH) %>%
             relocate(Spacer1, .after = mean_attempts_per_trial) %>%
             select(-FA_detailed)
-        } else if (phase_current == "Tones") {
+        } else if (phase_current == "Tones" & detail_current != "Oddball") {
 
           r = r %>% unnest(threshold) %>%
             filter(Freq != 0 & Dur == min_duration) %>%
@@ -604,6 +617,21 @@ Workbook_Writer <- function() {
             relocate(`4`, `8`, `16`, `32`, .after = Spacer3)
 
 
+        } else if (phase_current == "Tones" & detail_current == "Oddball") {
+          r = r %>% filter(detail == "Oddball") %>%
+            select(-threshold) %>%
+            select(-FA_detailed)
+          
+          x = rat_runs %>%
+            tidyr::unnest_wider(assignment) %>%
+            filter(detail == detail_current) %>%
+            tidyr::unnest_wider(stats) %>%
+            unnest(dprime) %>%
+            select(task, detail, date, dprime)
+            
+            
+          r = left_join(r, x, by = c("task", "detail", "date"))
+          
         } else if (phase_current == "Octave") {
           r = r %>% select(-threshold)
           
@@ -691,7 +719,7 @@ Workbook_Writer <- function() {
           r = cbind(r, c("", "TH"))
           r = cbind(r, c("", "{TH}"))
         }
-        else if (phase_current == "Tones") {
+        else if (phase_current == "Tones" & detail_current != "Oddball") {
           r = cbind(r, c("                       TH", "4"))
           r = cbind(r, c("                       TH", "8"))
           r = cbind(r, c("                       TH", "16"))
@@ -706,6 +734,10 @@ Workbook_Writer <- function() {
           r = cbind(r, c("              {Stim} Range", "8"))
           r = cbind(r, c("              {Stim} Range", "16"))
           r = cbind(r, c("              {Stim} Range", "32"))
+        }
+        else if (phase_current == "Tones" & detail_current == "Oddball") {
+          r = cbind(r, c("", "d'"))
+          r = cbind(r, NA)
         }
         else if (phase_current == "Octave") {
           r = cbind(r, c("", "d'"))
@@ -851,13 +883,13 @@ Workbook_Writer <- function() {
   Define_Styles()
   Setup_Workbook()
 
-  # Add_Rat_To_Workbook(141)
+  Add_Rat_To_Workbook(139)
   #OR
-  rat_archive %>%
-    filter(is.na(end_date)) %>%
-    filter(is.na(Assigned_Filename)) %>%
-    .$Rat_ID %>%
-    lapply(Add_Rat_To_Workbook)
+  # rat_archive %>%
+  #   filter(is.na(end_date)) %>%
+  #   filter(is.na(Assigned_Filename)) %>%
+  #   .$Rat_ID %>%
+  #   lapply(Add_Rat_To_Workbook)
 
   old_wd = getwd()
   setwd(projects_folder)
