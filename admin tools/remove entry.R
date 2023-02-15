@@ -37,7 +37,7 @@ clean_archives <- function(entry) {
   
 # Wipe UUID from run archive
   run_archive = filter(run_archive, UUID != df$UUID)
-  save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
+  save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = FALSE, compress = FALSE)
   writeLines("\tRun archive cleaned")
   
 # Restore assignment
@@ -52,6 +52,7 @@ clean_archives <- function(entry) {
   } else {writeLines("\tRat assignment untouched")}
   
   writeLines("Done.")
+  InitializeMain()
 }
 
 
@@ -71,5 +72,4 @@ switch(menu(c("Yes", "No"),
        lapply(Bad_entries %>% .$UUID, clean_archives), writeLines("Stopped. Entries remain."))
 
 rm(list = c("Bad_entries", "restore", "bad_rats", "bad_date"))
-InitializeMain()
 
