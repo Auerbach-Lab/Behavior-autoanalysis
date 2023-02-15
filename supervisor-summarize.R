@@ -629,6 +629,7 @@ Workbook_Writer <- function() {
             dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
             tidyr::unnest_wider(assignment) %>%
             tidyr::unnest_wider(stats) %>%
+            unnest(dprime) %>%
             select(task, detail, date, dprime)
 
           df_training = left_join(df_training, x, by = c("task", "detail", "date"))
