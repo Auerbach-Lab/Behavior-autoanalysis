@@ -1618,5 +1618,5 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 # set up environment
 InitializeMain()
 
-Process_File(file.choose(), name = name, weight = weight, observations = observations, exclude_trials = exclude_trials)
+# Process_File(file.choose(), name = name, weight = weight, observations = observations, exclude_trials = exclude_trials)
 
