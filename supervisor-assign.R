@@ -16,6 +16,8 @@ Workbook_Reader <- function() {
   colnames(assignments_df) = c("Assigned_Filename", "Assigned_Experiment", "Assigned_Phase", "Assigned_Task", "Assigned_Detail", "Persistent_Comment", "Rat_ID")
   assignments_df = assignments_df %>% dplyr::filter(!is.na(Rat_ID)) %>% filter(!is.na(Assigned_Filename))
   assignments_df$Rat_ID = assignments_df$Rat_ID %>% stringr::str_sub(start = 2) %>% as.numeric() # trim off pound sign added for humans, coerce to numeric since that's what rat_archive uses
+  #clean white spaces from names as they should never exist
+  assignments_df = assignments_df %>% mutate(Assigned_Filename = stringr::str_replace_all(Assigned_Filename, " ", ""))
   if (nrow(assignments_df) != user_settings$runs_per_day) {
     warn = paste0("Only ", nrow(assignments_df), " assignments were found. (Expected ", user_settings$runs_per_day, ")")
     warning(paste0(warn, "\n"))
