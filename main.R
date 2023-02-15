@@ -1626,7 +1626,7 @@ Generate_Rxn_Graph <- function(rat_name, ratID) {
   rat_runs = rat_runs %>% mutate(date_asDate = lubridate::ymd(date))
 
   Rxn_today =
-    run_archive %>% dplyr::filter(rat_name == name) %>%
+    run_archive %>% dplyr::filter(rat_name == rat_name) %>%
     arrange(desc(date)) %>%
     head(n = 1) %>%
     unnest_wider(stats) %>%
@@ -1634,7 +1634,7 @@ Generate_Rxn_Graph <- function(rat_name, ratID) {
     mutate(Rxn = Rxn * 1000)
 
   test_graph_Rxn =
-    run_archive %>% dplyr::filter(rat_name == name) %>%
+    run_archive %>% dplyr::filter(rat_name == rat_name) %>%
     unnest_wider(stats) %>%
     # Omit invalid days
     filter(invalid != "TRUE") %>%

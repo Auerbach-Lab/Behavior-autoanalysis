@@ -18,7 +18,7 @@ ui <- fluidPage(
   #shinythemes::themeSelector(),
   titlePanel("PiedPiper", windowTitle = "PiedPiper"),
   fluidRow(
-    column(width = 3,
+    column(width = 2,
            wellPanel(
              textInput("name", "Rat name", placeholder = "Blue4"),
              numericInput("weight", "Weight (g)", value = 0, min = 0),
@@ -30,7 +30,7 @@ ui <- fluidPage(
              textInput("scientist", "Your Name", placeholder = "Noëlle"),
            ),
     ),
-    column(width = 9,
+    column(width = 10,
       fillRow(height = "100px", width = "1250px", # want 625 for file input plus margin, so 625 x2 = 1250
         fileInput("matfile", "Select .mat file:", buttonLabel = "Browse...", accept = c(".mat"), width = "600px"),
         actionButton("btnAnalyze", span("Analyze", id = "UpdateAnimate", class = ""), class = "btn btn-primary", style = "margin-top: 25px;", width = "150px"),
@@ -39,30 +39,40 @@ ui <- fluidPage(
       textOutput("text1"),
       textOutput("text2"),
       withLoader(tableOutput("warnings"), type = "html", loader = "dnaspin"),
-      plotOutput("plotWeight"),
+      withLoader(plotOutput("plotWeight"), type = "html", loader = "dnaspin"),
       conditionalPanel(
         condition = "output.plotWeight",
         span(tags$div(
-          "Does this graph look OK?", tags$br(),
-          "Are there problems with weight or trial trends?", tags$br(),
-          "Does today's weight look like it belongs?", tags$br(),
+          "Is there a problem with these trends?", #tags$br(),
+          "Does today's weight look like it belongs?", #tags$br(),
         ), style="font-weight:bold"),
         fluidRow(
-          column(width = 3,
-            actionButton("weightOK", "OK", width = "100%"),
-          ),
           column(width = 2,
-            actionButton("weightProblem", "Problem", width = "100%"),
+            radioGroupButtons(
+              inputId = "weightProblem",
+              label = NULL,
+              choices = c("OK", "Problem"), #changing this text changes the conditional below
+              selected = character(0),
+              justified = TRUE,
+              status = "primary",
+            )
           ),
-          column(width = 8,
+          column(width = 9,
             conditionalPanel(
-              condition = "output.weightProblem",
-              span(textInput("weightAction", NULL, placeholder = "To correct [description of problem], I will [take these actions]...", width = "95%"), style = "margin-top: -20px;")
+              condition = "input.weightProblem == 'Problem'",
+              span(textInput("weightAction", NULL, placeholder = "To correct [description of problem], I will [take these actions]...", width = "97%"), style = "margin-top: -20px;")
             ),
           )
         ),
       ),
-      plotOutput("plotRxn"),
+      conditionalPanel(
+        condition = "output.plotWeight",
+        withLoader(plotOutput("plotRxn"), type = "html", loader = "dnaspin"),
+        span(tags$div(
+          "Is there a problem with these trends?", #tags$br(),
+          "Does today's weight look like it belongs?", #tags$br(),
+        ), style="font-weight:bold"),
+      ),
     ),
   ),
   tags$style(HTML("tbody { color: #DD0000; font-family: monospace; white-space: pre}")),
@@ -185,7 +195,7 @@ server <- function(input, output, session) {
   })
 
   # Submit validation
-  v <- reactiveValues(pushed = FALSE, row = NULL, finished = FALSE, weightProblem = FALSE)
+  v <- reactiveValues(pushed = FALSE, row = NULL, weightPlotted = FALSE)
 
   requirements <- reactive({
     if(input$name == "") {
@@ -271,18 +281,14 @@ server <- function(input, output, session) {
     Generate_Weight_Trials_Graph(rat_name, rat_ID)
   })
 
-  output$weightProblem <- reactive({v$weightProblem})
-  outputOptions(output, "weightProblem", suspendWhenHidden = FALSE)
-  observeEvent(input$weightOK, {v$weightProblem = FALSE})
-  observeEvent(input$weightProblem, {v$weightProblem = TRUE})
-
-  output$plotWeight <- renderPlot({
+  output$plotRxn <- renderPlot({
     req(input$btnAnalyze)
     req(v$row) #TODO at the moment I'm constructing a fake vrow to feed to warnings for when the file is already loaded, but this thinks it has a real one and dies. Check existence of columns or something and skip evaluation if they're absent.
     rat_name = v$row %>% .$rat_name
     rat_ID = v$row %>% .$rat_ID
-    Generate_Weight_Trials_Graph(rat_name, rat_ID)
+    Generate_Rxn_Graph(rat_name, rat_ID)
   })
+  #outputOptions(output, "plotRxn", suspendWhenHidden = FALSE)
 
 
 }
