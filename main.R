@@ -560,9 +560,9 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
       # For gap detection files (training or otherwise)
       # DO NOT CHANGE THE TEXTUAL DESCRIPTIONS OR YOU WILL BREAK COMPARISONS LATER
-      if (has_one_dB) r = "Training - Gap"
-      else if (has_multiple_durations) r = "Gap Mixed Duration"
-      else r = "Gap (Standard)"
+      if (has_one_dB & !has_multiple_durations) r = "Training - Gap"
+      else if (has_one_dB & has_multiple_durations) r = "Gap (Standard)"
+      else (stop("ABORT: Unknown tonal file type."))
       return(r)
     }
 
