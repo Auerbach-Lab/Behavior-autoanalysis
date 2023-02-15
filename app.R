@@ -1,6 +1,7 @@
 library(shiny)
 library(shinyFeedback)
 library(shinythemes)
+library(shinyWidgets)
 library(dplyr, warn.conflicts = FALSE)
 library(thematic)
 library(stringr)
@@ -41,12 +42,27 @@ ui <- fluidPage(
       plotOutput("plotWeight"),
       conditionalPanel(
         condition = "output.plotWeight",
-        textOutput("text3"),
-        fillRow(height = "100px", width = "250px",
-                actionButton("weightYes", "Yes", width = "100px"),
-                actionButton("weightNo", "No", width = "100px")
+        span(tags$div(
+          "Does this graph look OK?", tags$br(),
+          "Are there problems with weight or trial trends?", tags$br(),
+          "Does today's weight look like it belongs?", tags$br(),
+        ), style="font-weight:bold"),
+        fluidRow(
+          column(width = 3,
+            actionButton("weightOK", "OK", width = "100%"),
+          ),
+          column(width = 2,
+            actionButton("weightProblem", "Problem", width = "100%"),
+          ),
+          column(width = 8,
+            conditionalPanel(
+              condition = "output.weightProblem",
+              span(textInput("weightAction", NULL, placeholder = "To correct [description of problem], I will [take these actions]...", width = "95%"), style = "margin-top: -20px;")
+            ),
+          )
         ),
       ),
+      plotOutput("plotRxn"),
     ),
   ),
   tags$style(HTML("tbody { color: #DD0000; font-family: monospace; white-space: pre}")),
@@ -169,7 +185,7 @@ server <- function(input, output, session) {
   })
 
   # Submit validation
-  v <- reactiveValues(pushed = FALSE, row = NULL, finished = FALSE) # TODO update to reset the shinybutton's internal value directly to 0 instead of using pushed?
+  v <- reactiveValues(pushed = FALSE, row = NULL, finished = FALSE, weightProblem = FALSE)
 
   requirements <- reactive({
     if(input$name == "") {
@@ -228,7 +244,7 @@ server <- function(input, output, session) {
   })
 
   # output$text2 <- renderText({
-  #   input$matfile$datapath
+  #   input$weightYes
   # })
 
   # output$text3 <- renderText({
@@ -239,10 +255,6 @@ server <- function(input, output, session) {
   #     "This is an important message!"
   #   ))
   # })
-
-  output$text3 <- renderText({
-    "Does action need to be taken about this rat's weight and food schedule?"
-  })
 
   output$warnings <- renderTable(striped = TRUE, hover = TRUE, sanitize.text.function = identity,
   {
@@ -259,8 +271,20 @@ server <- function(input, output, session) {
     Generate_Weight_Trials_Graph(rat_name, rat_ID)
   })
 
+  output$weightProblem <- reactive({v$weightProblem})
+  outputOptions(output, "weightProblem", suspendWhenHidden = FALSE)
+  observeEvent(input$weightOK, {v$weightProblem = FALSE})
+  observeEvent(input$weightProblem, {v$weightProblem = TRUE})
 
-  # TODO next steps are providing a way for them to sign off on weight looking good with initials and comment field (where will this information go?)
+  output$plotWeight <- renderPlot({
+    req(input$btnAnalyze)
+    req(v$row) #TODO at the moment I'm constructing a fake vrow to feed to warnings for when the file is already loaded, but this thinks it has a real one and dies. Check existence of columns or something and skip evaluation if they're absent.
+    rat_name = v$row %>% .$rat_name
+    rat_ID = v$row %>% .$rat_ID
+    Generate_Weight_Trials_Graph(rat_name, rat_ID)
+  })
+
+
 }
 
 
