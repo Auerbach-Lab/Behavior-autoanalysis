@@ -1035,6 +1035,17 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       # print(TH)
       return(TH)
     }
+    
+    Calculate_TH_gap <- function(df) {
+      # Uncomment to see line fitting by a package which shows line
+      # library(drda)
+      # drda(dprime ~ dB, data = df) %>% plot
+      fit = loess(dprime ~ Dur, data = df)
+      # plot(fit)
+      TH = approx(x = fit$fitted, y = fit$x, xout = user_settings$TH_cutoff, ties = "ordered")$y
+      # print(TH)
+      return(TH)
+    }
 
     Calculate_Threshold <- function() {
       # Signal detection index calculation by the psycho package. We use d' a sensitivity measure.
@@ -1070,6 +1081,13 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         warning(paste0(warn, "\n"))
         warnings_list <<- append(warnings_list, warn)
 
+      } else if(analysis$type == "Gap (Standard)") {
+        r = dprime_data %>%
+          select(Freq, Dur, dB, dprime) %>%
+          group_by(Freq, dB) %>%
+          nest() %>%
+          mutate(TH = map_dbl(data, Calculate_TH_gap)) %>%
+          select(-data)
       } else {
         r = dprime_data %>%
           select(Freq, Dur, dB, dprime) %>%
@@ -1150,30 +1168,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
       return(r)
     }
-    
-    Calculate_FA_Detailed_Gap <- function() {
-      dprime_table <-
-        trial_data %>%
-        dplyr::filter(Block_number != 1) %>%
-        group_by(`Dur (ms)`, Type, `Freq (kHz)`, `Inten (dB)`, Response) %>%
-        summarise(count = n(), .groups = "keep") %>%
-        spread(Response, count) %>% #View
-        ungroup()
-      
-      dprime_table = Format_for_Psycho(dprime_table) # type = 0 for inverted (no-go) d'
-      dprime_data = Calculate_dprime(dprime_table) %>%
-        rename(`Freq (kHz)` = Freq)
-      
-      r = trial_data %>%
-        filter(Trial_type == 0) %>% # select no-go trials
-        group_by(`Freq (kHz)`) %>%
-        summarise(FA = sum(Response == 'FA'),
-                  trials = n(),
-                  FA_percent_detailed = FA/trials) %>%
-        left_join(dprime_data %>% select(`Freq (kHz)`, dprime), by = "Freq (kHz)")
-      
-      return(r)
-    }
+
 
 
     # Statistics Workflow -----------------------------------------------------
@@ -1196,17 +1191,16 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
                                                                            n_cr = CRs,
                                                                            adjusted = TRUE) %>% .$dprime)
 
-    if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Training - Oddball", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)", "Gap (Standard)")) {
+    if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Training - Oddball", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
       TH_by_frequency_and_duration = NA
     } else {
       TH_by_frequency_and_duration = Calculate_Threshold()
     }
+    
     if(analysis$type == "Octave") {
       FA_detailed = Calculate_FA_Detailed_Octave()
     } else if(analysis$type %in% c("Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
       FA_detailed = Calculate_FA_Detailed_Oddball()
-    } else if(analysis$type %in% c("Gap (Standard)")) {
-      FA_detailed = Calculate_FA_Detailed_Gap()
     } else {
       FA_detailed = NA
     }
