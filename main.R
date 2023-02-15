@@ -88,7 +88,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           # remove excess info (i.e. .mat and then file location)
           stringr::str_remove(pattern = ".mat @ .*$", string = .)
         cat("Stim file:", r, sep = "\t", fill = TRUE)
-        if (use_shiny) shiny::showNotification(glue("{r}"))
+        if (use_shiny) shiny::showNotification(glue("{r}")) #TODO replace default with shinyfeedback colored ones
         return(r)
       }
 
@@ -1564,17 +1564,17 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
   return(row_added)
 }
 
-Generate_Chart <- function(rat_name, ratID) {
+Generate_Weight_Graph <- function(rat_name, ratID) {
   #ratID = Get_Rat_ID(run_properties$rat_name)
   rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID)
   rat_runs = rat_runs %>% mutate(date_asDate = lubridate::ymd(date))
   # thoughts - will want to standardize y axis to e.g. 80%-105% of baseline weight so that 'low' looks the same for everyone?
   # -- one problem with that is that if another rat's weight IS entered instead, it could be drastically above or below those bounds
   # I'm not bothering to figure out how to customize the axis labels right now.
-  weight_chart =
+  weight_graph =
     ggplot(rat_runs, aes(x = date_asDate, y = weight)) +
     geom_line(color = "grey", linewidth = 2) +
-    geom_point(shape=21, color="black", fill="#69b3a2", size=5) +
+    geom_point(shape = 21, color = "black", fill = "#69b3a2", size = 5) +
     scale_x_date(date_breaks = "1 month", date_labels = "%b%n%y") +
     ggtitle(paste0(rat_name, " Weight")) +
     theme_ipsum_es() +
@@ -1582,28 +1582,49 @@ Generate_Chart <- function(rat_name, ratID) {
   #dev.new(width = 10, height = 6, noRStudioGD = TRUE) # This actually pops out. Size is ignored unless you tell RStudio not to help with the noRstudioGD argument.
   #print(weight_chart, vp = NULL) # vp is viewport https://ggplot2.tidyverse.org/reference/print.ggplot.html
 
-  # Weight vs. Trials
-  weight_and_trials_chart =
-    rat_runs %>% unnest_wider(stats) %>% filter(date > str_remove_all(Sys.Date()-30, "-")) %>%
+  # writeLines("")
+  # writeLines("Does this weight look OK? ")
+  # weight_ok <- if(menu(c("Yes", "No")) == 1) TRUE else FALSE
+  # problem <- NA
+  # if (!weight_ok) {
+  #   problem <- readline(prompt = "Please describe the problem: ")
+  # }
+  # initials <- readline(prompt = "Your initials: ")
+  # dev.off()
+  return(weight_graph)
+}
+
+Generate_Weight_Trials_Graph <- function(rat_name, ratID) {
+  rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID)
+  rat_runs = rat_runs %>% mutate(date_asDate = lubridate::ymd(date))
+
+  weight_and_trials_graph =
+    rat_runs %>% unnest_wider(stats) %>% filter(date > str_remove_all(Sys.Date() - 30, "-")) %>%
     ggplot() +
     geom_smooth(aes(x = date_asDate, y = weight, color = "Weight"),
-                color = "grey", linewidth = 2,
-                se = FALSE, na.rm = TRUE, method = "lm", formula= y~x,
+                color = "#bed6ce", linewidth = 2,
+                se = FALSE, na.rm = TRUE, method = "lm", formula = y~x,
                 show.legend = TRUE) +
     geom_point(aes(x = date_asDate, y = weight),
-               shape=21, color="black", fill="#69b3a2", size=5) +
-    geom_text(aes(x = min(date_asDate) + 1, y = max(weight) + 15), label = "Weight", color="#69b3a2")+
+               shape = 21, color = "black", fill = "#6aaa96", size = 5) +
+    geom_text(aes(x = min(date_asDate) + 1, y = max(weight) + 7), label = "Weight", color = "#6aaa96") +
     geom_smooth(aes(x = date_asDate, y = trial_count, color = "Trials"),
-                color = "black", linewidth = 2, fill="steelblue",
-                se = FALSE, na.rm = TRUE, method = "lm", formula= y~x,
-                show.legend = TRUE) +
-    geom_text(aes(x = min(date_asDate) + 1, y = head(trial_count, n = 1)), label = "Trial trend")+
-    ggtitle(paste0(name, " 30 days Weight vs. Trail count")) +
+                color = "lightsteelblue", linewidth = 2, fill = "lightsteelblue",
+                se = FALSE, na.rm = TRUE, method = "lm", formula = y~x,
+                show.legend = TRUE,
+                ) +
+    geom_text(aes(x = min(date_asDate) + 1, y = mean(head(trial_count, n = 14)) + 7), label = "Trial trend", color = "steelblue") +
+    ggtitle(glue("{rat_name} Weight & Trials (30d)")) +
     theme_ipsum_es() +
     labs(x = NULL, y = NULL)
 
+  return(weight_and_trials_graph)
+}
 
-  # Reaction time graph
+Generate_Rxn_Graph <- function(rat_name, ratID) {
+  rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID)
+  rat_runs = rat_runs %>% mutate(date_asDate = lubridate::ymd(date))
+
   Rxn_today =
     run_archive %>% dplyr::filter(rat_name == name) %>%
     arrange(desc(date)) %>%
@@ -1637,22 +1658,12 @@ Generate_Chart <- function(rat_name, ratID) {
     stat_summary(fun = mean, geom = "point", shape=24, color="black", fill="black", size=5) +
     geom_line(data = Rxn_today, aes(color = "Today"), linewidth = 1.5) +
     geom_point(data = Rxn_today, shape=21, color="black", fill = "#69b3a2", size = 5) +
-    ggtitle(paste0(name, " Reaction Curve Check")) +
+    ggtitle(paste0(rat_name, " Reaction Curve Check")) +
     scale_color_manual(values = c("Today" = "#69b3a2", "Average" = "black"), name = "") +
     theme_ipsum_es() +
     theme(legend.position = "bottom") +
     labs(x = NULL, y = NULL)
-
-  # writeLines("")
-  # writeLines("Does this weight look OK? ")
-  # weight_ok <- if(menu(c("Yes", "No")) == 1) TRUE else FALSE
-  # problem <- NA
-  # if (!weight_ok) {
-  #   problem <- readline(prompt = "Please describe the problem: ")
-  # }
-  # initials <- readline(prompt = "Your initials: ")
-  # dev.off()
-  return(weight_and_trials_chart)
+  return(test_graph_Rxn)
 }
 
 WriteToArchive <- function(row_added) {

@@ -16,26 +16,38 @@ ui <- fluidPage(
   theme = shinythemes::shinytheme("spacelab"),
   #shinythemes::themeSelector(),
   titlePanel("PiedPiper", windowTitle = "PiedPiper"),
-  sidebarLayout(
-    sidebarPanel(width = 3,
-      textInput("name", "Rat name", placeholder = "Blue4"),
-      numericInput("weight", "Weight (g)", value = 0, min = 0),
-      textAreaInput("observations", "Observations from run", rows = 5,
-                    placeholder = "Good hits. Good misses.\nOnly real FAs.\n2 CRs back to back.\nBreak 35-47m with no jams."),
-      textInput("exclude_trials", "Trials to skip", placeholder = "2, 120-126, 201 (or blank)")
+  fluidRow(
+    column(width = 3,
+           wellPanel(
+             textInput("name", "Rat name", placeholder = "Blue4"),
+             numericInput("weight", "Weight (g)", value = 0, min = 0),
+             textAreaInput("observations", "Observations from run", rows = 5,
+                           placeholder = "Good hits. Good misses.\nOnly real FAs.\n2 CRs back to back.\nBreak 35-47m with no jams."),
+             textInput("exclude_trials", "Trials to skip", placeholder = "2, 120-126, 201 (or blank)")
+           ),
+           wellPanel(
+             textInput("scientist", "Your Name", placeholder = "Noëlle"),
+           ),
     ),
-    mainPanel(width = 9,
+    column(width = 9,
       fillRow(height = "100px", width = "1250px", # want 625 for file input plus margin, so 625 x2 = 1250
         fileInput("matfile", "Select .mat file:", buttonLabel = "Browse...", accept = c(".mat"), width = "600px"),
-        actionButton("btnAnalyze", span("Analyze", id="UpdateAnimate", class=""), class = "btn btn-primary", style = "margin-top: 25px;", width = "150px"),
+        actionButton("btnAnalyze", span("Analyze", id = "UpdateAnimate", class = ""), class = "btn btn-primary", style = "margin-top: 25px;", width = "150px"),
       ),
       textOutput("requirements"),
       textOutput("text1"),
       textOutput("text2"),
-      textOutput("text3"),
       withLoader(tableOutput("warnings"), type = "html", loader = "dnaspin"),
-      plotOutput("plotWeight")
-    )
+      plotOutput("plotWeight"),
+      conditionalPanel(
+        condition = "output.plotWeight",
+        textOutput("text3"),
+        fillRow(height = "100px", width = "250px",
+                actionButton("weightYes", "Yes", width = "100px"),
+                actionButton("weightNo", "No", width = "100px")
+        ),
+      ),
+    ),
   ),
   tags$style(HTML("tbody { color: #DD0000; font-family: monospace; white-space: pre}")),
   # button animation
@@ -157,7 +169,7 @@ server <- function(input, output, session) {
   })
 
   # Submit validation
-  v <- reactiveValues(pushed = FALSE, row = NULL, finished = FALSE)
+  v <- reactiveValues(pushed = FALSE, row = NULL, finished = FALSE) # TODO update to reset the shinybutton's internal value directly to 0 instead of using pushed?
 
   requirements <- reactive({
     if(input$name == "") {
@@ -220,8 +232,17 @@ server <- function(input, output, session) {
   # })
 
   # output$text3 <- renderText({
-  #   input$matfile$name
+  #   req(input$btnAnalyze)
+  #   req(v$row)
+  #   showModal(modalDialog(
+  #     title = "Important message",
+  #     "This is an important message!"
+  #   ))
   # })
+
+  output$text3 <- renderText({
+    "Does action need to be taken about this rat's weight and food schedule?"
+  })
 
   output$warnings <- renderTable(striped = TRUE, hover = TRUE, sanitize.text.function = identity,
   {
@@ -235,13 +256,14 @@ server <- function(input, output, session) {
     req(v$row) #TODO at the moment I'm constructing a fake vrow to feed to warnings for when the file is already loaded, but this thinks it has a real one and dies. Check existence of columns or something and skip evaluation if they're absent.
     rat_name = v$row %>% .$rat_name
     rat_ID = v$row %>% .$rat_ID
-    Generate_Chart(rat_name, rat_ID)
+    Generate_Weight_Trials_Graph(rat_name, rat_ID)
   })
+
 
   # TODO next steps are providing a way for them to sign off on weight looking good with initials and comment field (where will this information go?)
 }
 
 
 source(paste0(projects_folder, "main.R"))
-options(shiny.host = "192.168.1.113")
+options(shiny.host = "127.0.0.1") #setting this to an external IP address forces browser instead of rstudio window
 shinyApp(ui, server)
