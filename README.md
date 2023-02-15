@@ -76,6 +76,6 @@ Several small scripts are available for those comfortable with R. Note that thes
 - `Load enviornment.R` - This should be used following a cleaning of the global environment. *It can be out of sync from main*
 - `Common lookups.R` - This contain short scripts that filter run_archive or rat_archive for information that I have looked up several times. These have not been made into functions.
 - `Modify an entry.R` - This contains a quick way to set a run invalid, change the weight or assignment. It should be kept in the **safe** state i.e. comment out from = to the new value.
-- `remove entry.R` and `Clean NA_archive entries.R` - These are used to clean poor entries. They are under active development to make them safe for others to use.
+- `remove entry.R` and `Clean NA_archive entries.R` - These are used to clean poor entries. They are under active development to make them safe for others to use. Remove entry has been made into a function that backs-up deleted data and requires confrimation to use.
 - `import_old_excel.R` - This is a utility to read a directory tree and import information from the old experimental excel sheets that PiedPiper is designed to replace.
 

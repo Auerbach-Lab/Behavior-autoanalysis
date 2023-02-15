@@ -334,9 +334,7 @@ Workbook_Writer <- function() {
             ))
 
           # get the duration that was used in today's run
-          duration_current = df %>%
-            filter(phase == phase_current & task == task_current & detail == detail_current) %>%
-            .$duration %>% unique()
+          duration_current = df %>% arrange(desc(date)) %>% head(1) %>% .$duration
 
           # count number of pre-HL TH runs, and number of post-HL runs by detail
           BBN_counts = df %>%
@@ -412,6 +410,19 @@ Workbook_Writer <- function() {
                         .groups = "drop")
           }
         }
+        
+        
+        # Oddball Training/Reset PreHL
+        if (phase_current == "Tones" & task_current %in% c("Training", "Reset") & pre_HL & detail_current == "Oddball") {
+          count_df = rat_runs %>%
+            tidyr::unnest_wider(assignment) %>%
+            dplyr::filter(detail == "Oddball") %>% # keeping all tasks
+            group_by(task) %>%
+            summarise(task = unique(task), detail = detail_current,
+                      date = tail(date, 1), n = n(),
+                      condition = "baseline",
+                      .groups = "drop")
+        }
 
         # Oddball
         # df_basecase = length of most recent streak with task==basecase
@@ -486,7 +497,7 @@ Workbook_Writer <- function() {
             select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`) %>% #TODO check that Frequency is actually go tone positional data
             distinct()
         } else {
-          if (phase_current == "Octave") {
+          if (phase_current == "Octave" | detail_current == "Oddball") {
             r = r %>% unnest(reaction) %>%
               select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
           } else {
@@ -561,7 +572,7 @@ Workbook_Writer <- function() {
             relocate(THrange, .after = TH) %>%
             relocate(Spacer1, .after = mean_attempts_per_trial) %>%
             select(-FA_detailed)
-        } else if (phase_current == "Tones") {
+        } else if (phase_current == "Tones" & detail_current != "Oddball") {
 
           r = r %>% unnest(threshold) %>%
             filter(Freq != 0 & Dur == min_duration) %>%
@@ -597,24 +608,47 @@ Workbook_Writer <- function() {
             select(task, detail, date, Spacer3, `Freq (kHz)`, Stimrange)
 
           r = left_join(r, x, by = c("task", "detail", "date")) %>%
+            unique() %>%
             pivot_wider(names_from = `Freq (kHz)`, values_from = Stimrange)
-
+          
           # Adding missing columns without overwriting extant THs and THranges
           df = tibble(`4` = NA, `8` = NA, `16` = NA, `32` = NA)
           r = add_column(r, !!!df[setdiff(names(df), names(r))]) %>%
             relocate(`4`, `8`, `16`, `32`, .after = Spacer3)
 
 
+        } else if (phase_current == "Tones" & detail_current == "Oddball") {
+          r = r %>% filter(detail == "Oddball") %>%
+            select(-threshold) %>%
+            select(-FA_detailed)
+          
+          x = rat_runs %>%
+            tidyr::unnest_wider(assignment) %>%
+            filter(detail == detail_current) %>%
+            tidyr::unnest_wider(stats) %>%
+            unnest(dprime) %>%
+            select(task, detail, date, dprime)
+            
+            
+          r = left_join(r, x, by = c("task", "detail", "date"))
+          
         } else if (phase_current == "Octave") {
           r = r %>% select(-threshold)
+          
 
           #TODO NOT MVP convert to 1/12 of octaves based on summary kHz range
           df_discrimination = r %>% filter(task != "Training") %>%
-            unnest(FA_detailed) %>%
-            group_by(date) %>%
-            do(mutate(., Oct = c(1:6), dprime = max(dprime))) %>% # mutate(Oct_position = c(1:6)) %>% print) %>%
-            select(-FA, -trials, -`Freq (kHz)`) %>%
-            pivot_wider(names_from = Oct, values_from = FA_percent_detailed)
+            unnest(FA_detailed)
+          
+          if(nrow(df_discrimination) > 0){
+            df_discrimination = 
+              df_discrimination %>%
+              group_by(date) %>%
+              do(mutate(., Oct = c(1:6), dprime = max(dprime))) %>% # mutate(Oct_position = c(1:6)) %>% print) %>%
+              select(-FA, -trials, -`Freq (kHz)`) %>%
+              pivot_wider(names_from = Oct, values_from = FA_percent_detailed)
+          }
+
 
           df_training = r %>% filter(task == "Training") %>% select(-FA_detailed)
 
@@ -623,8 +657,8 @@ Workbook_Writer <- function() {
             dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
             tidyr::unnest_wider(assignment) %>%
             tidyr::unnest_wider(stats) %>%
-            select(task, detail, date, dprime) %>%
-            dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4)))
+            unnest(dprime) %>%
+            select(task, detail, date, dprime)
 
           df_training = left_join(df_training, x, by = c("task", "detail", "date"))
 
@@ -643,6 +677,14 @@ Workbook_Writer <- function() {
             select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`, -FA, -trials) %>%
             pivot_wider(names_from = position, values_from = c(Rxn, FA_percent_detailed)) %>%
             mutate(Spacer2 = NA) %>% relocate(Spacer2, .after = Rxn_late)
+        } else if (experiment_current == "GD") {
+          r = r %>%
+            select(-FA_detailed) %>% 
+            unnest(threshold) %>% 
+            select(-Freq, -dB) %>%
+            mutate(THrange = paste0(suppressWarnings(min(TH, na.rm = TRUE)) %>% round(digits = 0), "-", suppressWarnings(max(TH, na.rm = TRUE)) %>% round(digits = 0))) %>%
+            relocate(Spacer1, .before = TH) %>%
+            relocate(THrange, .after = TH)
         }
 
 
@@ -685,7 +727,7 @@ Workbook_Writer <- function() {
           r = cbind(r, c("", "TH"))
           r = cbind(r, c("", "{TH}"))
         }
-        else if (phase_current == "Tones") {
+        else if (phase_current == "Tones" & detail_current != "Oddball") {
           r = cbind(r, c("                       TH", "4"))
           r = cbind(r, c("                       TH", "8"))
           r = cbind(r, c("                       TH", "16"))
@@ -700,6 +742,10 @@ Workbook_Writer <- function() {
           r = cbind(r, c("              {Stim} Range", "8"))
           r = cbind(r, c("              {Stim} Range", "16"))
           r = cbind(r, c("              {Stim} Range", "32"))
+        }
+        else if (phase_current == "Tones" & detail_current == "Oddball") {
+          r = cbind(r, c("", "d'"))
+          r = cbind(r, NA)
         }
         else if (phase_current == "Octave") {
           r = cbind(r, c("", "d'"))
@@ -845,7 +891,7 @@ Workbook_Writer <- function() {
   Define_Styles()
   Setup_Workbook()
 
-  #Add_Rat_To_Workbook(186)
+  # Add_Rat_To_Workbook(139)
   #OR
   rat_archive %>%
     filter(is.na(end_date)) %>%

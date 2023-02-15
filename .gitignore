@@ -3,3 +3,5 @@
 .RData
 .Ruserdata
 Behavior-autoanalysis.Rproj
+rat_archive.csv
+run_archive.Rdata

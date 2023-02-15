@@ -2,7 +2,7 @@
 InitializeMain <- function() {
   Load_Packages <- function() {
     # data loading external file formats
-    library(R.matlab);
+    library(R.matlab); library(data.table);
 
     # data manipulation
     library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr); library(lubridate);
@@ -15,7 +15,7 @@ InitializeMain <- function() {
   options(warn = 1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
   source(paste0(projects_folder, "settings.R"))  # user variables
 
-  rat_archive <<- read.csv(paste0(projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
+  rat_archive <<- fread(paste0(projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
   load(paste0(projects_folder, "run_archive.Rdata"), .GlobalEnv)
 }
 
@@ -188,8 +188,13 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       if (nrow(stim_type) > 1) {
         if ("train" %in% stim_type$`Stim Source`) {
           stim_type = "train"
+        } 
+        else {
+          warn = paste0("WARNING: Multiple non-oddball stim types: ", stim_type)
+          warning(paste0(warn, "\n"))
+          warnings_list <<- append(warnings_list, warn)
+          stim_type = stim_encoding_table %>% filter(Type == "1") %>% .$`Stim Source`
         }
-        else stop(paste0("ABORT: Multiple non-oddball stim types: ", stim_type))
       } else {
         stim_type = stim_type %>% as.character()
       }
@@ -541,13 +546,16 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       has_only_one_frequency = length(unique(run_properties$stim_encoding_table$`Freq (kHz)`)) == 1
       # Does the file have only a single intensity (dB), i.e. training
       has_one_dB = unique(run_properties$summary$dB_min == run_properties$summary$dB_max)
+      # 50ms is used for Oddball training while 300ms is used for Octave training
+      short_duration = run_properties$summary %>% unnest(duration) %>% .$`Dur (ms)` %>% unique == 50
 
       # For tonal files (octaves, or mainly 4-32kHz)
       # DO NOT CHANGE THE TEXTUAL DESCRIPTIONS OR YOU WILL BREAK COMPARISONS LATER
       if (!has_audible_NoGo & has_different_dB_ranges_for_frequencies) r = "Tone (Thresholding)"
       else if (has_one_dB & has_only_one_frequency) r = "Training - Tone"
       else if (has_audible_NoGo & has_more_than_one_NoGo) r = "Octave"
-      else if (has_audible_NoGo & !has_more_than_one_NoGo) r = "Training - Octave"
+      else if (has_audible_NoGo & !has_more_than_one_NoGo & short_duration) r = "Training - Oddball"
+      else if (has_audible_NoGo & !has_more_than_one_NoGo & !short_duration) r = "Training - Octave"
       else if (!has_audible_NoGo & has_only_one_frequency ) r = "Tone (Single)"
       else if (!has_audible_NoGo) r =  "Tone (Standard)"
       else (stop("ABORT: Unknown tonal file type."))
@@ -575,9 +583,9 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
       # For gap detection files (training or otherwise)
       # DO NOT CHANGE THE TEXTUAL DESCRIPTIONS OR YOU WILL BREAK COMPARISONS LATER
-      if (has_one_dB) r = "Training - Gap"
-      else if (has_multiple_durations) r = "Gap Mixed Duration"
-      else r = "Gap (Standard)"
+      if (has_one_dB & !has_multiple_durations) r = "Training - Gap"
+      else if (has_one_dB & has_multiple_durations) r = "Gap (Standard)"
+      else (stop("ABORT: Unknown tonal file type."))
       return(r)
     }
 
@@ -667,6 +675,21 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         rat_ID = stringr::str_split(run_properties$stim_filename, "_") %>% unlist() %>% .[1]
         computed_file_name = paste0(rat_ID, "_", go_kHz_range, "_", go_dB_range, "_", run_properties$duration, "ms_", run_properties$lockout, "s")
       }
+      else if (analysis$type == "Training - Oddball")
+      {
+        go_kHz = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)`, "kHz_")
+        nogo = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$`Freq (kHz)`)
+        nogo_kHz = if_else(nogo == 0, "BBN_", paste0(nogo, "kHz_")) 
+        go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB_")
+        nogo_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$`Inten (dB)`, "dB_")
+        catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number)
+        
+        computed_file_name = paste0(go_kHz, go_dB, nogo_kHz, nogo_dB, run_properties$duration, "ms_", run_properties$lockout, "s")
+        if (catch_number != 3) computed_file_name = paste0(computed_file_name, "_c", catch_number)
+        if (run_properties$nogo_max_touching != 1) computed_file_name = paste0(computed_file_name, "_NG", run_properties$nogo_max_touching)
+        
+        analysis$minimum_trials <<- user_settings$minimum_trials$`Training - Oddball`
+      }
 
       else if (analysis$type == "Training - Tone") {
         go_kHz = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)`, "kHz_")
@@ -681,11 +704,18 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           delay_in_filename <<- TRUE
         }
         else if (catch_number > 0) {
-          computed_file_name = paste0(computed_file_name, catch_number, "catch_", lockout, "s")
-          delay_in_filename <<- FALSE
-
-          if (catch_number >= 3) {
+          if(rat_archive[rat_archive$Rat_name == run_properties$rat_name,]$Assigned_Detail == "Oddball" | rat_archive[rat_archive$Rat_name == run_properties$rat_name,]$Assigned_Phase == "Octave" ) {
+            computed_file_name = paste0(computed_file_name, run_properties$duration, "ms_", lockout, "s")
+            delay_in_filename <<- FALSE
             analysis$minimum_trials <<- user_settings$minimum_trials$`Tone (Single)`
+            
+          } else {
+            computed_file_name = paste0(computed_file_name, catch_number, "catch_", lockout, "s")
+            delay_in_filename <<- FALSE
+            
+            if (catch_number >= 3) {
+              analysis$minimum_trials <<- user_settings$minimum_trials$`Tone (Single)`
+            }
           }
         }
       }
@@ -808,13 +838,14 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       }
       else
       {
-        go_dB_range = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_min %>% unique(), "-",
-                             run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_max %>% unique(), "dB")
-
+        go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)` %>% unique(), "dB")
+        
         has_duration_range = nrow(unique(run_properties$duration)) > 1
         if (has_duration_range) {
-          duration = paste0(min(run_properties$duration), "-",
-                            max(run_properties$duration), "")
+          duration = run_properties$stim_encoding_table %>%
+            filter(Type != 0) %>%
+            transmute(x = paste0(min(`Dur (ms)`), "-",
+                                 max(`Dur (ms)`), "")) %>% .$x %>% unique()
         } else {
           duration = run_properties$duration
         }
@@ -825,10 +856,9 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
         # Note there is not BG test here because there is expected to always be background in a Gap Detection file.
 
-        computed_file_name = paste0("gap_", go_dB_range, "_", duration, "ms_", run_properties$lockout, "s")
+        computed_file_name = paste0("gap_", go_dB, "_", duration, "ms_", run_properties$lockout, "s")
         if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
         if (has_TR) computed_file_name = paste0(computed_file_name, "_", "TR", run_properties$trigger_sensitivity, "ms")
-        if (has_BG) computed_file_name = paste0(computed_file_name, "_", BG)
       }
       return(computed_file_name)
     }
@@ -955,7 +985,9 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     Format_for_Psycho <- function(df) {
       check = df %>% filter(Type == 0) %>% count() %>% as.numeric()
       CRnum = (if (check == 1) filter(df, Type == 0) %>% .$CR %>% as.numeric() else check)
-      FAnum = (if (check == 1) filter(df, Type == 0) %>% .$FA %>% as.numeric() else check)
+      suppressWarnings({
+        FAnum = (if (check == 1) filter(df, Type == 0) %>% .$FA %>% as.numeric() else check)        
+      })
       if(!("Hit" %in% colnames(df))) df = df %>% add_column(Hit = NA)
       if(!("Miss" %in% colnames(df))) df = df %>% add_column(Miss = NA)
       if(!("FA" %in% colnames(df))) {
@@ -1026,6 +1058,17 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       # print(TH)
       return(TH)
     }
+    
+    Calculate_TH_gap <- function(df) {
+      # Uncomment to see line fitting by a package which shows line
+      # library(drda)
+      # drda(dprime ~ dB, data = df) %>% plot
+      fit = loess(dprime ~ Dur, data = df)
+      # plot(fit)
+      TH = approx(x = fit$fitted, y = fit$x, xout = user_settings$TH_cutoff, ties = "ordered")$y
+      # print(TH)
+      return(TH)
+    }
 
     Calculate_Threshold <- function() {
       # Signal detection index calculation by the psycho package. We use d' a sensitivity measure.
@@ -1061,6 +1104,13 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         warning(paste0(warn, "\n"))
         warnings_list <<- append(warnings_list, warn)
 
+      } else if(analysis$type == "Gap (Standard)") {
+        r = dprime_data %>%
+          select(Freq, Dur, dB, dprime) %>%
+          group_by(Freq, dB) %>%
+          nest() %>%
+          mutate(TH = map_dbl(data, Calculate_TH_gap)) %>%
+          select(-data)
       } else {
         r = dprime_data %>%
           select(Freq, Dur, dB, dprime) %>%
@@ -1143,6 +1193,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     }
 
 
+
     # Statistics Workflow -----------------------------------------------------
 
     trial_count = trial_data %>% dplyr::count() %>% as.numeric()
@@ -1163,11 +1214,12 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
                                                                            n_cr = CRs,
                                                                            adjusted = TRUE) %>% .$dprime)
 
-    if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
+    if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Training - Oddball", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
       TH_by_frequency_and_duration = NA
     } else {
       TH_by_frequency_and_duration = Calculate_Threshold()
     }
+    
     if(analysis$type == "Octave") {
       FA_detailed = Calculate_FA_Detailed_Octave()
     } else if(analysis$type %in% c("Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
@@ -1393,24 +1445,18 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     Add_to_Run_Archive <- function(row_to_add) {
       cat("Run... ")
       run_archive <<- rbind(run_archive, row_to_add)
-#APP      save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
+#APP      save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = FALSE, compress = FALSE)
     }
 
-    Add_to_Trial_Archive <- function(row_to_add) {
+    Add_to_Trial_Archive <- function(row_to_add) { # NOTE row_to_add is the row to add to the RUN archive, just used here to get uuid.
+
       cat("Trials... ")
       uuid = row_to_add$UUID
       experiment = row_to_add$assignment %>% .[[1]] %>% pluck("experiment")
       variable_name = paste0(experiment, "_archive")
-      filename = paste0(projects_folder, variable_name, ".Rdata")
+      filename = paste0(projects_folder, variable_name, ".csv.gz")
+#APP      fwrite(cbind(trial_data, UUID = uuid), file = filename, append = file.exists(filename)) # tack UUID onto trials and add to archive, appending if the file already exists
 
-      if(file.exists(filename)){
-        load(filename, .GlobalEnv)
-        assign(variable_name, rbind(get(variable_name), cbind(trial_data, UUID = uuid))) # tack UUID onto row and add row to existing dynamically-named archive
-      } else {
-        assign(variable_name, cbind(trial_data, UUID = uuid))
-      }
-
-#APP      save(list = get("variable_name"), file = filename, ascii = TRUE, compress = FALSE)
     }
 
     Construct_Run_Entry <- function() {
@@ -1684,24 +1730,5 @@ InitializeMain()
 #r = Process_File(file.choose(), name, weight, observations, exclude_trials)
 #WriteToArchive(r)
 
-#### either:
-# old_file = FALSE # removed from undergrad r script
-#Process_File(file.choose())
-
-#### or:
-# old_file = TRUE
-# ignore_name_check = TRUE
-# exclude_trials = ""
-# load(paste0(projects_folder, "old_excel_archive.Rdata"))
-# directory = "C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)"  # slashes must be either / or \\
-# files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
-# files = files[str_which(files, pattern = "^(?!.*(Archive|TTS|Oddball))")] # Drop un-annotated files
-# files = files[str_which(files, pattern = ".*/data/202208..")]
-# # files = files[str_which(files, pattern = ".*/data/20220609/RP1.*")] # select a specific rat on a specific day
-# # files = files[str_which(files, pattern = ".*/data/(?!(2022060(9|7)/RP1.*))")] # Bad second file for RP1 on 6/9/22 - dprime giving error but transiently
-# # files = files[str_which(files, pattern = ".*/data/202207(?!(06))")] # Bad data on 7/6/22 - no creation date.
-# files = paste0(directory, "/", files)
-# writeLines(paste0("Loading ", length(files), " files.\n\n"))
-# lapply(files, Process_File)
-# writeLines(paste0("Done with back date loading. ", length(files), " files added."))
+# Process_File(file.choose(), name = name, weight = weight, observations = observations, exclude_trials = exclude_trials)
 
