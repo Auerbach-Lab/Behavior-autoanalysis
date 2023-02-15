@@ -677,6 +677,14 @@ Workbook_Writer <- function() {
             select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`, -FA, -trials) %>%
             pivot_wider(names_from = position, values_from = c(Rxn, FA_percent_detailed)) %>%
             mutate(Spacer2 = NA) %>% relocate(Spacer2, .after = Rxn_late)
+        } else if (experiment_current == "GD") {
+          r = r %>%
+            select(-FA_detailed) %>% 
+            unnest(threshold) %>% 
+            select(-Freq, -dB) %>%
+            mutate(THrange = paste0(suppressWarnings(min(TH, na.rm = TRUE)) %>% round(digits = 0), "-", suppressWarnings(max(TH, na.rm = TRUE)) %>% round(digits = 0))) %>%
+            relocate(Spacer1, .before = TH) %>%
+            relocate(THrange, .after = TH)
         }
 
 
