@@ -1,10 +1,10 @@
 #TODO: make this work filter_arguments = 
-bad_rats = c("RP3")
-bad_date = "20230214"
+bad_rats = c("GP5")
+bad_date = "20221118"
 # Restore assignment from the 'old' setting
-restore = TRUE
+restore = FALSE
 # Backs up loseable data such as comments, weight, omit list
-backup_data = TRUE
+backup_data = FALSE
 
 
 # Function ---------------------------------------------------------------_
@@ -21,20 +21,18 @@ clean_archives <- function(entry) {
     deleted_entries = bind_rows(deleted_entries, key_data)
     write.csv(deleted_entries, paste0(projects_folder, "deleted_entries.csv"), row.names = FALSE)
     writeLines("\tData backed up")
-  }
+  } else writeLines("\tData NOT backed up")
   
 # Wipe from trials archive:
   experiment = df$assignment %>% .[[1]] %>% pluck("experiment")
   variable_name = paste0(experiment, "_archive")
   filename = paste0(projects_folder, variable_name, ".csv.gz")
   # load archive & clean
-  fread(filename)
-  temp = get(variable_name) %>%
+  temp = fread(filename) %>%
     filter(UUID != df$UUID)
   fwrite(temp, file = filename)
   rm(temp)
   # save archive
-  save(list = get("variable_name"), file = filename, ascii = TRUE, compress = FALSE)
   writeLines(paste0("\tTrials removed from ", variable_name))
   
 # Wipe UUID from run archive
@@ -65,7 +63,12 @@ InitializeMain()
 Bad_entries = run_archive %>% filter(date == bad_date & rat_name %in% bad_rats)
 print(select(Bad_entries, all_of(c("date", "rat_name"))))
 
-switch(menu(c("Yes", "No"), title=paste0("Do you want to DELETE the runs from run_archive?"), graphics = FALSE), lapply(Bad_entries %>% .$UUID, clean_archives), writeLines("Stopped. Entries remain."))
+switch(menu(c("Yes", "No"), 
+            title=paste0("Do you want to DELETE the runs from run_archive?\n Note: ", 
+                         "Data ", if_else(backup_data, "will", "will NOT"), " be saved and ", 
+                         "previous assignment ", if_else(restore, "will", "will NOT"), " be restored"), 
+            graphics = FALSE), 
+       lapply(Bad_entries %>% .$UUID, clean_archives), writeLines("Stopped. Entries remain."))
 
 rm(list = c("Bad_entries", "restore", "bad_rats", "bad_date"))
 InitializeMain()
