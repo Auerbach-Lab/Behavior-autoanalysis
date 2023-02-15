@@ -17,6 +17,7 @@ ui <- fluidPage(
   theme = shinythemes::shinytheme("spacelab"),
   #shinythemes::themeSelector(),
   titlePanel("PiedPiper", windowTitle = "PiedPiper"),
+  textOutput("text2"),
   fluidRow(
     column(width = 2,
            wellPanel(
@@ -39,10 +40,11 @@ ui <- fluidPage(
           actionButton("btnAnalyze", span("Analyze", id = "UpdateAnalyze", class = ""), class = "btn btn-primary", style = "margin-top: 25px;", width = "150px"),
         ),
         column(width = 5,
-          withLoader(tableOutput("warnings"), type = "html", loader = "dnaspin"),
+          withLoader(tableOutput("warnings"), type = "html", loader = "dnaspin", proxy.height = "100px"),
         ),
       ),
       textOutput("requirements"),
+      #withLoader(tableOutput("warnings"), type = "html", loader = "dnaspin", proxy.height = "100px"),
       fluidRow(
         column(width = 6,
           plotOutput("plotWeight", height = "500px"),
@@ -289,9 +291,9 @@ server <- function(input, output, session) {
     else(requirements())
   })
 
-  # output$text2 <- renderText({
-  #   input$weightYes
-  # })
+  output$text2 <- renderText({
+    v$row %>% .$warnings_list %>% unlist()
+  })
 
   # output$text3 <- renderText({
   #   req(input$btnAnalyze)
@@ -327,7 +329,7 @@ server <- function(input, output, session) {
 
   requirements_for_save <- reactive({
     if(input$weightProblem != "OK") {
-      if(is.null(input$weightProblem) || input$weightProblem == "") {
+      if(is.null(input$weightAction) || input$weightAction == "") {
         hideFeedback("weightAction")
         showFeedbackDanger("weightAction", "Required.")
       } else {
@@ -335,18 +337,35 @@ server <- function(input, output, session) {
       }
     }
     if(input$rxnProblem != "OK") {
-      if(is.null(input$rxnProblem) || input$rxnProblem == "") {
+      if(is.null(input$rxnAction) || input$rxnAction == "") {
         hideFeedback("rxnAction")
         showFeedbackDanger("rxnAction", "Required.")
       } else {
         hideFeedback("rxnAction")
       }
     }
+    if(is.null(input$scientist) || input$scientist == "") {
+      hideFeedback("scientist")
+      showFeedbackDanger("scientist", "Required.")
+    }
     validate(
       need(input$weightProblem, "Must OK or Reject weight graph."),
       need(input$rxnProblem, "Must OK or Reject rxn graph."),
+      need(input$scientist, "Must enter your name."),
     )
     "Ready for save."
+  })
+
+  observeEvent(ignoreInit = TRUE, input$weightAction, {
+    if (input$weightAction != "") hideFeedback("weightAction")
+  })
+
+  observeEvent(ignoreInit = TRUE, input$rxnAction, {
+    if (input$rxnAction != "") hideFeedback("rxnAction")
+  })
+
+  observeEvent(ignoreInit = TRUE, input$scientist, {
+    if (input$scientist != "") hideFeedback("scientist")
   })
 
   observeEvent(input$btnSave, {
@@ -370,13 +389,15 @@ server <- function(input, output, session) {
     requirements_for_save()
     if(isolate(v$saving)) {
       v$saving = FALSE
-
-      "Finished."
+      Write_To_Archives(v$row)
+      "Saved."
       # stop animation and reenable button
-      shinyjs::removeClass(id = "UpdateAnalyze", class = "loading dots")
+      shinyjs::removeClass(id = "UpdateSave", class = "loading dots")
       # shinyjs::enable("btnAnalyze")
+
+      # TODO - reset the entire flipping form
     }
-    else(requirements())
+    else(requirements_for_save())
   })
 
 
