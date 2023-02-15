@@ -962,7 +962,9 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     Format_for_Psycho <- function(df) {
       check = df %>% filter(Type == 0) %>% count() %>% as.numeric()
       CRnum = (if (check == 1) filter(df, Type == 0) %>% .$CR %>% as.numeric() else check)
-      FAnum = (if (check == 1) filter(df, Type == 0) %>% .$FA %>% as.numeric() else check)
+      suppressWarnings({
+        FAnum = (if (check == 1) filter(df, Type == 0) %>% .$FA %>% as.numeric() else check)        
+      })
       if(!("Hit" %in% colnames(df))) df = df %>% add_column(Hit = NA)
       if(!("Miss" %in% colnames(df))) df = df %>% add_column(Miss = NA)
       if(!("FA" %in% colnames(df))) {
