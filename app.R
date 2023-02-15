@@ -31,47 +31,82 @@ ui <- fluidPage(
            ),
     ),
     column(width = 10,
-      fillRow(height = "100px", width = "1250px", # want 625 for file input plus margin, so 625 x2 = 1250
-        fileInput("matfile", "Select .mat file:", buttonLabel = "Browse...", accept = c(".mat"), width = "600px"),
-        actionButton("btnAnalyze", span("Analyze", id = "UpdateAnimate", class = ""), class = "btn btn-primary", style = "margin-top: 25px;", width = "150px"),
+      fluidRow(
+        column(width = 5,
+          fileInput("matfile", "Select .mat file:", buttonLabel = "Browse...", accept = c(".mat"), width = "600px"),
+        ),
+        column(width = 2,
+          actionButton("btnAnalyze", span("Analyze", id = "UpdateAnalyze", class = ""), class = "btn btn-primary", style = "margin-top: 25px;", width = "150px"),
+        ),
+        column(width = 5,
+          withLoader(tableOutput("warnings"), type = "html", loader = "dnaspin"),
+        ),
       ),
       textOutput("requirements"),
-      textOutput("text1"),
-      textOutput("text2"),
-      withLoader(tableOutput("warnings"), type = "html", loader = "dnaspin"),
-      withLoader(plotOutput("plotWeight"), type = "html", loader = "dnaspin"),
-      conditionalPanel(
-        condition = "output.plotWeight",
-        span(tags$div(
-          "Is there a problem with these trends?", #tags$br(),
-          "Does today's weight look like it belongs?", #tags$br(),
-        ), style="font-weight:bold"),
-        fluidRow(
-          column(width = 2,
-            radioGroupButtons(
-              inputId = "weightProblem",
-              label = NULL,
-              choices = c("OK", "Problem"), #changing this text changes the conditional below
-              selected = character(0),
-              justified = TRUE,
-              status = "primary",
-            )
-          ),
-          column(width = 9,
-            conditionalPanel(
-              condition = "input.weightProblem == 'Problem'",
-              span(textInput("weightAction", NULL, placeholder = "To correct [description of problem], I will [take these actions]...", width = "97%"), style = "margin-top: -20px;")
+      fluidRow(
+        column(width = 6,
+          plotOutput("plotWeight", height = "500px"),
+          conditionalPanel(
+            condition = "output.plotWeight",
+            span(tags$div(
+              "Is there a problem with these trends?", #tags$br(),
+              "Does today's weight look correct?", #tags$br(),
+            ), style="font-weight:bold"),
+            fluidRow(
+              column(width = 3,
+                radioGroupButtons(
+                  inputId = "weightProblem",
+                  label = NULL,
+                  choices = c("OK", "Problem"), #changing this text changes the conditional below and in server
+                  selected = character(0),
+                  justified = TRUE,
+                  status = "primary",
+                ),
+              ),
+              column(width = 9,
+                conditionalPanel(
+                  condition = "input.weightProblem == 'Problem'",
+                  span(textInput("weightAction", NULL, placeholder = "To correct [description of problem], I will [take these actions]...", width = "90%"), style = "margin-top: -20px;")
+                ),
+              ),
             ),
-          )
+          ),
+        ),
+        column(width = 6,
+          conditionalPanel(
+            condition = "output.plotWeight",
+            withLoader(plotOutput("plotRxn", height = "500px"), type = "html", loader = "dnaspin"),
+            conditionalPanel(
+              condition = "output.plotWeight",
+              span(tags$div(
+                "Does it look like the rat performed as usual today?", #tags$br(),
+              ), style="font-weight:bold"),
+              fluidRow(
+                column(width = 3,
+                  radioGroupButtons(
+                    inputId = "rxnProblem",
+                    label = NULL,
+                    choices = c("OK", "Problem"), #changing this text changes the conditional below and in server
+                    selected = character(0),
+                    justified = TRUE,
+                    status = "primary",
+                  ),
+                ),
+                column(width = 9,
+                  conditionalPanel(
+                    condition = "input.rxnProblem == 'Problem'",
+                    span(textInput("rxnAction", NULL, placeholder = "Today's data is concerning because....", width = "90%"), style = "margin-top: -20px;")
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
       conditionalPanel(
-        condition = "output.plotWeight",
-        withLoader(plotOutput("plotRxn"), type = "html", loader = "dnaspin"),
-        span(tags$div(
-          "Is there a problem with these trends?", #tags$br(),
-          "Does today's weight look like it belongs?", #tags$br(),
-        ), style="font-weight:bold"),
+        condition = "(input.weightProblem != null) && (input.rxnProblem != null)",
+        actionButton("btnSave", span("Save Run", id = "UpdateSave", class = ""), class = "btn btn-success", style = "margin-top: 25px;", width = "450px"),
+        textOutput("requirements_for_save")
       ),
     ),
   ),
@@ -106,7 +141,8 @@ ui <- fluidPage(
                 text-align: left;
             }
             @keyframes spin10 { to { transform: translateY(-15.0em); } }
-            '))
+            '),
+  ),
 )
 
 server <- function(input, output, session) {
@@ -195,7 +231,7 @@ server <- function(input, output, session) {
   })
 
   # Submit validation
-  v <- reactiveValues(pushed = FALSE, row = NULL, weightPlotted = FALSE)
+  v <- reactiveValues(pushed = FALSE, row = NULL, weightPlotted = FALSE, saving = FALSE)
 
   requirements <- reactive({
     if(input$name == "") {
@@ -229,7 +265,7 @@ server <- function(input, output, session) {
       v$pushed = TRUE
 
       # start animation and disable inputs
-      shinyjs::addClass(id = "UpdateAnimate", class = "loading dots")
+      shinyjs::addClass(id = "UpdateAnalyze", class = "loading dots")
       shinyjs::disable("btnAnalyze")
       shinyjs::disable("name")
       shinyjs::disable("weight")
@@ -247,7 +283,7 @@ server <- function(input, output, session) {
       v$row = Process_File(file_to_load = input$matfile$datapath, name = input$name, weight = input$weight, observations = input$observations, exclude_trials = input$exclude_trials, file_name_override = input$matfile$name, use_shiny = TRUE)
       "Finished."
       # stop animation and reenable button
-      shinyjs::removeClass(id = "UpdateAnimate", class = "loading dots")
+      shinyjs::removeClass(id = "UpdateAnalyze", class = "loading dots")
       # shinyjs::enable("btnAnalyze")
     }
     else(requirements())
@@ -279,7 +315,7 @@ server <- function(input, output, session) {
     rat_name = v$row %>% .$rat_name
     rat_ID = v$row %>% .$rat_ID
     Generate_Weight_Trials_Graph(rat_name, rat_ID)
-  })
+  }, height = 500)
 
   output$plotRxn <- renderPlot({
     req(input$btnAnalyze)
@@ -287,8 +323,61 @@ server <- function(input, output, session) {
     rat_name = v$row %>% .$rat_name
     rat_ID = v$row %>% .$rat_ID
     Generate_Rxn_Graph(rat_name, rat_ID)
+  }, height = 500)
+
+  requirements_for_save <- reactive({
+    if(input$weightProblem != "OK") {
+      if(is.null(input$weightProblem) || input$weightProblem == "") {
+        hideFeedback("weightAction")
+        showFeedbackDanger("weightAction", "Required.")
+      } else {
+        hideFeedback("weightAction")
+      }
+    }
+    if(input$rxnProblem != "OK") {
+      if(is.null(input$rxnProblem) || input$rxnProblem == "") {
+        hideFeedback("rxnAction")
+        showFeedbackDanger("rxnAction", "Required.")
+      } else {
+        hideFeedback("rxnAction")
+      }
+    }
+    validate(
+      need(input$weightProblem, "Must OK or Reject weight graph."),
+      need(input$rxnProblem, "Must OK or Reject rxn graph."),
+    )
+    "Ready for save."
   })
-  #outputOptions(output, "plotRxn", suspendWhenHidden = FALSE)
+
+  observeEvent(input$btnSave, {
+    v$saving = FALSE
+    if (requirements_for_save() == "Ready for save.") {
+      v$saving = TRUE
+
+      # start animation and disable inputs
+      shinyjs::addClass(id = "UpdateSave", class = "loading dots")
+      shinyjs::disable("btnSave")
+      shinyjs::disable("weightProblem")
+      shinyjs::disable("weightAction")
+      shinyjs::disable("rxnProblem")
+      shinyjs::disable("rxnAction")
+      shinyjs::disable("scientist")
+    }
+  })
+
+  output$requirements_for_save <- renderText({
+    req(input$btnSave)
+    requirements_for_save()
+    if(isolate(v$saving)) {
+      v$saving = FALSE
+
+      "Finished."
+      # stop animation and reenable button
+      shinyjs::removeClass(id = "UpdateAnalyze", class = "loading dots")
+      # shinyjs::enable("btnAnalyze")
+    }
+    else(requirements())
+  })
 
 
 }

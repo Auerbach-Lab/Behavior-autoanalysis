@@ -1655,13 +1655,13 @@ Generate_Rxn_Graph <- function(rat_name, ratID) {
                  fun.max = function(x) mean(x) + sd(x),
                  geom = "errorbar", linewidth = 2, width = 1.5) +
     stat_summary(aes(color = "Average"), fun = mean, geom = "line", linewidth = 2) +
-    stat_summary(fun = mean, geom = "point", shape=24, color="black", fill="black", size=5) +
+    stat_summary(fun = mean, geom = "point", shape=24, color="black", fill="thistle", size=5) +
     geom_line(data = Rxn_today, aes(color = "Today"), linewidth = 1.5) +
-    geom_point(data = Rxn_today, shape=21, color="black", fill = "#69b3a2", size = 5) +
+    geom_point(data = Rxn_today, shape=21, color="black", fill = "mediumslateblue", size = 5) +
     ggtitle(paste0(rat_name, " Reaction Curve Check")) +
-    scale_color_manual(values = c("Today" = "#69b3a2", "Average" = "black"), name = "") +
+    scale_color_manual(values = c("Today" = "mediumslateblue", "Average" = "thistle"), name = "") +
     theme_ipsum_es() +
-    theme(legend.position = "bottom") +
+    theme(legend.position = c(.9,.75)) +
     labs(x = NULL, y = NULL)
   return(test_graph_Rxn)
 }
