@@ -17,7 +17,7 @@ ui <- fluidPage(
   theme = shinythemes::shinytheme("spacelab"),
   #shinythemes::themeSelector(),
   titlePanel("PiedPiper", windowTitle = "PiedPiper"),
-  textOutput("text2"),
+  #textOutput("text2"),
   fluidRow(
     column(width = 2,
            wellPanel(
@@ -40,11 +40,11 @@ ui <- fluidPage(
           actionButton("btnAnalyze", span("Analyze", id = "UpdateAnalyze", class = ""), class = "btn btn-primary", style = "margin-top: 25px;", width = "150px"),
         ),
         column(width = 5,
-          withLoader(tableOutput("warnings"), type = "html", loader = "dnaspin", proxy.height = "100px"),
+          #withLoader(tableOutput("warnings"), type = "html", loader = "dnaspin", proxy.height = "100px"),
         ),
       ),
       textOutput("requirements"),
-      #withLoader(tableOutput("warnings"), type = "html", loader = "dnaspin", proxy.height = "100px"),
+      withLoader(tableOutput("warnings"), type = "html", loader = "dnaspin", proxy.height = "100px"),
       fluidRow(
         column(width = 6,
           plotOutput("plotWeight", height = "500px"),
@@ -112,7 +112,6 @@ ui <- fluidPage(
       ),
     ),
   ),
-  tags$style(HTML("tbody { color: #DD0000; font-family: monospace; white-space: pre}")),
   # button animation
   tags$head(tags$style(type="text/css", '
             .loading {
@@ -143,7 +142,18 @@ ui <- fluidPage(
                 text-align: left;
             }
             @keyframes spin10 { to { transform: translateY(-15.0em); } }
+            .greenbody tbody {
+              color: #00BB00;
+              font-family: monospace;
+              white-space: pre
+            }
+            .redbody tbody {
+              color: #DD0000;
+              font-family: monospace;
+              white-space: pre
+            }
             '),
+
   ),
 )
 
@@ -233,7 +243,7 @@ server <- function(input, output, session) {
   })
 
   # Submit validation
-  v <- reactiveValues(pushed = FALSE, row = NULL, weightPlotted = FALSE, saving = FALSE)
+  v <- reactiveValues(pushed = FALSE, row = NULL, weightPlotted = FALSE, saving = FALSE, noWarns = FALSE)
 
   requirements <- reactive({
     if(input$name == "") {
@@ -291,9 +301,9 @@ server <- function(input, output, session) {
     else(requirements())
   })
 
-  output$text2 <- renderText({
-    v$row %>% .$warnings_list %>% unlist()
-  })
+  # output$text2 <- renderText({
+  #   v$row %>% .$warnings_list %>% unlist()
+  # })
 
   # output$text3 <- renderText({
   #   req(input$btnAnalyze)
@@ -308,7 +318,16 @@ server <- function(input, output, session) {
   {
     req(input$btnAnalyze)
     req(v$row)
-    v$row %>% .$warnings_list %>% unlist() %>% data.frame(Warnings = .) %>% mutate(Warnings = str_replace_all(Warnings, "\\n", "<br> "))
+    warns = v$row %>% .$warnings_list %>% unlist() %>% data.frame(Warnings = .)
+    if(nrow(warns) == 0) {
+      v$noWarns = TRUE
+      shinyjs::addClass(id = "warnings", class = "greenbody")
+      #data.frame(File_Checks_Complete = "No warnings!")
+    } else {
+      v$noWarns = FALSE
+      shinyjs::addClass(id = "warnings", class = "redbody")
+      warns = warns %>% mutate(Warnings = str_replace_all(Warnings, "\\n", "<br> "))
+    }
   })
 
   output$plotWeight <- renderPlot({
