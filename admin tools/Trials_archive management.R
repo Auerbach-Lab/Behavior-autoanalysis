@@ -1,38 +1,52 @@
-# Find missing entries ---------------------------------------------------
+group = "GD"
 
+# Find missing entries ---------------------------------------------------
 # Load file
-Tsc = fread(paste0(projects_folder, "Tsc2-LE_archive.csv.gz"))
+trials_archive = fread(paste0(projects_folder, group, "_archive.csv.gz"))
 
 # Get list of entered trials
-UUIDs_in_trials = Tsc$UUID %>% unique()
+UUIDs_in_trials = trials_archive$UUID %>% unique()
 # Get list of entered runs
-UUIDs_in_runs = run_archive %>% filter(rat_name %in% Tsc_rats) %>% .$UUID %>% unique()
+InitializeMain()
+UUIDs_in_runs = run_archive %>% unnest_wider(assignment) %>% filter(experiment == group) %>% .$UUID %>% unique()
 # Find what is missing
-UUIDs_missing = keep(UUIDs_in_runs , ~ ! . %in% UUIDs_in_trials)
+UUIDs_missing = keep(UUIDs_in_runs, ~ ! . %in% UUIDs_in_trials)
+UUIDs_without_runs = keep(UUIDs_in_trials, ~ ! . %in% UUIDs_in_runs)
+
+if(is_empty(UUIDs_without_runs)) {
+  writeLines(glue("\tNo extra data for {group}"))
+  rm(UUIDs_without_runs)
+}
 
 # Write out list to load
-run_archive %>% filter(UUID %in% UUIDs_missing) %>% 
-  arrange(desc(date)) %>%
+temp = run_archive %>% filter(UUID %in% UUIDs_missing) %>% 
+  arrange(date) %>%
   select(date, rat_name, rat_ID, omit_list, assignment) %>% 
   unnest_wider(assignment) %>% 
-  select(-comment) %>%
   unnest(omit_list) %>%
-  arrange(date) %>%
-  fwrite("missing.csv")
+  mutate(Dataset = group)
+
+if(nrow(temp) >= 1) {fwrite(temp, "missing.csv")
+  } else { writeLines(glue("\tNo missing data for {group}")) }
+  
+
+rm(list = c("trials_archive", "group", "UUIDs_in_trials", "UUIDs_in_runs", "UUIDs_missing", "temp"))
 
 
 # De-duplicating ----------------------------------------------------------
 
 # Load file
-Tsc_original = fread(paste0(projects_folder, "Tsc2-LE_archive.csv.gz"))
+trials_archive = fread(paste0(projects_folder, group, "_archive.csv.gz"))
 
 # ID duplicates
-Dup = duplicated(Tsc_original) | duplicated(Tsc_original, fromLast = TRUE)
-Tsc_dup = mutate(Tsc_original, Dup = Dup) %>% rowid_to_column()
+Dup = duplicated(trials_archive) | duplicated(trials_archive, fromLast = TRUE)
+trials_archive_dup = mutate(trials_archive, Dup = Dup) %>% rowid_to_column()
 filter(Tsc_dup, Dup == TRUE)
 
 # Remove
-Tsc = unique(Tsc_original)
+trials_archive_dedup = unique(trials_archive)
 
 # Write file
-fwrite(Tsc, paste0(projects_folder, "Tsc2-LE_archive.csv.gz"))
+fwrite(trials_archive_dedup, paste0(projects_folder, "Tsc2-LE_archive.csv.gz"))
+
+rm(list = c("trials_archive", "group", "Dup", "trials_archive_dup", "trials_archive_dedup"))

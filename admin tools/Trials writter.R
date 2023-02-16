@@ -1,6 +1,5 @@
 
 # User set variables ------------------------------------------------------
-Trial_archive = "Tsc2-LE"
 
 
 # Functions ---------------------------------------------------------------
@@ -69,11 +68,7 @@ Process_File <- function(df) {
         } else {
           r = unique(stim_encoding_table$`Delay (s)`)
         }
-        if (length(r)>1) {
-          warn = paste0("ACTION REQUIRED: Multiple delay windows (", r, ").")
-          warning(paste0(warn, "\n"))
-          warnings_list <<- append(warnings_list, warn)
-        }
+        
         return(r)
       }
       
@@ -106,7 +101,6 @@ Process_File <- function(df) {
         else {
           warn = paste0("WARNING: Multiple non-oddball stim types: ", stim_type)
           warning(paste0(warn, "\n"))
-          warnings_list <<- append(warnings_list, warn)
           stim_type = stim_encoding_table %>% filter(Type == "1") %>% .$`Stim Source`
         }
       } else {
@@ -156,7 +150,6 @@ Process_File <- function(df) {
       if (!is.na(filename_TR)) if (filename_TR != r$trigger_sensitivity) {
         warn = paste0("ACTION REQUIRED: Mismatched trigger window in filename (", filename_TR, ") and user_settings (", r$trigger_sensitivity, ").")
         warning(paste0(warn, "\n"))
-        warnings_list <<- append(warnings_list, warn)
         
         if (r$trigger_sensitivity != 200) {
           newname = stringr::str_replace(r$stim_filename,"_TR[:digit:]+ms",paste0("_TR", r$trigger_sensitivity, "ms"))
@@ -167,7 +160,6 @@ Process_File <- function(df) {
         
         warn = paste0("Overriding File Name: Old (", r$stim_filename, ") to New (", newname, ") based on trigger_sensitivity.")
         warning(paste0(warn, "\n"))
-        warnings_list <<- append(warnings_list, warn)
         r$stim_filename = newname
       }
       if (length(r$response_window) > 1) stop("ABORT: Multiple response windows:", r$response_window,". Aborting.")
@@ -344,13 +336,14 @@ Process_File <- function(df) {
       return(current_file_UUID)
     }
     
-    Is_New_UUID <- function(uuid) {
-      is_old = uuid %in% trials_UUIDs$UUID
+    Is_New_UUID <- function(current_file_UUID) {
+      trials_UUIDs = fread(paste0(projects_folder, filename), select = "UUID")
+      
+      is_old = current_file_UUID %in% trials_UUIDs$UUID
       if (is_old) {
-        warn = paste0("SKIPPED: This file has already been added: ", uuid)
+        warn = paste0("SKIPPED: This file has already been added: ", current_file_UUID)
         warning(paste0(warn, "\n"))
-        warnings_list <<- append(warnings_list, warn)
-        #stop(paste0("ABORT: This file has already been added: ", uuid))
+        stop(paste0("ABORT: This file has already been added: ", current_file_UUID))
       }
       return(!is_old)
     }
@@ -362,7 +355,8 @@ Process_File <- function(df) {
   Add_to_Trial_Archive <- function(rat_id, current_file_UUID) { # NOTE row_to_add is the row to add to the RUN archive, just used here to get uuid.
     cat("Trials... ")
     uuid = current_file_UUID
-    fwrite(cbind(trial_data, UUID = uuid), file = filename, append = file.exists(filename)) # tack UUID onto trials and add to archive, appending if the file already exists
+    file_name = paste0(projects_folder, filename)
+    fwrite(cbind(trial_data, UUID = uuid), file = file_name, append = file.exists(file_name)) # tack UUID onto trials and add to archive, appending if the file already exists
     cat(glue("appended to {Trial_archive}\n"))
   }
   
@@ -373,20 +367,26 @@ Process_File <- function(df) {
   
   rat_ID = df$rat_ID
   name = df$rat_name
-  date = lubridate::as_date(df$date)
+  date = df$date
+    if(date > 20230104) file_location = "Z:/Daily Matlab files"
+    else file_location = glue("C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)/{project}/data")
+  
   exclude_trials = df$omit_list
   ignore_name_check = FALSE
-  writeLines(glue('Pick file for {name} on {date}'))
-  file_to_load <- choose.files(default = glue("Z:/Daily Matlab files/{date} {name}"))
+  writeLines(glue('Pick file for {name} on {lubridate::as_date(date)}'))   
+  files = list.files(path = glue("{file_location}/{date}/"), pattern = glue("^{name}.*.mat$"))
+  if(length(files) != 1) {
+    file_to_load = choose.files(default = glue("{file_location}/{date}/{name}"))
+  } else {file_to_load = glue("{file_location}/{date}/{files}")}
+  filename = paste0(Trial_archive, "_archive.csv.gz")
   
   # load run's .mat file
   imported_data <- Import_Matlab(file_to_load)
   run_properties <- imported_data$run_properties
   trial_data <- imported_data$trial_data
   
-  filename = paste0(Trial_archive, "_archive.csv.gz")
-  trials_UUIDs = fread(paste0(projects_folder, filename), select = "UUID")
-  current_file_UUID <- Check_UUID()
+  Check_UUID()
+  current_file_UUID <- run_properties$UUID 
   
   rat_id = Get_Rat_ID(run_properties$rat_name)
   if (rat_ID != rat_id) stop("ABORT: rat IDs do not match.")
@@ -394,10 +394,17 @@ Process_File <- function(df) {
   
   cat("Archiving ")
   Add_to_Trial_Archive(rat_id, current_file_UUID)
-  writeLines("Done\n")
+  writeLines("\nDone\n")
   
 }
 
 missing_files = fread("missing.csv")
-apply(missing_files, 1, Process_File) # 1 sets it to apply by rows not columns
 
+Trial_archive = unique(missing_files$Dataset)
+if (Trial_archive == "Tsc2-LE") {project = "Tsc2 Eker"
+} else if (Trial_archive == "GD") {project = "Tsc2 Eker"
+} else {project = Trial_archive}
+
+apply(missing_files, 1, Process_File) # 1 sets it to apply by rows not columns
+writeLines("No more files missing")
+rm(list = c("missing_files", "Trial_archive", "project"))
