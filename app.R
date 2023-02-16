@@ -17,10 +17,10 @@ ui <- fluidPage(
   theme = shinythemes::shinytheme("spacelab"),
   #shinythemes::themeSelector(),
   titlePanel("PiedPiper", windowTitle = "PiedPiper"),
-  div(id = "form",
-    #textOutput("text2"),
-    fluidRow(
-      column(width = 2,
+  #textOutput("text2"),
+  fluidRow(
+    column(width = 2,
+           div(id = "form1",
              wellPanel(
                textInput("name", "Rat name", placeholder = "Blue4"),
                numericInput("weight", "Weight (g)", value = 0, min = 0),
@@ -28,10 +28,12 @@ ui <- fluidPage(
                              placeholder = "Good hits. Good misses.\nOnly real FAs.\n2 CRs back to back.\nBreak 35-47m with no jams."),
                textInput("exclude_trials", "Trials to skip", placeholder = "2, 120-126, 201 (or blank)")
              ),
-             wellPanel(
-               textInput("scientist", "Your Name", placeholder = "Noëlle"),
-             ),
-      ),
+           ),
+           wellPanel(
+             textInput("scientist", "Your Name", placeholder = "Noëlle"),
+           ),
+    ),
+    div(id = "form2",
       column(width = 10,
         fluidRow(
           column(width = 5,
@@ -47,7 +49,7 @@ ui <- fluidPage(
         textOutput("requirements"),
         withLoader(tableOutput("warnings"), type = "html", loader = "dnaspin", proxy.height = "100px"),
         conditionalPanel(
-          condition = "output.fatal_error",
+          condition = "output.fatal_error == 'TRUE'",
           actionButton("btnReset", label = "Reset Form", class = "btn btn-danger", width = "250px"),
         ),
         fluidRow(
@@ -249,7 +251,7 @@ server <- function(input, output, session) {
   })
 
   # Submit validation
-  v <- reactiveValues(pushed = FALSE, row = NULL, weightPlotted = FALSE, saving = FALSE)
+  v <- reactiveValues(pushedAnalyze = FALSE, readyAnalyze = FALSE, row = NULL, weightPlotted = FALSE, pushedSave = FALSE, readySave = FALSE)
 
   requirements <- reactive({
     if(input$name == "") {
@@ -278,9 +280,10 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$btnAnalyze, {
-    v$pushed = FALSE
+    v$pushedAnalyze = TRUE
+    v$readyAnalyze = FALSE
     if (requirements() == "Ready for analysis.") {
-      v$pushed = TRUE
+      v$readyAnalyze = TRUE
 
       # start animation and disable inputs
       shinyjs::addClass(id = "UpdateAnalyze", class = "loading dots")
@@ -293,22 +296,27 @@ server <- function(input, output, session) {
     }
   })
 
+
+
   output$requirements <- renderText({
     req(input$btnAnalyze)
-    requirements()
-    if(isolate(v$pushed)) {
-      v$pushed = FALSE
+    #requirements()
+    if(isolate(v$readyAnalyze)) {
+      v$readyAnalyze = FALSE
       v$row = Process_File(file_to_load = input$matfile$datapath, name = input$name, weight = input$weight, observations = input$observations, exclude_trials = input$exclude_trials, file_name_override = input$matfile$name, use_shiny = TRUE)
       "Finished."
       # stop animation and reenable button
       shinyjs::removeClass(id = "UpdateAnalyze", class = "loading dots")
       # shinyjs::enable("btnAnalyze")
     }
-    else(requirements())
+    else if(isolate(v$pushedAnalyze)) {
+      v$pushedAnalyze = FALSE
+      requirements()
+    }
   })
 
   # output$text2 <- renderText({
-  #   v$row %>% .$warnings_list %>% unlist()
+  #   sci()
   # })
 
   # output$text3 <- renderText({
@@ -329,7 +337,7 @@ server <- function(input, output, session) {
   output$fatal_error <- renderText({
     fatal_error()
   })
-  outputOptions(output, "fatal_error", suspendWhenHidden=FALSE)
+  outputOptions(output, "fatal_error", suspendWhenHidden = FALSE)
 
   output$warnings <- renderTable(striped = TRUE, hover = TRUE, sanitize.text.function = identity,
   {
@@ -403,23 +411,15 @@ server <- function(input, output, session) {
     if (input$scientist != "") hideFeedback("scientist")
   })
 
-  observeEvent(input$btnSave, {
-    v$saving = FALSE
-    if (requirements_for_save() == "Ready for save.") {
-      v$saving = TRUE
-
-      # start animation and disable inputs
-      shinyjs::addClass(id = "UpdateSave", class = "loading dots")
-      shinyjs::disable("btnSave")
-      shinyjs::disable("weightProblem")
-      shinyjs::disable("weightAction")
-      shinyjs::disable("rxnProblem")
-      shinyjs::disable("rxnAction")
-      shinyjs::disable("scientist")
-    }
-  })
-
-  resetForm <- function(scientist_name) {
+  resetForm <- function() {
+    updateRadioGroupButtons(inputId = "weightProblem", selected = character(0))
+    updateRadioGroupButtons(inputId = "rxnProblem", selected = character(0))
+    v$pushedAnalyze = FALSE
+    v$readyAnalyze = FALSE
+    v$row = NULL
+    v$weightPlotted = FALSE
+    v$pushedSave = FALSE
+    v$readySave = FALSE
     shinyjs::enable("btnAnalyze")
     shinyjs::enable("name")
     shinyjs::enable("weight")
@@ -439,22 +439,45 @@ server <- function(input, output, session) {
     hideFeedback("weight")
     hideFeedback("observations")
     hideFeedback("matfile")
-    updateTextInput(inputId = "scientist", label = scientist_name)
+    reset("form1")
+    reset("form2")
   }
+
+  observeEvent(input$btnReset, {
+    resetForm()
+  })
+
 
   output$requirements_for_save <- renderText({
     req(input$btnSave)
     requirements_for_save()
-    if(isolate(v$saving)) {
-      v$saving = FALSE
+    if(v$readySave) {
       Write_To_Archives(v$row)
       "Saved."
       # stop animation
       shinyjs::removeClass(id = "UpdateSave", class = "loading dots")
-      resetForm(input$scientist)
+      resetForm()
     }
     else(requirements_for_save())
   })
+
+  observeEvent(input$btnSave, {
+    v$pushedSave = TRUE
+    v$readySave = FALSE
+    if (requirements_for_save() == "Ready for save.") {
+      v$readySave = TRUE
+
+      # start animation and disable inputs
+      shinyjs::addClass(id = "UpdateSave", class = "loading dots")
+      shinyjs::disable("btnSave")
+      shinyjs::disable("weightProblem")
+      shinyjs::disable("weightAction")
+      shinyjs::disable("rxnProblem")
+      shinyjs::disable("rxnAction")
+      shinyjs::disable("scientist")
+    }
+  })
+
 
 
 }
