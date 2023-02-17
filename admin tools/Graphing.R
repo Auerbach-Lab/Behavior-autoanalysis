@@ -1,7 +1,7 @@
 InitializeMain()
 
-rat_to_graph = c("BP6")
-date_to_graph = "20230210"
+rat_to_graph = c("Purple2")
+date_to_graph = "20230217"
 
 
 run_archive %>%
@@ -10,7 +10,8 @@ run_archive %>%
   unnest(reaction) %>%
   mutate(Rxn = Rxn * 1000) %>%
   ggplot(aes(x = `Inten (dB)`, y = Rxn)) +
-    geom_line()
+    geom_line(linewidth = 2, color = "darkgreen") +
+    theme_ipsum_es()
 
 
 run_archive %>%
@@ -18,7 +19,9 @@ run_archive %>%
   unnest_wider(stats) %>%
   unnest(dprime) %>%
   ggplot(aes(x = dB, y = dprime)) +
-    geom_line()
+    geom_line(linewidth = 2, color = "darkgreen") +
+    theme_ipsum_es()
+
 
 
 # #inidividual data points
