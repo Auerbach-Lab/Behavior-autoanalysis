@@ -2,6 +2,9 @@
 .Rhistory
 .RData
 .Ruserdata
-Behavior-autoanalysis.Rproj
-rat_archive.csv
-run_archive.Rdata
+**.Rproj
+**.csv
+**.Rdata
+**.csv.gz
+**.xlsx
+**.mat
