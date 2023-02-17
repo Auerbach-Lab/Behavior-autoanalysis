@@ -64,7 +64,7 @@ ui <- fluidPage(
               fluidRow(
                 column(width = 3,
                   radioGroupButtons(
-                    inputId = "weightProblem",
+                    inputId = "weightCheck",
                     label = NULL,
                     choices = c("OK", "Problem"), #changing this text changes the conditional below and in server
                     selected = character(0),
@@ -74,8 +74,8 @@ ui <- fluidPage(
                 ),
                 column(width = 9,
                   conditionalPanel(
-                    condition = "input.weightProblem == 'Problem'",
-                    span(textInput("weightAction", NULL, placeholder = "To correct [description of problem], I will [take these actions]...", width = "90%"), style = "margin-top: -20px;")
+                    condition = "input.weightCheck == 'Problem'",
+                    span(textInput("weightProblem", NULL, placeholder = "To correct [description of problem], I will [take these actions]...", width = "90%"), style = "margin-top: -20px;")
                   ),
                 ),
               ),
@@ -93,7 +93,7 @@ ui <- fluidPage(
                 fluidRow(
                   column(width = 3,
                     radioGroupButtons(
-                      inputId = "rxnProblem",
+                      inputId = "rxnCheck",
                       label = NULL,
                       choices = c("OK", "Problem"), #changing this text changes the conditional below and in server
                       selected = character(0),
@@ -103,8 +103,8 @@ ui <- fluidPage(
                   ),
                   column(width = 9,
                     conditionalPanel(
-                      condition = "input.rxnProblem == 'Problem'",
-                      span(textInput("rxnAction", NULL, placeholder = "Today's data is concerning because....", width = "90%"), style = "margin-top: -20px;")
+                      condition = "input.rxnCheck == 'Problem'",
+                      span(textInput("rxnProblem", NULL, placeholder = "Today's data is concerning because....", width = "90%"), style = "margin-top: -20px;")
                     ),
                   ),
                 ),
@@ -113,7 +113,7 @@ ui <- fluidPage(
           ),
         ),
         conditionalPanel(
-          condition = "(input.weightProblem != null) && (input.rxnProblem != null)",
+          condition = "(input.weightCheck != null) && (input.rxnCheck != null)",
           actionButton("btnSave", span("Save Run", id = "UpdateSave", class = ""), class = "btn btn-success", style = "margin-top: 25px;", width = "450px"),
           textOutput("requirements_for_save")
         ),
@@ -371,40 +371,43 @@ server <- function(input, output, session) {
   }, height = 500)
 
   requirements_for_save <- reactive({
-    if(input$weightProblem != "OK") {
-      if(is.null(input$weightAction) || input$weightAction == "") {
-        hideFeedback("weightAction")
-        showFeedbackDanger("weightAction", "Required.")
+    req(input$weightCheck)
+    req(input$rxnCheck)
+    req(input$scientist)
+    validate(
+      need(input$weightCheck, "Must OK or Reject weight graph."),
+      need(input$rxnCheck, "Must OK or Reject rxn graph."),
+      need(input$scientist, "Must enter your name."),
+    )
+    if(input$weightCheck != "OK") {
+      if(is.null(input$weightProblem) || input$weightProblem == "") {
+        hideFeedback("weightProblem")
+        showFeedbackDanger("weightProblem", "Required.")
       } else {
-        hideFeedback("weightAction")
+        hideFeedback("weightProblem")
       }
     }
-    if(input$rxnProblem != "OK") {
-      if(is.null(input$rxnAction) || input$rxnAction == "") {
-        hideFeedback("rxnAction")
-        showFeedbackDanger("rxnAction", "Required.")
+    if(input$rxnCheck != "OK") {
+      if(is.null(input$rxnProblem) || input$rxnProblem == "") {
+        hideFeedback("rxnProblem")
+        showFeedbackDanger("rxnProblem", "Required.")
       } else {
-        hideFeedback("rxnAction")
+        hideFeedback("rxnProblem")
       }
     }
     if(is.null(input$scientist) || input$scientist == "") {
       hideFeedback("scientist")
       showFeedbackDanger("scientist", "Required.")
     }
-    validate(
-      need(input$weightProblem, "Must OK or Reject weight graph."),
-      need(input$rxnProblem, "Must OK or Reject rxn graph."),
-      need(input$scientist, "Must enter your name."),
-    )
     "Ready for save."
   })
 
-  observeEvent(ignoreInit = TRUE, input$weightAction, {
-    if (input$weightAction != "") hideFeedback("weightAction")
+  observeEvent(ignoreInit = TRUE, input$weightProblem, {
+    if (input$weightProblem != "") hideFeedback("weightProblem")
   })
 
-  observeEvent(ignoreInit = TRUE, input$rxnAction, {
-    if (input$rxnAction != "") hideFeedback("rxnAction")
+  observeEvent(ignoreInit = TRUE, input$rxnProblem, {
+    if (input$rxnProblem != "") hideFeedback("rxnProblem")
   })
 
   observeEvent(ignoreInit = TRUE, input$scientist, {
@@ -412,14 +415,16 @@ server <- function(input, output, session) {
   })
 
   resetForm <- function() {
-    updateRadioGroupButtons(inputId = "weightProblem", selected = character(0))
-    updateRadioGroupButtons(inputId = "rxnProblem", selected = character(0))
+    reset("form1")
+    reset("form2")
     v$pushedAnalyze = FALSE
     v$readyAnalyze = FALSE
     v$row = NULL
     v$weightPlotted = FALSE
     v$pushedSave = FALSE
     v$readySave = FALSE
+    updateRadioGroupButtons(inputId = "weightCheck", selected = character(0))
+    updateRadioGroupButtons(inputId = "rxnCheck", selected = character(0))
     shinyjs::enable("btnAnalyze")
     shinyjs::enable("name")
     shinyjs::enable("weight")
@@ -427,35 +432,34 @@ server <- function(input, output, session) {
     shinyjs::enable("exclude_trials")
     shinyjs::enable("matfile")
     shinyjs::enable("btnSave")
+    shinyjs::enable("weightCheck")
     shinyjs::enable("weightProblem")
-    shinyjs::enable("weightAction")
+    shinyjs::enable("rxnCheck")
     shinyjs::enable("rxnProblem")
-    shinyjs::enable("rxnAction")
     shinyjs::enable("scientist")
-    hideFeedback("weightAction")
-    hideFeedback("rxnAction")
+    hideFeedback("weightProblem")
+    hideFeedback("rxnProblem")
     hideFeedback("scientist")
     hideFeedback("name")
     hideFeedback("weight")
     hideFeedback("observations")
     hideFeedback("matfile")
-    reset("form1")
-    reset("form2")
   }
 
   observeEvent(input$btnReset, {
     resetForm()
   })
 
-
   output$requirements_for_save <- renderText({
     req(input$btnSave)
-    requirements_for_save()
-    if(v$readySave) {
-      Write_To_Archives(v$row)
+    if(isolate(v$readySave)) {
+      r = v$row
+      r$scientist = input$scientist
+      r$weightProblem = if(input$weightCheck != "OK") input$weightProblem else ""
+      r$rxnProblem = if(input$rxnCheck != "OK") input$rxnProblem else ""
+      Write_To_Archives(r)
       "Saved."
-      # stop animation
-      shinyjs::removeClass(id = "UpdateSave", class = "loading dots")
+      shinyjs::removeClass(id = "UpdateSave", class = "loading dots") # stop animation
       resetForm()
     }
     else(requirements_for_save())
@@ -470,10 +474,10 @@ server <- function(input, output, session) {
       # start animation and disable inputs
       shinyjs::addClass(id = "UpdateSave", class = "loading dots")
       shinyjs::disable("btnSave")
+      shinyjs::disable("weightCheck")
       shinyjs::disable("weightProblem")
-      shinyjs::disable("weightAction")
+      shinyjs::disable("rxnCheck")
       shinyjs::disable("rxnProblem")
-      shinyjs::disable("rxnAction")
       shinyjs::disable("scientist")
     }
   })

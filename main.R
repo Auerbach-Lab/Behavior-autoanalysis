@@ -1439,23 +1439,19 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Phase <<- NA
       rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Task <<- NA
       rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Detail <<- NA
-#APP      write.csv(rat_archive, paste0(projects_folder, "rat_archive.csv"), row.names = FALSE)
     }
 
     Add_to_Run_Archive <- function(row_to_add) {
       cat("Run... ")
       run_archive <<- rbind(run_archive, row_to_add)
-#APP      save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = FALSE, compress = FALSE)
     }
 
     Add_to_Trial_Archive <- function(row_to_add) { # NOTE row_to_add is the row to add to the RUN archive, just used here to get uuid.
-
       cat("Trials... ")
       uuid = row_to_add$UUID
       experiment = row_to_add$assignment %>% .[[1]] %>% pluck("experiment")
       variable_name = paste0(experiment, "_archive")
       filename = paste0(projects_folder, variable_name, ".csv.gz")
-#APP      fwrite(cbind(trial_data, UUID = uuid), file = filename, append = file.exists(filename)) # tack UUID onto trials and add to archive, appending if the file already exists
       trials_to_write <<- trial_data
     }
 
@@ -1527,11 +1523,13 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         block_size = run_properties$stim_block_size,
         complete_block_count = trial_data$complete_block_number %>% max(na.rm = TRUE),
 
-        invalid = "",    # supervisor can manually mark runs as invalid, putting reasoning here
-        comments = observations,    #   undergrad comments
-        # check = list(check), # TODO: graphs and UG sign offs will go here
+        scientist = "", # individual who checked in this data, provided later by shiny app
+        comments = observations,    # observations taken during run
+        weightProblem = "", # empty string for no problem, or a description of problem, by shiny app later
+        rxnProblem = "", # empty string for no problem, or a description of problem, by shiny app later
         warnings_list = list(warnings_list),
         omit_list = run_properties$omit_list,
+        invalid = "",    # supervisor can manually mark runs as invalid, putting reasoning here
         UUID = run_properties$UUID
       )
       return(r)
@@ -1718,10 +1716,12 @@ Write_To_Archives <- function(row_added) {
   variable_name = paste0(experiment, "_archive")
   filename = paste0(projects_folder, variable_name, ".csv.gz") # trials archive
 
+  run_archive <<- run_archive %>% rows_update(row_added, by = "UUID") # update run_archive with information from shiny
+
   fwrite(rat_archive, paste0(projects_folder, "rat_archive.csv"), row.names = FALSE)
   save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
   fwrite(cbind(trials_to_write, UUID = uuid), file = filename, append = file.exists(filename)) # tack UUID onto trials and add to archive, appending if the file already exists
-  remove(trials_to_write)
+  remove(trials_to_write, inherits = TRUE)
 
   writeLines(paste0("Run ", row_added$UUID, " of ", row_added$rat_name, " (#", row_added$rat_ID, ") saved to disk."))
 }
