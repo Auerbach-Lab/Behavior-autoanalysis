@@ -375,12 +375,6 @@ server <- function(input, output, session) {
   requirements_for_save <- reactive({
     req(input$weightCheck)
     req(input$rxnCheck)
-    req(input$scientist)
-    validate(
-      need(input$weightCheck, "Must OK or Reject weight graph."),
-      need(input$rxnCheck, "Must OK or Reject rxn graph."),
-      need(input$scientist, "Must enter your name."),
-    )
     if(input$weightCheck != "OK") {
       if(is.null(input$weightProblem) || input$weightProblem == "") {
         hideFeedback("weightProblem")
@@ -401,6 +395,11 @@ server <- function(input, output, session) {
       hideFeedback("scientist")
       showFeedbackDanger("scientist", "Required.")
     }
+    validate(
+      need(input$weightCheck, "Must OK or Reject weight graph."),
+      need(input$rxnCheck, "Must OK or Reject rxn graph."),
+      need(input$scientist, "Must enter your name."),
+    )
     "Ready for save."
   })
 
