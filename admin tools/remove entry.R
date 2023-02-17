@@ -1,10 +1,10 @@
 #TODO: make this work filter_arguments = 
-bad_rats = c("GP5")
-bad_date = "20221118"
+bad_rats = c("GP6")
+bad_date = "20230217"
 # Restore assignment from the 'old' setting
-restore = FALSE
+restore = TRUE
 # Backs up loseable data such as comments, weight, omit list
-backup_data = FALSE
+backup_data = TRUE
 
 
 # Function ---------------------------------------------------------------_
@@ -66,8 +66,8 @@ print(select(Bad_entries, all_of(c("date", "rat_name"))))
 
 switch(menu(c("Yes", "No"), 
             title=paste0("Do you want to DELETE the runs from run_archive?\n Note: ", 
-                         "Data ", if_else(backup_data, "will", "will NOT"), " be saved and ", 
-                         "previous assignment ", if_else(restore, "will", "will NOT"), " be restored"), 
+                         "Data ", if_else(backup_data, "WILL", "will NOT"), " be saved and ", 
+                         "previous assignment ", if_else(restore, "WILL", "will NOT"), " be restored"), 
             graphics = FALSE), 
        lapply(Bad_entries %>% .$UUID, clean_archives), writeLines("Stopped. Entries remain."))
 
