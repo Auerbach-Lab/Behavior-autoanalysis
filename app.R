@@ -10,6 +10,7 @@ library(ggplot2)
 library(hrbrthemes)
 library(shinycustomloader)
 library(shinyjs)
+library(rlang)
 
 ui <- fluidPage(
   useShinyFeedback(),
@@ -171,15 +172,15 @@ server <- function(input, output, session) {
   name_clean <- reactive({
     input$name %>% str_trim %>% str_replace_all(" ", "") %>% str_to_upper()
   })
+  known_rat <- reactive ({
+    name_clean() %in% rats
+  })
   name_good <- reactive({
-    req(name_clean() %in% rats, cancelOutput = TRUE)
+    req(known_rat(), cancelOutput = TRUE)
     name_clean()
   })
   id_good <- reactive({
     rat_archive %>% dplyr::filter(str_to_upper(Rat_name) == name_good()) %>% .$Rat_ID
-  })
-  known_rat <- reactive ({
-    name_clean() %in% rats
   })
   observeEvent(input$name, {
     alnum = name_clean() %>% str_detect("^[:alnum:]*$")
@@ -196,10 +197,11 @@ server <- function(input, output, session) {
 
   # Weight validation
   last_weight <- reactive({
-    run_archive %>% dplyr::filter(rat_ID == id_good()) %>% dplyr::arrange(date) %>% tail(1) %>% .$weight
+    w = run_archive %>% dplyr::filter(rat_ID %in% id_good()) %>% dplyr::arrange(date) %>% tail(1) %>% .$weight
+    if (rlang::is_empty(w)) -1 else w
   })
   weight_change_percent <- reactive({
-    if(is.na(input$weight) || input$weight == 0) -1 else abs((input$weight - last_weight()) / last_weight())
+    if(is.na(input$weight) || input$weight == 0 || last_weight() == -1) -1 else abs((input$weight - last_weight()) / last_weight())
   })
   observeEvent(weight_change_percent(), {
     if(weight_change_percent() == -1) {
@@ -315,9 +317,9 @@ server <- function(input, output, session) {
     }
   })
 
-  # output$text2 <- renderText({
-  #   sci()
-  # })
+   output$text2 <- renderText({
+     id_good()
+   })
 
   # output$text3 <- renderText({
   #   req(input$btnAnalyze)
