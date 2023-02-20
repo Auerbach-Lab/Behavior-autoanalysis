@@ -310,7 +310,7 @@ Workbook_Writer <- function() {
 
 
         # Gap Detection Training/Reset PreHL
-        if (phase_current == "Gap Detection" & task_current %in% c("Training", "Reset") & pre_HL) {
+        if (phase_current == "Gap Detection" & pre_HL) {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "Gap Detection" & detail == detail_current) %>%
@@ -320,6 +320,8 @@ Workbook_Writer <- function() {
                       condition = "baseline",
                       .groups = "drop")
         }
+        
+        
 
 
         # Tones Rxn/TH PreHL
