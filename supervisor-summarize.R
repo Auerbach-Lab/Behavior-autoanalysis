@@ -46,21 +46,23 @@ Check_Trial_Archives <- function () {
 
 Workbook_Writer <- function() {
   Define_Styles <- function() {
-    rat_name_style <<- createStyle(fontSize = 22, textDecoration = "bold")
-    rat_header_style <<- createStyle(valign = "center", wrapText = TRUE)
-    date_style <<- createStyle(halign = "right")
-    mandatory_input_reject_style <<- createStyle(bgFill = "#FFE699", fontColour = "#9C5700")  #conditional uses bg
-    mandatory_input_accept_style <<- createStyle(bgFill = "#C6EFCE", fontColour = "#006100")  #conditional uses bg
-    optional_input_style <<- createStyle(fgFill = "#FFFFCC", fontColour = "#9C5700")          #regular uses fg
-    warning_style <<- createStyle(bgFill = "#FFC7CE", fontColour = "#9C0006")                 #conditional uses bg
-    halign_center_style <<- createStyle(halign = "center")
-    table_header_style <<- createStyle(fgFill = "darkgray", fontColour = "white", textDecoration = "bold") #regular uses fg
-    key_style <<- createStyle(textDecoration = "bold")
-    key_center <<- createStyle (textDecoration = "bold", halign = "center")
-    key_merged_style <<- createStyle(fgFill = "#D9D9D9", textDecoration = "bold", halign = "left") #regular uses fg
-    averages_style <<- createStyle(textDecoration = "italic")
-    today_style <<- createStyle(fontColour = "#ED7D31")
-    percent_style <<- createStyle(numFmt = "0%")
+    r = list(
+      rat_name = createStyle(fontSize = 22, textDecoration = "bold"),
+      rat_header = createStyle(valign = "center", wrapText = TRUE),
+      date = createStyle(halign = "right"),
+      mandatory_input_reject = createStyle(bgFill = "#FFE699", fontColour = "#9C5700"),  #conditional uses bg
+      mandatory_input_accept = createStyle(bgFill = "#C6EFCE", fontColour = "#006100"),  #conditional uses bg
+      optional_input = createStyle(fgFill = "#FFFFCC", fontColour = "#9C5700"),          #regular uses fg
+      warning = createStyle(bgFill = "#FFC7CE", fontColour = "#9C0006"),                 #conditional uses bg
+      halign_center = createStyle(halign = "center"),
+      table_header = createStyle(fgFill = "darkgray", fontColour = "white", textDecoration = "bold"), #regular uses fg
+      key = createStyle(textDecoration = "bold"),
+      key_center = createStyle(textDecoration = "bold", halign = "center"),
+      key_merged = createStyle(fgFill = "#D9D9D9", textDecoration = "bold", halign = "left"), #regular uses fg
+      averages = createStyle(textDecoration = "italic"),
+      today = createStyle(fontColour = "#ED7D31"),
+      percent = createStyle(numFmt = "0%")
+    )
   }
 
   Setup_Workbook <- function() {
@@ -163,18 +165,18 @@ Workbook_Writer <- function() {
                         " ",
                         stringr::str_sub(rat_name, digit_index, stringr::str_length(rat_name))
       )
-      addStyle(wb, 1, rat_name_style, rows = rowCurrent, cols = 1) # Name
-      addStyle(wb, 1, rat_name_style, rows = rowCurrent, cols = 30) # ID
+      addStyle(wb, 1, style[["rat_name"]], rows = rowCurrent, cols = 1) # Name
+      addStyle(wb, 1, style[["rat_name"]], rows = rowCurrent, cols = 30) # ID
 
 
       #Date
-      addStyle(wb, 1, date_style, rows = rowCurrent, cols = 2:3)
+      addStyle(wb, 1, style[["date"]], rows = rowCurrent, cols = 2:3)
       mergeCells(wb, 1, cols = 2:3, rows = rowCurrent)
       nextrun_text = Calculate_Next_Run_Text()
 
       #Tomorrow's Filename
-      conditionalFormatting(wb, 1, type = "contains", rule = "[", style = mandatory_input_reject_style, rows = rowCurrent, cols = 4)
-      conditionalFormatting(wb, 1, type = "notcontains", rule = "[", style = mandatory_input_accept_style, rows = rowCurrent, cols = 4)
+      conditionalFormatting(wb, 1, type = "contains", rule = "[", style = style[["mandatory_input_reject"]], rows = rowCurrent, cols = 4)
+      conditionalFormatting(wb, 1, type = "notcontains", rule = "[", style = style[["mandatory_input_accept"]], rows = rowCurrent, cols = 4)
 
       #Experiment
       range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col))
@@ -183,9 +185,9 @@ Workbook_Writer <- function() {
       suppressWarnings(dataValidation(wb, 1, rows = rowCurrent, cols = 6, type = "list", value = range_string, operator = ""))
       mergeCells(wb, 1, cols = 6:7, rows = rowCurrent)
       rule_string = paste0("COUNTIF(", range_string, ",F", rowCurrent, ")>0")
-      conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_accept_style, rows = rowCurrent, cols = 6)
+      conditionalFormatting(wb, 1, rule = rule_string, style = style[["mandatory_input_accept"]], rows = rowCurrent, cols = 6)
       rule_string = paste0("COUNTIF(", range_string, ",F", rowCurrent, ")<=0")
-      conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_reject_style, rows = rowCurrent, cols = 6)
+      conditionalFormatting(wb, 1, rule = rule_string, style = style[["mandatory_input_reject"]], rows = rowCurrent, cols = 6)
 
       #Experimental Phase
       range_start = getCellRefs(data.frame(rowCurrent + 1, user_settings$dynamic_col))
@@ -193,9 +195,9 @@ Workbook_Writer <- function() {
       range_string = paste0(range_start, ":", range_end)
       suppressWarnings(dataValidation(wb, 1, rows = rowCurrent, cols = 9, type = "list", value = range_string, operator = ""))
       rule_string = paste0("COUNTIF(", range_string, ",I", rowCurrent, ")>0")
-      conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_accept_style, rows = rowCurrent, cols = 9)
+      conditionalFormatting(wb, 1, rule = rule_string, style = style[["mandatory_input_accept"]], rows = rowCurrent, cols = 9)
       rule_string = paste0("COUNTIF(", range_string, ",I", rowCurrent, ")<=0")
-      conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_reject_style, rows = rowCurrent, cols = 9)
+      conditionalFormatting(wb, 1, rule = rule_string, style = style[["mandatory_input_reject"]], rows = rowCurrent, cols = 9)
       mergeCells(wb, 1, cols = 9:10, rows = rowCurrent)
 
       #Task
@@ -204,9 +206,9 @@ Workbook_Writer <- function() {
       range_string = paste0(range_start, ":", range_end)
       suppressWarnings(dataValidation(wb, 1, rows = rowCurrent, cols = 12, type = "list", value = range_string, operator = ""))
       rule_string = paste0("COUNTIF(", range_string, ",L", rowCurrent, ")>0")
-      conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_accept_style, rows = rowCurrent, cols = 12)
+      conditionalFormatting(wb, 1, rule = rule_string, style = style[["mandatory_input_accept"]], rows = rowCurrent, cols = 12)
       rule_string = paste0("COUNTIF(", range_string, ",L", rowCurrent, ")<=0")
-      conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_reject_style, rows = rowCurrent, cols = 12)
+      conditionalFormatting(wb, 1, rule = rule_string, style = style[["mandatory_input_reject"]], rows = rowCurrent, cols = 12)
       mergeCells(wb, 1, cols = 12:13, rows = rowCurrent)
 
       #Detail
@@ -215,22 +217,22 @@ Workbook_Writer <- function() {
       range_string = paste0(range_start, ":", range_end)
       suppressWarnings(dataValidation(wb, 1, rows = rowCurrent, cols = 15, type = "list", value = range_string, operator = ""))
       rule_string = paste0("COUNTIF(", range_string, ",O", rowCurrent, ")>0")
-      conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_accept_style, rows = rowCurrent, cols = 15)
+      conditionalFormatting(wb, 1, rule = rule_string, style = style[["mandatory_input_accept"]], rows = rowCurrent, cols = 15)
       rule_string = paste0("COUNTIF(", range_string, ",O", rowCurrent, ")<=0")
-      conditionalFormatting(wb, 1, rule = rule_string, style = mandatory_input_reject_style, rows = rowCurrent, cols = 15)
+      conditionalFormatting(wb, 1, rule = rule_string, style = style[["mandatory_input_reject"]], rows = rowCurrent, cols = 15)
       mergeCells(wb, 1, cols = 15:16, rows = rowCurrent)
 
       #Persistent Comment Field
-      addStyle(wb, 1, rows = rowCurrent, cols = 18:27, style = optional_input_style)
+      addStyle(wb, 1, rows = rowCurrent, cols = 18:27, style = style[["optional_input"]])
       mergeCells(wb, 1, cols = 18:27, rows = rowCurrent) # rat persistent comment merge
 
       #Warnings
-      conditionalFormatting(wb, 1, type = "expression", rule = "==\"Warnings: none\"", style = mandatory_input_accept_style, rows = rowCurrent, cols = 29)
-      conditionalFormatting(wb, 1, type = "expression", rule = "!=\"Warnings: none\"", style = warning_style, rows = rowCurrent, cols = 29)
-      addStyle(wb, 1, rows = rowCurrent, cols = 29, style = halign_center_style, stack = TRUE) # center the warning text
+      conditionalFormatting(wb, 1, type = "expression", rule = "==\"Warnings: none\"", style = style[["mandatory_input_accept"]], rows = rowCurrent, cols = 29)
+      conditionalFormatting(wb, 1, type = "expression", rule = "!=\"Warnings: none\"", style = style[["warning"]], rows = rowCurrent, cols = 29)
+      addStyle(wb, 1, rows = rowCurrent, cols = 29, style = style[["halign_center"]], stack = TRUE) # center the warning text
 
       #Entire Main rowCurrent
-      addStyle(wb, 1, rows = rowCurrent, cols = 1:30, style = rat_header_style, stack = TRUE) # vertically center & wrap the main rowCurrent
+      addStyle(wb, 1, rows = rowCurrent, cols = 1:30, style = style[["rat_header"]], stack = TRUE) # vertically center & wrap the main rowCurrent
       #Set_Height_Main_Row()
 
       #Retrieve persistent comment if there is one
@@ -803,7 +805,7 @@ Workbook_Writer <- function() {
 
       # Write Table Workflow ----------------------------------------------------
       row_table_start = rowCurrent + 1 #save for later
-      addStyle(wb, 1, table_header_style, rows = row_table_start, cols = 1:29, gridExpand = TRUE)
+      addStyle(wb, 1, style[["table_header"]], rows = row_table_start, cols = 1:29, gridExpand = TRUE)
       df_table = Build_Table()
       df_key = Build_Table_Key()
       df_counts = Build_Counts()
@@ -829,12 +831,12 @@ Workbook_Writer <- function() {
 
       # style the averages rows
       averages_last_row = row_table_start + max(which(df_table[,3] == "Overall"))
-      addStyle(wb, 1, averages_style, rows = row_key_end:averages_last_row, cols = 1:29, gridExpand = TRUE, stack = TRUE)
+      addStyle(wb, 1, style[["averages"]], rows = row_key_end:averages_last_row, cols = 1:29, gridExpand = TRUE, stack = TRUE)
 
       # style the 'today' rowCurrent
       today_offset = min(which(df_table[,3] != "Overall"))
       row_today = row_table_start + today_offset
-      addStyle(wb, 1, today_style, rows = row_today, cols = 1:29)
+      addStyle(wb, 1, style[["today"]], rows = row_today, cols = 1:29)
 
       # style the '%' columns
       tk = t(tail(df_key))
@@ -842,7 +844,7 @@ Workbook_Writer <- function() {
       pc1 = tk %>% as.data.frame() %>% filter(str_detect(.[,1], "%")) %>% rownames() %>% as.numeric
       pc2 = tk %>% as.data.frame() %>% filter(str_detect(.[,2], "%")) %>% rownames() %>% as.numeric
       percentage_columns = c(pc1, pc2)
-      addStyle(wb, 1, percent_style, rows = row_key_end:row_table_end, cols = percentage_columns, gridExpand = TRUE, stack = TRUE)
+      addStyle(wb, 1, style[["percent"]], rows = row_key_end:row_table_end, cols = percentage_columns, gridExpand = TRUE, stack = TRUE)
 
       # copy today's warnings
       warns = df_table[today_offset, 28] %>% unlist() %>% stringr::str_c(collapse = "\n")
@@ -850,44 +852,44 @@ Workbook_Writer <- function() {
       writeData(wb, 1, x = warns, startRow = rowCurrent, startCol = 29)
 
       # style the key
-      addStyle(wb, 1, key_style, rows = row_key_start:row_key_end, cols = 1:29, gridExpand = TRUE)
-      addStyle(wb, 1, key_center, rows = row_key_start:row_key_end, cols = 5:28, gridExpand = TRUE) # don't center observations
+      addStyle(wb, 1, style[["key"]], rows = row_key_start:row_key_end, cols = 1:29, gridExpand = TRUE)
+      addStyle(wb, 1, style[["key_center"]], rows = row_key_start:row_key_end, cols = 5:28, gridExpand = TRUE) # don't center observations
 
       # detect and merge common header cells -- nope, merges can't be done inside a table object, so just style it
       matching_cells = (df_key[1,12] == df_key[1,13] && df_key[1,13] == df_key[1,14])
       if (!is.na(matching_cells) && matching_cells) { # Rxn Time
         deleteData(wb, 1, rows = row_key_start, cols = 13:14, gridExpand = TRUE) # delete all but first
-        addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 12:14)
+        addStyle(wb, 1, style[["key_merged"]], rows = row_key_start, cols = 12:14)
       }
 
       matching_cells = (df_key[1,12] == df_key[1,15])
       if (!is.na(matching_cells) && matching_cells) { # TH; rxn above will also fire but we just overwrite what it does
         deleteData(wb, 1, rows = row_key_start, cols = 15)
-        addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 12:15)
+        addStyle(wb, 1, style[["key_merged"]], rows = row_key_start, cols = 12:15)
       }
 
       matching_cells = (df_key[1,17] == df_key[1,18] && df_key[1,17] == df_key[1,19] && df_key[1,17] == df_key[1,20])
       if (!is.na(matching_cells) && matching_cells) { # TH Range
         deleteData(wb, 1, rows = row_key_start, cols = 18:20, gridExpand = TRUE)
-        addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 17:20)
+        addStyle(wb, 1, style[["key_merged"]], rows = row_key_start, cols = 17:20)
       }
 
       matching_cells = (df_key[1,22] == df_key[1,23] && df_key[1,22] == df_key[1,24] && df_key[1,22] == df_key[1,25])
       if (!is.na(matching_cells) && matching_cells) {  # Stim range
         deleteData(wb, 1, rows = row_key_start, cols = 23:25, gridExpand = TRUE)
-        addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 22:25)
+        addStyle(wb, 1, style[["key_merged"]], rows = row_key_start, cols = 22:25)
       }
 
       matching_cells = (df_key[1,16] == df_key[1,17] && df_key[1,17] == df_key[1,18])
       if (!is.na(matching_cells) && matching_cells) {  # FA %
         deleteData(wb, 1, rows = row_key_start, cols = 17:18, gridExpand = TRUE)
-        addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 16:18)
+        addStyle(wb, 1, style[["key_merged"]], rows = row_key_start, cols = 16:18)
       }
 
       matching_cells = (df_key[1,14] == df_key[1,25]) # No Go False Alarm % (by octave steps)
       if (!is.na(matching_cells) && matching_cells) {
         deleteData(wb, 1, rows = row_key_start, cols = 15:25, gridExpand = TRUE)
-        addStyle(wb, 1, key_merged_style, rows = row_key_start, cols = 14:25)
+        addStyle(wb, 1, style[["key_merged"]], rows = row_key_start, cols = 14:25)
       }
 
       # advance rowCurrent for next table
@@ -916,7 +918,7 @@ Workbook_Writer <- function() {
 
 
 # Writer Workflow ---------------------------------------------------------
-  Define_Styles()
+  style = Define_Styles()
   Setup_Workbook()
 
   # Add_Rat_To_Workbook(139)
@@ -940,9 +942,5 @@ Workbook_Writer <- function() {
 InitializeWriter()
 Check_Trial_Archives()
 Workbook_Writer()
-rm(list = c("averages_style", "date_style", "experiment_config_df", "halign_center_style",
-            "key_center", "key_merged_style", "key_style", "mandatory_input_accept_style",
-            "mandatory_input_reject_style", "optional_input_style", "percent_style",
-            "rat_header_style", "rat_name_style", "run_today", "table_header_style",
-            "today_style", "warning_style", "wb"))
+rm(list = c("experiment_config_df", "run_today", "wb"))
 
