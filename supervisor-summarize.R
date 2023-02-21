@@ -463,11 +463,11 @@ Workbook_Writer <- function() {
           filter(experiment == experiment_current) %>%
           filter(phase == phase_current) %>%
           dplyr::select(all_of(columns)) %>%
-          arrange(desc(date), .by_group = F)
+          arrange(desc(date))
 
         weight_max = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
         min_duration = r %>% unnest(reaction) %>% dplyr::filter(task == task_current & detail == detail_current) %>% .$`Dur (ms)` %>% unique() %>% min()
-        analysis_type = r %>% arrange(desc(date)) %>% head(1) %>% .$analysis_type         # Needed to deal with the initial training
+        analysis_type = r %>% head(1) %>% .$analysis_type         # Needed to deal with the initial training
 
         # Task-specific RXN column ------------------------------------------------
 
