@@ -868,18 +868,20 @@ Workbook_Writer <- function() {
   Setup_Workbook()
 
   #EITHER
-  Add_Rat_To_Workbook(192)
+  #Add_Rat_To_Workbook(192)
   #OR
-  # rat_archive %>%
-  #   filter(is.na(end_date)) %>%
-  #   filter(is.na(Assigned_Filename)) %>%
-  #   .$Rat_ID %>%
-  #   lapply(Add_Rat_To_Workbook)
+  cat(system.time(
+  rat_archive %>%
+    filter(is.na(end_date)) %>%
+    #filter(is.na(Assigned_Filename)) %>%
+    .$Rat_ID %>%
+    lapply(Add_Rat_To_Workbook)
+  ))
 
   old_wd = getwd()
   setwd(projects_folder)
-  saveWorkbook(wb, "supervisor.xlsx", overwrite = TRUE)
-  openXL(paste0(projects_folder, "supervisor.xlsx"))
+  #saveWorkbook(wb, "supervisor.xlsx", overwrite = TRUE)
+  #openXL(paste0(projects_folder, "supervisor.xlsx"))
   #if (tools::md5sum(paste0(projects_folder, "supervisor.xlsx")) == "fd69ef8169cbca262225640c58ecea43") writeLines("OK") else writeLines("CHANGED")
   setwd(old_wd)
 }
