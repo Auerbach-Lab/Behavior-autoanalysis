@@ -317,7 +317,7 @@ Workbook_Writer <- function() {
         if (phase_current == "Gap Detection" & ! task_current %in% c("Reset") & pre_HL) {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
-            dplyr::filter(phase == "Gap Detection" & detail == detail_current) %>%
+            dplyr::filter(phase == "Gap Detection") %>%
             group_by(task) %>%
             summarise(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
