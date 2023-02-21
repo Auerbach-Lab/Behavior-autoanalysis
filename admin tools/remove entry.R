@@ -16,9 +16,9 @@ clean_archives <- function(entry) {
   if(backup_data) {
     key_data = df %>% select(all_of(c("date", "rat_ID", "rat_name", "weight", "omit_list", "comments"))) %>% 
       mutate(date_removed = Sys.Date() %>% as.character(),
-             omit_list = as.character(omit_list))
+             omit_list = as.numeric(omit_list))
     deleted_entries = read.csv(paste0(projects_folder, "deleted_entries.csv"))
-    deleted_entries = bind_rows(deleted_entries, key_data)
+    deleted_entries = rows_append(deleted_entries, key_data)
     write.csv(deleted_entries, paste0(projects_folder, "deleted_entries.csv"), row.names = FALSE)
     writeLines("\tData backed up")
   } else writeLines("\tData NOT backed up")
