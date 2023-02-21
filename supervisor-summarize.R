@@ -24,6 +24,7 @@ Check_Trial_Archives <- function () {
     temp = fread(archive_file)
     
     # Check file
+    # TODO sum expected number of trials and make sure the number of lines matches
     if (nrow(temp) >= 2 & length(names(temp)) == 18) {cat(" loads fine...")
     } else {stop(glue("ABORT:problem with {archive_file} Aborting."))}
     
@@ -39,7 +40,8 @@ Check_Trial_Archives <- function () {
     # Get just the experiment name
     mutate(experiment = str_extract(file, pattern = '(?<=s/).*(?=_a)'))
   writeLines("Checking and backing up trials archives")
-  apply(archives, 1, Archive_Reader)
+  if(nrow(archives) == 0) writeLines("Nothing to backup")
+  else apply(archives, 1, Archive_Reader)
 }
 
 Workbook_Writer <- function() {
@@ -310,7 +312,7 @@ Workbook_Writer <- function() {
 
 
         # Gap Detection Training/Reset PreHL
-        if (phase_current == "Gap Detection" & task_current %in% c("Training", "Reset") & pre_HL) {
+        if (phase_current == "Gap Detection" & ! task_current %in% c("Reset") & pre_HL) {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "Gap Detection" & detail == detail_current) %>%
