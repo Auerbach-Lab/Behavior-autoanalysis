@@ -459,7 +459,7 @@ Workbook_Writer <- function() {
         # Common Columns ----------------------------------------------------------
         columns = c("task", "detail", "date", "file_name", "weight", "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial", "threshold", "reaction", "FA_detailed", "warnings_list", "comments", "analysis_type")
 
-        r = rat_runs %>%
+        r <<- rat_runs %>%
           filter(experiment == experiment_current) %>%
           filter(phase == phase_current) %>%
           dplyr::select(all_of(columns)) %>%
@@ -487,20 +487,21 @@ Workbook_Writer <- function() {
             df_TH_BBN = NULL
             df_TH_tones = NULL
             df_Rxn = NULL
+            r = r %>% unnest(reaction)
 
-            df_TH_BBN = r %>% unnest(reaction) %>%
+            df_TH_BBN = r %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` == 0)  %>%
               group_by(date) %>%
               slice(which.min(`Inten (dB)`))
 
-            intensity = r %>% unnest(reaction) %>%
-              dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
+            intensity = r %>%
+              dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>%
               group_by(date) %>%
               count(`Inten (dB)`) %>% arrange(desc(`Inten (dB)`)) %>% slice(which.max(n)) %>%
               rename(desired_dB = `Inten (dB)`) %>% select(-n)
 
-            df_TH_tones = r %>% unnest(reaction) %>%
-              dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
+            df_TH_tones = r %>%
+              dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>%
               right_join(intensity, by = "date") %>%
               filter(`Inten (dB)` == desired_dB) %>%
               group_by(date) %>%
@@ -509,7 +510,6 @@ Workbook_Writer <- function() {
 
             # if we have a 60db entry for a date, great
             df_Temp = r %>%
-              unnest(reaction) %>%
               dplyr::filter(task != "TH" & `Dur (ms)` == min_duration & `Inten (dB)` == 60) %>% # not equal TH
               group_by(date) %>%
               mutate(Rxn = mean(Rxn))
@@ -517,7 +517,6 @@ Workbook_Writer <- function() {
             # for all dates, take their 55 and 65 entries (stepsize 5 will have potentially all of 55, 60, 65, stepsize 10 will have either 60 or both 55 and 65)
             # take the average Rxn from the 55 and 65 and only keep dates that aren't already in df_Temp
             df_Rxn = r %>%
-              unnest(reaction) %>%
               dplyr::filter(task != "TH" & `Dur (ms)` == min_duration & `Inten (dB)` %in% c(55,65)) %>% # not equal TH
               group_by(date) %>%
               summarise(Rxn = mean(Rxn), `Inten (dB)` = mean(`Inten (dB)`), across(), .groups = "drop") %>%
