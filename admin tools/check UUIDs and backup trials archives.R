@@ -26,7 +26,7 @@ Check_Trial_Archives <- function () {
   writeLines("Checking and backing up trials archives")
   if(nrow(archives) == 0) writeLines("Nothing to backup")
   else {
-    trials_uuids <<- do.call(c, apply(archives, 1, Archive_Reader))
+    trials_uuids = do.call(c, apply(archives, 1, Archive_Reader))
     trials_uuid_counts = length(trials_uuids)
     runs_uuid_counts = length(unique(run_archive$UUID))
 
