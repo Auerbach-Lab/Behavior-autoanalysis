@@ -2,7 +2,7 @@
 library(R.matlab); library(openxlsx); library(xml2); library(zip);
 
 # data manipulation
-library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr); library(data.table)
+library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr); library(data.table); library(glue)
 
 InitializeWriter <- function() {
   options(warn=1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
@@ -14,6 +14,34 @@ InitializeWriter <- function() {
 
   rat_archive <<- read.csv(paste0(projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
   load(paste0(projects_folder, "run_archive.Rdata"), .GlobalEnv)
+}
+
+Check_Trial_Archives <- function () {
+  Archive_Reader <- function(df) {
+    archive_file = df["file"]
+    experiment = df["experiment"]
+    cat(glue("\t{experiment}..."))
+    temp = fread(archive_file)
+    
+    # Check file
+    # TODO sum expected number of trials and make sure the number of lines matches
+    if (nrow(temp) >= 2 & length(names(temp)) == 18) {cat(" loads fine...")
+    } else {stop(glue("ABORT:problem with {archive_file} Aborting."))}
+    
+    # Backup
+    fwrite(temp, file = paste0(archive_file, ".backup"))
+    cat(" backed up\n")
+  }
+  
+  # Get archives updated today
+  archives = list.files(path = projects_folder, pattern = "^.*_archive.csv.gz$") %>% paste0(projects_folder, .) %>% 
+    # limit to just today
+    file.info() %>% filter(mtime >= Sys.Date()) %>% rownames_to_column(var = "file") %>% 
+    # Get just the experiment name
+    mutate(experiment = str_extract(file, pattern = '(?<=s/).*(?=_a)'))
+  writeLines("Checking and backing up trials archives")
+  if(nrow(archives) == 0) writeLines("Nothing to backup")
+  else apply(archives, 1, Archive_Reader)
 }
 
 Workbook_Writer <- function() {
@@ -284,7 +312,7 @@ Workbook_Writer <- function() {
 
 
         # Gap Detection Training/Reset PreHL
-        if (phase_current == "Gap Detection" & task_current %in% c("Training", "Reset") & pre_HL) {
+        if (phase_current == "Gap Detection" & ! task_current %in% c("Reset") & pre_HL) {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "Gap Detection" & detail == detail_current) %>%
@@ -910,6 +938,7 @@ Workbook_Writer <- function() {
 # Workflow -----------------------------------------------------------
 
 InitializeWriter()
+Check_Trial_Archives()
 Workbook_Writer()
 rm(list = c("averages_style", "date_style", "experiment_config_df", "halign_center_style",
             "key_center", "key_merged_style", "key_style", "mandatory_input_accept_style",

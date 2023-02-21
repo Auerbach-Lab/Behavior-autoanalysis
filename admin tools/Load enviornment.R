@@ -1,13 +1,13 @@
 InitializeMain <- function() {
   Load_Packages <- function() {
     # data loading external file formats
-    library(R.matlab);
+    library(R.matlab); library(data.table);
     
     # data manipulation
-    library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr);
+    library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr); library(lubridate); library(glue)
     
     # analysis & visualization
-    library(psycho); library(ggplot2);
+    library(psycho); library(ggplot2); library(hrbrthemes); library(shiny);
   }
   
   Load_Packages()

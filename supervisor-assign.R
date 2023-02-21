@@ -52,7 +52,8 @@ Assignments_Writer <- function() {
   data_table = rat_archive %>% filter(is.na(end_date)) %>%
     arrange(Box) %>%
     mutate(Changed = ifelse(Assigned_Filename == Old_Assigned_Filename, "", "*")) %>%
-    select(Rat_name, Box, Assigned_Filename, Changed, Assigned_Experiment)
+    select(Rat_name, Box, Assigned_Filename, Changed, Assigned_Experiment) %>%
+    rename(Experiment = Assigned_Experiment)
   writeDataTable(wb, 1, x = data_table, startRow = 1, colNames = TRUE, rowNames = FALSE, bandedRows = TRUE, tableStyle = "TableStyleMedium2", na.string = "")
 
   # formatting - widths
