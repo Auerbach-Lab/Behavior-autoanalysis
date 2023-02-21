@@ -22,21 +22,21 @@ Check_Trial_Archives <- function () {
     experiment = df["experiment"]
     cat(glue("\t{experiment}..."))
     temp = fread(archive_file)
-    
+
     # Check file
     # TODO sum expected number of trials and make sure the number of lines matches
     if (nrow(temp) >= 2 & length(names(temp)) == 18) {cat(" loads fine...")
     } else {stop(glue("ABORT:problem with {archive_file} Aborting."))}
-    
+
     # Backup
     fwrite(temp, file = paste0(archive_file, ".backup"))
     cat(" backed up\n")
   }
-  
+
   # Get archives updated today
-  archives = list.files(path = projects_folder, pattern = "^.*_archive.csv.gz$") %>% paste0(projects_folder, .) %>% 
+  archives = list.files(path = projects_folder, pattern = "^.*_archive.csv.gz$") %>% paste0(projects_folder, .) %>%
     # limit to just today
-    file.info() %>% filter(mtime >= Sys.Date()) %>% rownames_to_column(var = "file") %>% 
+    file.info() %>% filter(mtime >= Sys.Date()) %>% rownames_to_column(var = "file") %>%
     # Get just the experiment name
     mutate(experiment = str_extract(file, pattern = '(?<=s/).*(?=_a)'))
   writeLines("Checking and backing up trials archives")
@@ -252,7 +252,7 @@ Workbook_Writer <- function() {
         "[Task]", #L,
         "", #M - merge with previous
         "", #N
-        "[Detail]", #O,
+        detail_current, #O,
         "", #P - merge with previous
         "", #Q
         comment, #R
@@ -438,8 +438,8 @@ Workbook_Writer <- function() {
                         .groups = "drop")
           }
         }
-        
-        
+
+
         # Oddball Training/Reset PreHL
         if (phase_current == "Tones" & task_current %in% c("Training", "Reset") & pre_HL & detail_current == "Oddball") {
           count_df = rat_runs %>%
@@ -638,7 +638,7 @@ Workbook_Writer <- function() {
           r = left_join(r, x, by = c("task", "detail", "date")) %>%
             unique() %>%
             pivot_wider(names_from = `Freq (kHz)`, values_from = Stimrange)
-          
+
           # Adding missing columns without overwriting extant THs and THranges
           df = tibble(`4` = NA, `8` = NA, `16` = NA, `32` = NA)
           r = add_column(r, !!!df[setdiff(names(df), names(r))]) %>%
@@ -649,27 +649,27 @@ Workbook_Writer <- function() {
           r = r %>% filter(detail == "Oddball") %>%
             select(-threshold) %>%
             select(-FA_detailed)
-          
+
           x = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             filter(detail == detail_current) %>%
             tidyr::unnest_wider(stats) %>%
             unnest(dprime) %>%
             select(task, detail, date, dprime)
-            
-            
+
+
           r = left_join(r, x, by = c("task", "detail", "date"))
-          
+
         } else if (phase_current == "Octave") {
           r = r %>% select(-threshold)
-          
+
 
           #TODO NOT MVP convert to 1/12 of octaves based on summary kHz range
           df_discrimination = r %>% filter(task != "Training") %>%
             unnest(FA_detailed)
-          
+
           if(nrow(df_discrimination) > 0){
-            df_discrimination = 
+            df_discrimination =
               df_discrimination %>%
               group_by(date) %>%
               do(mutate(., Oct = c(1:6), dprime = max(dprime))) %>% # mutate(Oct_position = c(1:6)) %>% print) %>%
@@ -707,8 +707,8 @@ Workbook_Writer <- function() {
             mutate(Spacer2 = NA) %>% relocate(Spacer2, .after = Rxn_late)
         } else if (experiment_current == "GD") {
           r = r %>%
-            select(-FA_detailed) %>% 
-            unnest(threshold) %>% 
+            select(-FA_detailed) %>%
+            unnest(threshold) %>%
             select(-Freq, -dB) %>%
             mutate(THrange = paste0(suppressWarnings(min(TH, na.rm = TRUE)) %>% round(digits = 0), "-", suppressWarnings(max(TH, na.rm = TRUE)) %>% round(digits = 0))) %>%
             relocate(Spacer1, .before = TH) %>%
