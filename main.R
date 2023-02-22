@@ -1067,9 +1067,9 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       # save this to stats
 
       # Check for to small a dataset to calculate TH
-      less_than_one_block = is.na(trial_data %>% #TODO add a way to calculate using full trials archive history
-                                    dplyr::filter(Block_number != 1) %>% .$complete_block_number %>% unique() %>% {if(is_empty(.)) {NA} else {head(1)} })
-      if(less_than_one_block){
+      less_than_two_blocks = is.na(trial_data %>% #TODO add a way to calculate using full trials archive history
+                                    dplyr::filter(Block_number > 1) %>% .$complete_block_number %>% unique() %>% {if(is_empty(.)) {NA} else {head(., n = 1)} })
+      if(less_than_two_blocks){
         r = dprime_data %>%
           select(Freq, Dur, dB, dprime) %>%
           group_by(Freq, Dur) %>%
@@ -1096,7 +1096,9 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         
         need_evaluation = left_join(need_evaluation, r, by = groupings) %>% select(-dprime_check) %>% nest()
         
-        if (analysis$type == "Gap (Standard)") {
+        if(nrow(need_evaluation) == 0) {
+          r$TH = NA_integer_
+        } else if (analysis$type == "Gap (Standard)") {
           need_evaluation = need_evaluation %>% 
             mutate(TH = map_dbl(data, Calculate_TH_gap))
         } else {
