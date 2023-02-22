@@ -7,7 +7,7 @@ library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stri
 InitializeReader <- function() {
   options(warn = 1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
   source(paste0(projects_folder, "settings.R"))  # user variables
-  rat_archive <<- read.csv(paste0(projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
+  rat_archive <<- fread(paste0(projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
 }
 
 Workbook_Reader <- function() {
@@ -31,7 +31,7 @@ Workbook_Reader <- function() {
     {
       r = dplyr::rows_update(rat_archive, assignments_df, by = "Rat_ID", unmatched = "error")
       tryCatch(
-        write.csv(r, paste0(projects_folder, "rat_archive.csv"), row.names = FALSE),
+        fwrite(r, paste0(projects_folder, "rat_archive.csv")),
         finally = writeLines(paste0(nrow(assignments_df), " assignments were recorded in `rat_archive.csv`"))
       )
       r # this should NOT be a return, because that will return from the whole function and skip the global assignment above. We do actual returns from the error handlers because those are themselves functions.
