@@ -915,11 +915,11 @@ Workbook_Writer <- function() {
   style = Define_Styles()
   Setup_Workbook()
 
-  # Add_Rat_To_Workbook(257)
+  # Add_Rat_To_Workbook(209)
   #OR
   rat_archive %>%
     filter(is.na(end_date)) %>%
-    #filter(is.na(Assigned_Filename)) %>%
+    filter(Assigned_Filename == "") %>%
     .$Rat_ID %>%
     lapply(Add_Rat_To_Workbook)
 
