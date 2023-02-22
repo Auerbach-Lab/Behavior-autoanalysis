@@ -29,8 +29,9 @@ Check_Trial_Archives <- function () {
     trials_uuids = do.call(c, apply(archives, 1, Archive_Reader))
     trials_uuid_counts = length(trials_uuids)
     runs_uuid_counts = length(unique(run_archive$UUID))
+    diff = setdiff(trials_uuids, unique(run_archive$UUID))
 
-    if (trials_uuid_counts == runs_uuid_counts) {
+    if (length(diff) == 0) {
       writeLines(glue("Runs and trials agree: {trials_uuid_counts} UUIDs."))
     } else {
       difference = setdiff(trials_uuids, unique(run_archive$UUID))
