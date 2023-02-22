@@ -1088,7 +1088,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         
         r = dprime_data %>%
           select(Freq, Dur, dB, dprime) %>%
-          group_by_(.dots = groupings) 
+          group_by_at(groupings) 
         
         # To remove psycho warnings cause by a single dprime, check to see if there are multiple dprimes
         need_evaluation = r %>% summarise(dprime_check = unique(dprime) %>% as.list() %>% length,
