@@ -1108,7 +1108,9 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         
         need_evaluation = select(need_evaluation, -data)
         
-        r = left_join(r, need_evaluation, by = groupings)
+        r = left_join(r, need_evaluation, by = groupings) %>%
+          select(-dB, -dprime) %>%
+          unique()
         
       }
 
