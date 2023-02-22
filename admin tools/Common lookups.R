@@ -34,12 +34,14 @@ rat_archive %>% filter(is.na(end_date)) %>%
 
 
 
-# Single Rat Assignment History -------------------------------------------
+# Single Rat History -------------------------------------------
 run_archive %>% filter(rat_name %in% c("TP3")) %>% 
-  arrange(desc(date)) %>%
-  select(date, rat_name, assignment) %>% 
-  unnest_wider(assignment) %>% 
-  select(-comment)
+  unnest_wider(assignment) %>%
+  unnest_wider(stats) %>%
+  mutate(hit_percent = hit_percent * 100, FA_percent = FA_percent * 100) %>%
+  select(date, rat_name, weight, trial_count, hit_percent, FA_percent, file_name, experiment, phase, task, detail, warnings_list) %>%
+  unnest_wider(warnings_list, names_sep = "_") %>%
+  arrange(desc(date))
 
 
 # Weight ------------------------------------------------------------------
