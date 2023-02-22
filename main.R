@@ -1082,20 +1082,32 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         warning(paste0(warn, "\n"))
         warnings_list <<- append(warnings_list, warn)
 
-      } else if(analysis$type == "Gap (Standard)") {
-        r = dprime_data %>%
-          select(Freq, Dur, dB, dprime) %>%
-          group_by(Freq, dB) %>%
-          nest() %>%
-          mutate(TH = map_dbl(data, Calculate_TH_gap)) %>%
-          select(-data)
       } else {
+        groupings = case_when(analysis$type == "Gap (Standard)" ~ c("Freq", "dB"), 
+                              TRUE ~ c("Freq", "Dur"))
+        
         r = dprime_data %>%
           select(Freq, Dur, dB, dprime) %>%
-          group_by(Freq, Dur) %>%
-          nest() %>%
-          mutate(TH = map_dbl(data, Calculate_TH)) %>%
-          select(-data)
+          group_by_(.dots = groupings) 
+        
+        # To remove psycho warnings cause by a single dprime, check to see if there are multiple dprimes
+        need_evaluation = r %>% summarise(dprime_check = unique(dprime) %>% as.list() %>% length,
+                                          .groups = "keep") %>% filter(dprime_check > 1)
+        
+        need_evaluation = left_join(need_evaluation, r, by = groupings) %>% select(-dprime_check) %>% nest()
+        
+        if (analysis$type == "Gap (Standard)") {
+          need_evaluation = need_evaluation %>% 
+            mutate(TH = map_dbl(data, Calculate_TH_gap))
+        } else {
+          need_evaluation = need_evaluation %>% 
+            mutate(TH = map_dbl(data, Calculate_TH))
+        }
+        
+        need_evaluation = select(need_evaluation, -data)
+        
+        r = left_join(r, need_evaluation, by = groupings)
+        
       }
 
       return(r)
