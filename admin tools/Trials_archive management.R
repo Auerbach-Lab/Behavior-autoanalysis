@@ -1,4 +1,4 @@
-group = "GD"
+group = "Oddball"
 
 # Find missing entries ---------------------------------------------------
 # Load file
@@ -15,6 +15,12 @@ UUIDs_without_runs = keep(UUIDs_in_trials, ~ ! . %in% UUIDs_in_runs)
 
 if(is_empty(UUIDs_without_runs)) {
   writeLines(glue("\tNo extra data for {group}"))
+  rm(UUIDs_without_runs)
+} else {
+  writeLines("Removing orphan trial data... ")
+  trials_archive = filter(trials_archive, ! UUID %in% UUIDs_without_runs)
+  fwrite(trials_archive, file = paste0(projects_folder, group, "_archive.csv.gz"))
+  cat("Done.")
   rm(UUIDs_without_runs)
 }
 
