@@ -934,7 +934,7 @@ Workbook_Writer <- function() {
 # Workflow -----------------------------------------------------------
 
 InitializeWriter()
-source(paste0(projects_folder, "admin tools\\check UUIDs and backup trials archives.R"))
 Workbook_Writer()
 rm(list = c("experiment_config_df", "run_today", "wb"))
+source(paste0(projects_folder, "admin tools\\check UUIDs and backup trials archives.R"))
 
