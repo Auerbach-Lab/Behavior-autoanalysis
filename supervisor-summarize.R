@@ -9,12 +9,12 @@ InitializeWriter <- function() {
 
   source(paste0(projects_folder, "settings.R"))  # user variables
 
-  experiment_config_df <<- read.csv(paste0(projects_folder, "experiment_details.csv"), na.strings = "N/A")
+  experiment_config_df <<- fread(paste0(projects_folder, "experiment_details.csv"), na.strings = "N/A")
   experiment_config_df <<- Filter(function(x)!all(is.na(x)), experiment_config_df) # remove NA columns
 
   rat_archive <<- fread(paste0(projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
-  ra_un <<- run_archive %>% unnest_wider(assignment) %>% unnest_wider(stats)
   load(paste0(projects_folder, "run_archive.Rdata"), .GlobalEnv)
+  ra_un <<- run_archive %>% unnest_wider(assignment) %>% unnest_wider(stats)
 }
 
 Workbook_Writer <- function() {
@@ -237,7 +237,7 @@ Workbook_Writer <- function() {
         paste0("#", ratID), #AD, column 30 -- offscreen, but used for readback
         check.names = FALSE, fix.empty.names = FALSE
       )
-      writeData(wb, 1, x = rat_header_df, startRow = rowCurrent, colNames = FALSE, rowNames = FALSE)
+      #writeData(wb, 1, x = rat_header_df, startRow = rowCurrent, colNames = FALSE, rowNames = FALSE)
     }
 
     Write_Table <- function() {
@@ -453,8 +453,6 @@ Workbook_Writer <- function() {
       }
 
 
-
-
       Build_Table <- function() {
         # Common Columns ----------------------------------------------------------
         columns = c("task", "detail", "date", "file_name", "weight", "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial", "threshold", "reaction", "FA_detailed", "warnings_list", "comments", "analysis_type")
@@ -462,6 +460,7 @@ Workbook_Writer <- function() {
         r <<- rat_runs %>%
           filter(experiment == experiment_current) %>%
           filter(phase == phase_current) %>%
+          tidyr::unnest_wider(summary) %>%
           dplyr::select(all_of(columns)) %>%
           arrange(desc(date))
 
@@ -582,7 +581,7 @@ Workbook_Writer <- function() {
             dplyr::filter(phase == phase_current) %>%
             tidyr::unnest(summary) %>%
             select(task, detail, date, `Freq (kHz)`, dB_min, dB_max) %>%
-            group_by(date, task, detail, `Freq (kHz)`) %>% #do(print(.))
+            group_by(date, task, detail, `Freq (kHz)`) %>%
             mutate(Spacer3 = NA,
                    Stimrange = paste0(unique(dB_min), "-", unique(dB_max))) %>%
             select(task, detail, date, Spacer3, `Freq (kHz)`, Stimrange)
@@ -595,6 +594,7 @@ Workbook_Writer <- function() {
           df = tibble(`4` = NA, `8` = NA, `16` = NA, `32` = NA)
           r = add_column(r, !!!df[setdiff(names(df), names(r))]) %>%
             relocate(`4`, `8`, `16`, `32`, .after = Spacer3)
+
 
 
         } else if (phase_current == "Tones" & detail_current == "Oddball") {
@@ -675,8 +675,8 @@ Workbook_Writer <- function() {
         order = r %>% arrange(desc(date)) %>% group_by(task) %>% do(head(., 1)) %>% arrange(desc(date)) %>% .$task
 
         r = r %>% arrange(desc(date)) %>% group_by(task) %>%
-          # do(if (unique(.$task) %in% c("TH", "CNO 3mg/kg")) head(., 10)
-          #    else head(., 3)) %>%
+          do(if (unique(.$task) %in% c("TH", "CNO 3mg/kg")) head(., 10)
+              else head(., 3)) %>%
           arrange(match(task, order)) %>%
           dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
           mutate(date = as.character(date))
@@ -771,9 +771,9 @@ Workbook_Writer <- function() {
       row_key_end = row_table_start + nrow(df_counts) + nrow(df_key)
       row_table_end = row_table_start + nrow(df_table)
 
-      writeDataTable(wb, 1, x = df_table, startRow = row_table_start, colNames = TRUE, rowNames = FALSE, bandedRows = FALSE, tableStyle = "TableStyleMedium18", na.string = "")
-      writeData(wb, 1, x = df_counts, startRow = row_counts, colNames = FALSE, rowNames = FALSE)
-      writeData(wb, 1, x = df_key, startRow = row_key_start, colNames = FALSE, rowNames = FALSE)
+      #writeDataTable(wb, 1, x = df_table, startRow = row_table_start, colNames = TRUE, rowNames = FALSE, bandedRows = FALSE, tableStyle = "TableStyleMedium18", na.string = "")
+      #writeData(wb, 1, x = df_counts, startRow = row_counts, colNames = FALSE, rowNames = FALSE)
+      #writeData(wb, 1, x = df_key, startRow = row_key_start, colNames = FALSE, rowNames = FALSE)
 
       # style the averages rows
       averages_last_row = row_table_start + max(which(df_table[,3] == "Overall"))
@@ -795,7 +795,7 @@ Workbook_Writer <- function() {
       # copy today's warnings
       warns = df_table[today_offset, 28] %>% unlist() %>% stringr::str_c(collapse = "\n")
       if (warns == "") warns = "Warnings: none"
-      writeData(wb, 1, x = warns, startRow = rowCurrent, startCol = 29)
+      #writeData(wb, 1, x = warns, startRow = rowCurrent, startCol = 29)
 
       # style the key
       addStyle(wb, 1, style[["key"]], rows = row_key_start:row_key_end, cols = 1:29, gridExpand = TRUE)
@@ -870,13 +870,15 @@ Workbook_Writer <- function() {
   #EITHER
   #Add_Rat_To_Workbook(192)
   #OR
-  cat(system.time(
+  #cat(system.time(
+  profvis::profvis(interval = 0.2, prof_output = "gfdi.Rprofvis",
   rat_archive %>%
     filter(is.na(end_date)) %>%
     #filter(is.na(Assigned_Filename)) %>%
     .$Rat_ID %>%
     lapply(Add_Rat_To_Workbook)
-  ))
+  #))
+  )
 
   old_wd = getwd()
   setwd(projects_folder)
