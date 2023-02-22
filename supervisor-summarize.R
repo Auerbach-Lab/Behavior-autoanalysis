@@ -511,9 +511,9 @@ Workbook_Writer <- function() {
             group_by(date) %>%
             mutate(Rxn = mean(Rxn))
         }
-          
+
           r = r %>% select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
-          
+
         } else {
           if (phase_current == "Octave" | detail_current == "Oddball") {
             r = r %>% unnest(reaction) %>%
@@ -579,7 +579,7 @@ Workbook_Writer <- function() {
         # Phase-specific Columns --------------------------------------------------------
         if (analysis_type %in% c("Training - Gap")) {
           # Training has no TH
-          r = r %>% unnest(threshold) %>% 
+          r = r %>% unnest(threshold) %>%
             group_by(task, detail) %>%
             relocate(Spacer1, .after = mean_attempts_per_trial) %>%
             select(-FA_detailed)
@@ -735,7 +735,7 @@ Workbook_Writer <- function() {
           select(all_of(columns)) %>%
           mutate(weight = (weight - weight_max)/weight_max)
 
-        r[, (length(r) + 1):29] = NA # add columns to reach 29
+        if(length(r) < 29) r[, (length(r) + 1):29] = NA # add columns to reach 29
 
         r = r %>% relocate(warnings_list, comments, .after = last_col())
 
