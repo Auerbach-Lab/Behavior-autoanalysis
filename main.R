@@ -1354,7 +1354,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     if(old_file) {
       # need to fetch corresponding weight from old_excel_archive
       analysis$weight <<- old_excel_archive %>% dplyr::filter(Date == date_asDate & rat_name == run_properties$rat_name) %>% .$Weight
-      if(rlang::is_empty(analysis$weight)) {
+      if(is.na(analysis$weight)) {
         warn = paste0("No weight found in excel document for ", run_properties$rat_name, " on ", date, ".")
         warnings_list <<- append(warnings_list, warn)
       }
