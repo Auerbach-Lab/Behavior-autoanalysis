@@ -1096,7 +1096,9 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         
         need_evaluation = left_join(need_evaluation, r, by = groupings) %>% select(-dprime_check) %>% nest()
         
-        if (analysis$type == "Gap (Standard)") {
+        if(nrow(need_evaluation) == 0) {
+          r$TH = NA_integer_
+        } else if (analysis$type == "Gap (Standard)") {
           need_evaluation = need_evaluation %>% 
             mutate(TH = map_dbl(data, Calculate_TH_gap))
         } else {
