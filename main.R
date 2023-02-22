@@ -796,16 +796,17 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       if (analysis$type == "Training - Gap") {
         go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB_")
         catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
+        duration = unique(run_properties$duration) %>% as.numeric()
         delay = run_properties$delay %>% stringr::str_replace(" ", "-")
         lockout = `if`(length(run_properties$lockout) > 0, run_properties$lockout, 0)
 
         computed_file_name = paste0("gap_", go_dB)
         if (length(catch_number) == 0) {
-          computed_file_name = paste0(computed_file_name, delay, "s_0catch")
+          computed_file_name = paste0(computed_file_name, duration, "ms_", delay, "s_0catch")
           delay_in_filename <<- TRUE
         }
         else if (catch_number > 0) {
-          computed_file_name = paste0(computed_file_name, catch_number, "catch_", lockout, "s")
+          computed_file_name = paste0(computed_file_name, duration, "ms_", catch_number, "catch_", lockout, "s")
           delay_in_filename <<- FALSE
 
           if (catch_number >= 3) {
@@ -1066,9 +1067,9 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       # save this to stats
 
       # Check for to small a dataset to calculate TH
-      less_than_one_block = is.na(trial_data %>% #TODO add a way to calculate using full trials archive history
-                                    dplyr::filter(Block_number != 1) %>% .$complete_block_number %>% unique() %>% {if(is_empty(.)) {NA} else {head(1)} })
-      if(less_than_one_block){
+      less_than_two_blocks = is.na(trial_data %>% #TODO add a way to calculate using full trials archive history
+                                    dplyr::filter(Block_number > 1) %>% .$complete_block_number %>% unique() %>% {if(is_empty(.)) {NA} else {head(., n = 1)} })
+      if(less_than_two_blocks){
         r = dprime_data %>%
           select(Freq, Dur, dB, dprime) %>%
           group_by(Freq, Dur) %>%
@@ -1081,20 +1082,34 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         warning(paste0(warn, "\n"))
         warnings_list <<- append(warnings_list, warn)
 
-      } else if(analysis$type == "Gap (Standard)") {
-        r = dprime_data %>%
-          select(Freq, Dur, dB, dprime) %>%
-          group_by(Freq, dB) %>%
-          nest() %>%
-          mutate(TH = map_dbl(data, Calculate_TH_gap)) %>%
-          select(-data)
       } else {
+        groupings = case_when(analysis$type == "Gap (Standard)" ~ c("Freq", "dB"), 
+                              TRUE ~ c("Freq", "Dur"))
+        
         r = dprime_data %>%
           select(Freq, Dur, dB, dprime) %>%
-          group_by(Freq, Dur) %>%
-          nest() %>%
-          mutate(TH = map_dbl(data, Calculate_TH)) %>%
-          select(-data)
+          group_by_(.dots = groupings) 
+        
+        # To remove psycho warnings cause by a single dprime, check to see if there are multiple dprimes
+        need_evaluation = r %>% summarise(dprime_check = unique(dprime) %>% as.list() %>% length,
+                                          .groups = "keep") %>% filter(dprime_check > 1)
+        
+        need_evaluation = left_join(need_evaluation, r, by = groupings) %>% select(-dprime_check) %>% nest()
+        
+        if(nrow(need_evaluation) == 0) {
+          r$TH = NA_integer_
+        } else if (analysis$type == "Gap (Standard)") {
+          need_evaluation = need_evaluation %>% 
+            mutate(TH = map_dbl(data, Calculate_TH_gap))
+        } else {
+          need_evaluation = need_evaluation %>% 
+            mutate(TH = map_dbl(data, Calculate_TH))
+        }
+        
+        need_evaluation = select(need_evaluation, -data)
+        
+        r = left_join(r, need_evaluation, by = groupings)
+        
       }
 
       return(r)

@@ -498,6 +498,22 @@ Workbook_Writer <- function() {
             mutate(Rxn = mean(Rxn)) %>%
             select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`) %>% #TODO check that Frequency is actually go tone positional data
             distinct()
+        } else if(phase_current == "Gap Detection") {
+          if(detail_current == "None") {
+            r = r %>%
+              unnest(reaction) %>%
+              group_by(date) %>%
+              mutate(Rxn = mean(Rxn))
+          } else {
+          r = r %>%
+            unnest(reaction) %>%
+            dplyr::filter(`Dur (ms)` == 10) %>% # not equal TH
+            group_by(date) %>%
+            mutate(Rxn = mean(Rxn))
+        }
+          
+          r = r %>% select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
+          
         } else {
           if (phase_current == "Octave" | detail_current == "Oddball") {
             r = r %>% unnest(reaction) %>%
@@ -561,7 +577,13 @@ Workbook_Writer <- function() {
           mutate(Spacer1 = NA)
 
         # Phase-specific Columns --------------------------------------------------------
-        if (analysis_type %in% c("Training - Gap", "Training - BBN")) {
+        if (analysis_type %in% c("Training - Gap")) {
+          # Training has no TH
+          r = r %>% unnest(threshold) %>% 
+            group_by(task, detail) %>%
+            relocate(Spacer1, .after = mean_attempts_per_trial) %>%
+            select(-FA_detailed)
+        } else if (analysis_type %in% c("Training - BBN")) {
           # Training has no TH
           r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>% select(-Freq, -Dur) %>%
             group_by(task, detail) %>%
@@ -893,7 +915,7 @@ Workbook_Writer <- function() {
   style = Define_Styles()
   Setup_Workbook()
 
-  # Add_Rat_To_Workbook(139)
+  # Add_Rat_To_Workbook(257)
   #OR
   rat_archive %>%
     filter(is.na(end_date)) %>%
@@ -912,7 +934,7 @@ Workbook_Writer <- function() {
 # Workflow -----------------------------------------------------------
 
 InitializeWriter()
-source(paste0(projects_folder, "admin tools\\check UUIDs and backup trials archives.R"))
 Workbook_Writer()
 rm(list = c("experiment_config_df", "run_today", "wb"))
+source(paste0(projects_folder, "admin tools\\check UUIDs and backup trials archives.R"))
 
