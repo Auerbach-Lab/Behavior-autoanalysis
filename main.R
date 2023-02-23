@@ -98,7 +98,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           # important! \\\\ is specific to R, for testing this pattern in e.g. RegExr you have to use \\ but remember to change it back to \\\\ for r!
           # capture of the rat name, lazy to avoid underscores: .+?
           # lookahead for a _: (?=_)
-        print(file_to_load)
+        # print(file_to_load)
         r = stringr::str_match_all(file_to_load, pattern="(.*)((?<=[\\\\/]{1}).+?(?=_))") %>%
           unlist(recursive = TRUE) %>%
           tail (n = 1)
