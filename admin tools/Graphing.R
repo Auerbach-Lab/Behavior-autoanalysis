@@ -1,16 +1,18 @@
 InitializeMain()
 
-rat_to_graph = c("BP6", "LP1", "LP2")
-date_to_graph = "20230217"
+rat_to_graph = c("LP1")
+date_to_graph = "today"
 # can be reaction or dprime
 what_to_graph = "dprime"
 
+
+date_to_graph = if_else(date_to_graph == "today", str_remove_all(Sys.Date(), "-"), date_to_graph)
 
 Grapher <- function(rat_to_graph) {
   data = run_archive %>%
     filter(rat_name %in% rat_to_graph) %>%
     unnest_wider(assignment) %>%
-    filter(! phase %in% c("Training", "Reset")) %>%
+    filter(! task %in% c("Training", "Reset")) %>%
     unnest_wider(stats) %>%
     unnest(what_to_graph) %>%
     rename_at(vars(contains("Freq")), ~ str_extract(., pattern = "Freq")) %>%
@@ -36,6 +38,8 @@ Grapher <- function(rat_to_graph) {
       scale_x_continuous(breaks = seq(0, 100, by = 20)) +
       theme_ipsum_es()))
 }
+
+
 
 lapply(rat_to_graph, Grapher)
 
