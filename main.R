@@ -1358,8 +1358,9 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       # need to fetch corresponding weight from old_excel_archive
       analysis$weight <<- old_excel_archive %>% dplyr::filter(Date == date_asDate & rat_name == run_properties$rat_name) %>% .$Weight
       if(is.na(analysis$weight)) {
-        warn = paste0("No weight found in excel document for ", run_properties$rat_name, " on ", date, ".")
+        warn = paste0("No weight found in excel document for ", run_properties$rat_name, " on ", date_asDate, ".")
         warnings_list <<- append(warnings_list, warn)
+        rat_weights = NULL
       }
     } else {
       #use the weight from the undergrad file's variable
