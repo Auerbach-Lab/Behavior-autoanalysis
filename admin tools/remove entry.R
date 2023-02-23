@@ -1,6 +1,6 @@
 #TODO: make this work filter_arguments = 
-bad_rats = c("GP6")
-bad_date = "20230217"
+bad_rats = c("BP1")
+bad_date = "20230223"
 # Restore assignment from the 'old' setting
 restore = TRUE
 # Backs up loseable data such as comments, weight, omit list
@@ -28,10 +28,11 @@ clean_archives <- function(entry) {
   variable_name = paste0(experiment, "_archive")
   filename = paste0(projects_folder, variable_name, ".csv.gz")
   # load archive & clean
-  temp = fread(filename) %>%
-    filter(UUID != df$UUID)
+  trial_archive = fread(filename)
+  temp = filter(trial_archive, UUID != df$UUID)
   fwrite(temp, file = filename)
   rm(temp)
+  rm(trial_archive)
   # save archive
   writeLines(paste0("\tTrials removed from ", variable_name))
   
