@@ -1,4 +1,4 @@
-group = "Oddball"
+group = "GD"
 
 # Find missing entries ---------------------------------------------------
 # Load file
@@ -47,7 +47,7 @@ trials_archive = fread(paste0(projects_folder, group, "_archive.csv.gz"))
 # ID duplicates
 Dup = duplicated(trials_archive) | duplicated(trials_archive, fromLast = TRUE)
 trials_archive_dup = mutate(trials_archive, Dup = Dup) %>% rowid_to_column()
-filter(Tsc_dup, Dup == TRUE)
+filter(trials_archive_dup, Dup == TRUE)
 
 # Remove
 trials_archive_dedup = unique(trials_archive)
