@@ -192,7 +192,8 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         background_type = background_type,
 
         # Maximum number of back to back no go trials (0 or blank is infinite)
-        nogo_max_touching = run_properties$no.go.trial.max.num[[1]],
+        nogo_max_touching = ifelse(is_empty(run_properties$no.go.trial.max.num), "0",
+                                    run_properties$no.go.trial.max.num[[1]]),
 
         # settings from run_properties$stim_encoding_table
         lockout = unique(stim_encoding_table$`Time Out (s)`)[unique(stim_encoding_table$`Time Out (s)`) > 0],
@@ -663,7 +664,6 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
         computed_file_name = paste0(go_kHz, go_dB, nogo_kHz, nogo_dB, run_properties$duration, "ms_", run_properties$lockout, "s")
         if (catch_number != 3) computed_file_name = paste0(computed_file_name, "_c", catch_number)
-        if (run_properties$nogo_max_touching != 1) computed_file_name = paste0(computed_file_name, "_NG", run_properties$nogo_max_touching)
 
         analysis$minimum_trials <<- user_settings$minimum_trials$`Training - Oddball`
       }
@@ -727,7 +727,6 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
         computed_file_name = paste0(go_kHz, go_dB, nogo_kHz, nogo_dB, run_properties$duration, "ms_", run_properties$lockout, "s")
         if (catch_number != 3) computed_file_name = paste0(computed_file_name, "_c", catch_number)
-        if (run_properties$nogo_max_touching != 1) computed_file_name = paste0(computed_file_name, "_NG", run_properties$nogo_max_touching)
       }
 
       response_window = unique(run_properties$stim_encoding_table["Nose Out TL (s)"]) %>% as.numeric()
@@ -864,6 +863,10 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
                                 "BBN" = BBN_Filename(),
                                 "gap" = Gap_Filename(),
                                 "train" = Oddball_Filename())
+    
+    has_different_NG = run_properties$nogo_max_touching != 1
+    if (has_different_NG) computed_file_name = paste0(computed_file_name, "_NG", run_properties$nogo_max_touching)
+    
     if (is.null(computed_file_name)) stop("ABORT: Unknown file type. Can not create filename.")
 
     if (!delay_in_filename) Check_Delay(expected_delay)
