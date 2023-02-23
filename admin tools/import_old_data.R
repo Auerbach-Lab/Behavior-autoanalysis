@@ -1,7 +1,7 @@
 # For loading old files:
 
-projects_folder = "C:/Users/Noelle/Desktop/Behavior-autoanalysis/"
-source("C:/Users/Noelle/Documents/GitHub/Behavior-autoanalysis/main.R")
+projects_folder = "Z:/Behavior-autoanalysis/"
+source("Y:/GitHub/Behavior-autoanalysis/main.R")
 
 # Get files
 load(paste0(projects_folder, "old_excel_archive.Rdata"))
@@ -24,8 +24,7 @@ files = files[str_which(files, pattern = ".*/data/(?!(20220829/BP3.*))")] # Bad 
 files = files[str_which(files, pattern = ".*/data/(?!(20220706))")] # Bad data on 7/6/22 - no creation date.
 
 # Select Month to load
-files = files[str_which(files, pattern = ".*/data/20220[3-9]")]
-# files = files[str_which(files, pattern = ".*/data/20211[1-2]")]
+files = files[str_which(files, pattern = ".*/data/20220[4-5]")]
 
 
 files = paste0(directory, "/", files)
