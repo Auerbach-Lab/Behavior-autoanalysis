@@ -1360,7 +1360,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       if(is.na(analysis$weight)) {
         warn = paste0("No weight found in excel document for ", run_properties$rat_name, " on ", date_asDate, ".")
         warnings_list <<- append(warnings_list, warn)
-        rat_weights <<- ""
+        rat_weights = NULL
       }
     } else {
       #use the weight from the undergrad file's variable
@@ -1373,7 +1373,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       warnings_list <<- append(warnings_list, warn)
       analysis$weight_change <<- 0
     } else {
-      last_run = rat_weights %>% dplyr::filter(date < date_asNumeric) %>% dplyr::arrange(date) %>% tail(1)
+      last_run = rat_weights %>% dplyr::filter(date < date_asNumeric & ! is.na(weight)) %>% dplyr::arrange(date) %>% tail(1)
       old_date = last_run$date
       old_weight = last_run$weight
 
@@ -1383,7 +1383,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         warnings_list <<- append(warnings_list, warn)
         analysis$weight_change <<- 0
       } else {
-        max_weight = max(rat_weights$weight) #TODO add a column to rat_archive called e.g. override_weight to use instead of true max weight for chunky bois, or calculate max in past month or something else
+        max_weight = max(rat_weights$weight, na.rm = TRUE) #TODO add a column to rat_archive called e.g. override_weight to use instead of true max weight for chunky bois, or calculate max in past month or something else
         analysis$weight_change <<- analysis$weight - old_weight  # negative if lost weight
         weight_change_percent = analysis$weight_change / old_weight # negative if lost weight
         weight_change_overall_percent = (analysis$weight - max_weight) / max_weight # negative if lost weight
