@@ -1,4 +1,4 @@
-group = "GD"
+group = "Fmr1-LE"
 
 # Find missing entries ---------------------------------------------------
 # Load file
@@ -32,7 +32,9 @@ temp = run_archive %>% filter(UUID %in% UUIDs_missing) %>%
   unnest(omit_list) %>%
   mutate(Dataset = group)
 
-if(nrow(temp) >= 1) {fwrite(temp, "missing.csv")
+if(nrow(temp) >= 1) {
+  writeLines(glue("\tMissing data for {group}"))
+  fwrite(temp, "missing.csv")
   } else { writeLines(glue("\tNo missing data for {group}")) }
   
 
