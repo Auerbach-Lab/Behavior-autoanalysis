@@ -22,9 +22,10 @@ files = files[str_which(files, pattern = ".*/data/(?!(2022060(9|7)/RP1.*))")] # 
 files = files[str_which(files, pattern = ".*/data/(?!(20221128/GP3.*))")] # Bad second file for RP1 on 6/9/22 - dprime giving error but transiently
 files = files[str_which(files, pattern = ".*/data/(?!(20220829/BP3.*))")] # Bad second file for RP1 on 6/9/22 - dprime giving error but transiently
 files = files[str_which(files, pattern = ".*/data/(?!(20220706))")] # Bad data on 7/6/22 - no creation date.
+files = files[str_which(files, pattern = ".*/data/(?!(20220615/Green2_Green2_4-32kHz_MIX5step_50ms_16s_1s_BG_PNK_50dB_20220615-105130_BOX#006.mat*))")] # 1 trial causing issues
 
 # Select Month to load
-files = files[str_which(files, pattern = ".*/data/20220[4-5]")]
+files = files[str_which(files, pattern = ".*/data/202206[2-3]")]
 
 
 files = paste0(directory, "/", files)
