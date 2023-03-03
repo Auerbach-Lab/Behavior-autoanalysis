@@ -93,71 +93,81 @@ Generate_Graph <- function(rat_name, ratID) {
     dprime = FALSE
     if (what_to_graph == "dprime") {
       writeLines("You can't make a dprime graph because dprime is non-sensical")
-      graph = NULL
-      # TODO: Can we stop the script here with return(graph)?
+      graph_data = NULL
     }
   }
   
-  names_list = graph_data %>% unnest(what_to_graph) %>% names
-  
-  # Check Experiment
-  if (str_detect(current_analysis_type, pattern = "Gap")) {
-    x_column = names_list[[str_which(names_list, pattern = "Dur")]]
-  } else if (str_detect(current_analysis_type, pattern = "(Tone|BBN|Oddball)")) {
-    x_column = names_list[[str_which(names_list, pattern = "dB")]]
-  } else if (str_detect(current_analysis_type, pattern = "Octave")) {
-    x_column = names_list[[str_which(names_list, pattern = "Freq")]]
+  if(is_empty(graph_data)) {
+    graph =
+      ggplot(graph_data) + 
+      geom_point() + 
+      xlim(0, 100) + 
+      ylim(0, 100) + 
+      ggtitle(glue("{rat_name} {what_to_graph} does not exist")) +
+      theme_ipsum_es() +
+      theme(legend.position = "bottom")
+    
+    return(graph)
   } else {
-    stop("ERROR: unreognized analysis type of ", current_analysis_type)
-  }
-  
-  
+    names_list = graph_data %>% unnest(what_to_graph) %>% names
     
-  if (what_to_graph == "dprime") {
-    y_column = "dprime"
-  } else if  (what_to_graph == "reaction") {
-    y_column = "Rxn"
-  } else if  (what_to_graph == "hit") {
-    y_column = "hit_percent"
-  }
-  
-  if (exists("dprime")) {
-  
+    # Check Experiment
+    if (str_detect(current_analysis_type, pattern = "Gap")) {
+      x_column = names_list[[str_which(names_list, pattern = "Dur")]]
+    } else if (str_detect(current_analysis_type, pattern = "(Tone|BBN|Oddball)")) {
+      x_column = names_list[[str_which(names_list, pattern = "dB")]]
+    } else if (str_detect(current_analysis_type, pattern = "Octave")) {
+      x_column = names_list[[str_which(names_list, pattern = "Freq")]]
+    } else {
+      stop("ERROR: unreognized analysis type of ", current_analysis_type)
+    }
     
-  } else if (current_analysis_type == "Training - Octave") {
-    graph = 
-    graph_data %>% 
-      unnest(what_to_graph) %>%
-      unnest(reaction) %>%
-      Line_Grapher
     
-  } else if (current_phase == "Gap Detection") {
-    # check for the need to zoom in on a region...note that this prevents the TH line from being labeled
-    has_small_min_range = max(today_data$`Dur (ms)`) - min(today_data$`Dur (ms)`) < 50
     
-    graph = 
-    graph_data %>% 
-      unnest(what_to_graph) %>%
-      Line_Grapher 
+    if (what_to_graph == "dprime") {
+      y_column = "dprime"
+    } else if  (what_to_graph == "reaction") {
+      y_column = "Rxn"
+    } else if  (what_to_graph == "hit") {
+      y_column = "hit_percent"
+    }
     
-    # TODO: Test this code
-    if (has_small_min_range) {
-      # will complain about overwriting coordinate system - this is expected
+    if (exists("dprime")) {
+      
+      
+    } else if (current_analysis_type == "Training - Octave") {
+      graph = 
+        graph_data %>% 
+        unnest(what_to_graph) %>%
+        unnest(reaction) %>%
+        Line_Grapher
+      
+    } else if (current_phase == "Gap Detection") {
+      # check for the need to zoom in on a region...note that this prevents the TH line from being labeled
+      has_small_min_range = max(today_data$`Dur (ms)`) - min(today_data$`Dur (ms)`) < 50
+      
+      graph = 
+        graph_data %>% 
+        unnest(what_to_graph) %>%
+        Line_Grapher 
+      
+      # TODO: Test this code
+      if (has_small_min_range) {
+        # will complain about overwriting coordinate system - this is expected
         graph = graph +
           coord_cartesian(xlim = c(today_data %>% select(x_column) %>% min(na.rm = TRUE),
                                    today_data %>% select(x_column) %>% max(na.rm = TRUE)),
                           ylim = c(today_data %>% select(y_column) %>% min(na.rm = TRUE) * 0.9,
                                    today_data %>% select(y_column) %>% max(na.rm = TRUE) * 1.1))
-    }
-  } else {
-    graph = 
-    graph_data %>% 
-      unnest(what_to_graph) %>%
-      Line_Grapher 
+      }
+    } else {
+      graph = 
+        graph_data %>% 
+        unnest(what_to_graph) %>%
+        Line_Grapher 
       
+    }
   }
-  
-  return(graph)
 }
 
 # rat_name = "GP1" # Octave training
@@ -166,7 +176,7 @@ Generate_Graph <- function(rat_name, ratID) {
 # for dprime this requires unlisting reaction to get the Freq
 # rat_name = "RP1" # Tone
 # rat_name = "Blue4" # Oddball
-rat_name = "LP2" # Oddball training
+# rat_name = "LP2" # Oddball training
 # No dprime graph for Oddball
 
 ratID = rat_archive %>% filter(Rat_name == rat_name) %>% .$Rat_ID
@@ -175,6 +185,4 @@ ratID = rat_archive %>% filter(Rat_name == rat_name) %>% .$Rat_ID
 # Can be hits, dprime or reaction
 what_to_graph = "dprime"
 
-Generate_Graph(rat_name = rat_name, ratID = ratID)
-
-graph
+Generate_Graph(rat_name = rat_name, ratID = ratID) %>% print
