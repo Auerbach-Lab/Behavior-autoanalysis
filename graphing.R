@@ -29,7 +29,6 @@ Generate_Graph <- function(rat_name, ratID) {
   
   Line_Grapher <- function(df) {
     # Line Graph for Curves
-    # test_graph_Rxn =
     df %>%
       ggplot(aes(x = get(x_column), y = get(y_column))) +
       stat_summary(aes(color = "Average"),
@@ -57,7 +56,7 @@ Generate_Graph <- function(rat_name, ratID) {
   
   # only want to graph relevant data so need today's data
   today_data = rat_runs %>% 
-    # filter(date == "20230222")
+    filter(date == set_date) %>%
     head(graph_data, n = 1) # this should probably be a filter date
   current_analysis_type = today_data$analysis_type
   current_phase = pluck(today_data, "assignment", 1, "phase")
@@ -166,9 +165,32 @@ Generate_Graph <- function(rat_name, ratID) {
         unnest(what_to_graph) %>%
         Line_Grapher 
       
-    }
-  }
+    } 
+  } else if(! exists(graph_data)) {
+    # This should be impossible to hit given that the previous cascade ends in an else as a catchall
+    # Set_date should be changed to Sys.Date
+    writeLines(glue("ERROR: No {what_to_graph} graph made for {rat_name} ({ratID}) on {set_date} for an analysis of {analysis_type}"))
+    graph =
+      ggplot(graph_data) + 
+      geom_point() + 
+      xlim(0, 100) + 
+      ylim(0, 100) + 
+      ggtitle(glue("{rat_name} {what_to_graph} does not exist")) +
+      theme_ipsum_es() +
+      theme(legend.position = "bottom")
+    
+    return(graph)
+  } 
 }
+
+
+# BBN
+################
+# # BBN Training
+# rat_name = "TP6"; set_date = 20221017
+# # BBN Mixed Duration
+# rat_name = "Purple3"; set_date = 20230302
+
 
 # rat_name = "GP1" # Octave training
 # Ocatve Rxn time can not be standard as it has one intensity. Should be Freq vs. Rxn and then only on discrimination days
@@ -180,9 +202,21 @@ Generate_Graph <- function(rat_name, ratID) {
 # No dprime graph for Oddball
 
 ratID = rat_archive %>% filter(Rat_name == rat_name) %>% .$Rat_ID
-# rat_name = "Red4"; ratID = 254 # Gap
+# Gap Detection
+################
+# Gap
+# # Gap Rxn
+# rat_name = "Red4"; ratID = 254; set_date = 20230303
+# # Gap TH
+# rat_name = "Red2"; ratID = 252; set_date = 20230222 # narrow TH window
+# rat_name = "Red4"; ratID = 254; set_date = 20230301 # larger TH window
 
 # Can be hits, dprime or reaction
 what_to_graph = "dprime"
 
+# For testing purposes set_date is the date for graphing i.e. 'today'
+
+
 Generate_Graph(rat_name = rat_name, ratID = ratID) %>% print
+
+rm(list = c("ratID", "rat_name", "graph", "what_to_graph"))
