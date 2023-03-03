@@ -96,6 +96,10 @@ Generate_Graph <- function(rat_name, ratID) {
     }
   }
   
+
+# Graph production --------------------------------------------------------
+  graph = NULL
+  
   if(is_empty(graph_data)) {
     graph =
       ggplot(graph_data) + 
@@ -131,15 +135,20 @@ Generate_Graph <- function(rat_name, ratID) {
       y_column = "hit_percent"
     }
     
-    if (exists("dprime")) {
-      
-      
-    } else if (current_analysis_type == "Training - Octave") {
+    if (current_analysis_type == "Training - Octave") {
       graph = 
         graph_data %>% 
         unnest(what_to_graph) %>%
         unnest(reaction) %>%
-        Line_Grapher
+        Range_Grapher
+    
+    } else if (str_detect(current_analysis_type, pattern = "Training")) {
+      # Note this must be after the Octave Training tester
+      
+      graph = 
+        graph_data %>% 
+        unnest(what_to_graph) %>%
+        Range_Grapher
       
     } else if (current_phase == "Gap Detection") {
       # check for the need to zoom in on a region...note that this prevents the TH line from being labeled
@@ -160,29 +169,36 @@ Generate_Graph <- function(rat_name, ratID) {
                                    today_data %>% select(y_column) %>% max(na.rm = TRUE) * 1.1))
       }
     } else {
+      #TODO Add check for list in x_column then filter
+      
       graph = 
         graph_data %>% 
         unnest(what_to_graph) %>%
         Line_Grapher 
       
-    } 
-  } else if(! exists(graph_data)) {
-    # This should be impossible to hit given that the previous cascade ends in an else as a catchall
-    # Set_date should be changed to Sys.Date
-    writeLines(glue("ERROR: No {what_to_graph} graph made for {rat_name} ({ratID}) on {set_date} for an analysis of {analysis_type}"))
-    graph =
-      ggplot(graph_data) + 
-      geom_point() + 
-      xlim(0, 100) + 
-      ylim(0, 100) + 
-      ggtitle(glue("{rat_name} {what_to_graph} does not exist")) +
-      theme_ipsum_es() +
-      theme(legend.position = "bottom")
+    }
     
-    return(graph)
+    if (is_null(graph)) {
+      # This should be impossible to hit given that the previous cascade ends in an else as a catchall
+      # Set_date should be changed to Sys.Date
+      writeLines(glue("ERROR: No {what_to_graph} graph made for {rat_name} ({ratID}) on {set_date} for an analysis of {current_analysis_type}"))
+      graph =
+        ggplot(graph_data) + 
+        geom_point() + 
+        xlim(0, 100) + 
+        ylim(0, 100) + 
+        ggtitle(glue("{rat_name} {what_to_graph} does not exist")) +
+        theme_ipsum_es() +
+        theme(legend.position = "bottom")
+      
+      return(graph)
+    }
+  
+  return(graph)
   } 
 }
 
+ratID = NULL
 
 # BBN
 ################
@@ -196,7 +212,7 @@ Generate_Graph <- function(rat_name, ratID) {
 # Tones
 ################
 # # Tones Training
-# rat_name = "RP1"; set_date = 20221004
+rat_name = "RP1"; set_date = 20221004
 # # Tones Single Frequency
 # rat_name = "RP1"; set_date = 20230224
 # # Tones Mixed Frequency
@@ -238,14 +254,14 @@ Generate_Graph <- function(rat_name, ratID) {
 # rat_name = "Red2"; ratID = 252; set_date = 20230222 # narrow TH window
 # rat_name = "Red4"; ratID = 254; set_date = 20230301 # larger TH window
 
-if(! exists(ratID)) ratID = rat_archive %>% filter(Rat_name == rat_name) %>% .$Rat_ID
+if(is_null(ratID)) ratID = rat_archive %>% filter(Rat_name == rat_name) %>% .$Rat_ID
 
 # Can be hits, dprime or reaction
-what_to_graph = "dprime"
+what_to_graph = "reaction"
 
 # For testing purposes set_date is the date for graphing i.e. 'today'
 
 
 Generate_Graph(rat_name = rat_name, ratID = ratID) %>% print
 
-rm(list = c("ratID", "rat_name", "graph", "what_to_graph"))
+rm(list = c("ratID", "rat_name", "what_to_graph", "set_date"))
