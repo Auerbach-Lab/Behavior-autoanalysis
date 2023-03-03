@@ -1,7 +1,7 @@
 InitializeMain()
 
 # Find an entry -----------------------------------------------------------
-row_to_modify = run_archive %>% rowid_to_column() %>% filter(date == "20230217" & rat_name == "GP5")
+row_to_modify = run_archive %>% rowid_to_column() %>% filter(date == "20230209" & rat_name == "Purple4")
 row_to_modify %>% select(date, rat_name, rat_ID)
 line_to_modify = row_to_modify$rowid
 
@@ -13,7 +13,7 @@ run_archive[line_to_modify,]$invalid #= "TRUE"
 
 # Assignment change -------------------------------------------------------
 run_archive[line_to_modify,] %>% select(date, rat_name, rat_ID, assignment) %>% unnest_wider(assignment) %>% select(-comment)
-run_archive[line_to_modify,]$assignment[[1]]$phase #= "Tone"
+run_archive[line_to_modify,]$assignment[[1]]$phase #= "Tones"
 run_archive[line_to_modify,]$assignment[[1]]$task #= "Rxn"
 run_archive[line_to_modify,]$assignment[[1]]$detail #= "Mixed"
 
