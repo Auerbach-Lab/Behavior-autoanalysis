@@ -286,10 +286,23 @@ Workbook_Writer <- function() {
 
 
         # Gap Detection Training/Reset PreHL
-        if (phase_current == "Gap Detection" & ! task_current %in% c("Reset") & pre_HL) {
+        if (phase_current == "Gap Detection" & task_current %in% c("Training", "Reset") & pre_HL) {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "Gap Detection") %>%
+            group_by(task) %>%
+            summarise(task = unique(task), detail = unique(detail),
+                      date = tail(date, 1), n = n(),
+                      condition = "baseline",
+                      .groups = "drop")
+        }
+        
+        # Gap Detection Rxn/TH PreHL
+        if (phase_current == "Gap Detection" & task_current %in% c("Rxn", "TH") & pre_HL) {
+          count_df = rat_runs %>%
+            tidyr::unnest_wider(assignment) %>%
+            dplyr::filter(phase == "Gap Detection") %>%
+            filter(! task %in% c("Training", "Reset")) %>%
             group_by(task) %>%
             summarise(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
