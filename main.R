@@ -816,15 +816,16 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       else
       {
         go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)` %>% unique(), "dB")
+        catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
 
-        has_duration_range = nrow(unique(run_properties$duration)) > 1
+        has_duration_range = filter(run_properties$stim_encoding_table, Type != 0) %>% unique() %>% nrow() > 1
         if (has_duration_range) {
           duration = run_properties$stim_encoding_table %>%
             filter(Type != 0) %>%
             transmute(x = paste0(min(`Dur (ms)`), "-",
                                  max(`Dur (ms)`), "")) %>% .$x %>% unique()
         } else {
-          duration = run_properties$duration
+          duration = filter(run_properties$stim_encoding_table, Type != 0) %>% .$`Dur (ms)`
         }
 
         response_window = unique(run_properties$stim_encoding_table["Nose Out TL (s)"]) %>% as.numeric()
@@ -833,7 +834,9 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
         # Note there is not BG test here because there is expected to always be background in a Gap Detection file.
 
-        computed_file_name = paste0("gap_", go_dB, "_", duration, "ms_", run_properties$lockout, "s")
+        computed_file_name = paste0("gap_", go_dB, "_", duration, "ms_")
+        if (catch_number != 3) computed_file_name = paste0(computed_file_name, catch_number, "catch_")
+        computed_file_name = paste0(computed_file_name, run_properties$lockout, "s")
         if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
         if (has_TR) computed_file_name = paste0(computed_file_name, "_", "TR", run_properties$trigger_sensitivity, "ms")
       }
