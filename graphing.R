@@ -71,6 +71,8 @@ Generate_Graph <- function(rat_name, ratID) {
   # need table with date, hit%, Frequency, Duration, dB, rxn, dprime 
   graph_data =
     rat_runs %>%
+    # Due to bad data
+    filter(! date %in% c("20220107", "20220106", "20220105", "20220104", "20220103")) %>%
     unnest_wider(assignment) %>%
     filter(phase == current_phase & analysis_type == current_analysis_type) %>%
     filter(invalid != "TRUE") %>%
@@ -79,7 +81,7 @@ Generate_Graph <- function(rat_name, ratID) {
     mutate(frequencies = pluck(summary, "Freq (kHz)") %>% unique %>% str_flatten_comma()) %>%
     # filter to today's data based on analysis_type
     # Octave can not be limited to Freq
-    {if (str_detect(unique(.$analysis_type), pattern = "Octave|Oddball", negate = TRUE)) filter(., frequencies %in% current_frequencies) else .} %>%
+    {if (str_detect(unique(.$analysis_type), pattern = "Octave|Oddball", negate = TRUE)) filter(., any(frequencies %>% str_split(pattern = ", ", simplify = TRUE) %in% current_frequencies)) else .} %>%
     unnest_wider(stats)
     # # Omit days with > 45% FA, i.e. guessing
     # filter(FA_percent < user_settings$FA_cutoff) %>%
@@ -87,7 +89,10 @@ Generate_Graph <- function(rat_name, ratID) {
   # Check to see if we can calculate a TH
   # No TH for: Training - Gap, Training - BBN, Training - Tone, Training - Octave, Training - Oddball, Oddball (Standard), Oddball (Catch) 
   if (current_analysis_type %in% c("Tone (Single)", "BBN Mixed Duration", "BBN (Standard)", "Gap (Standard)", "Tone (Standard)", "Tone (Thresholding)")) {
-    TH = mean(graph_data$threshold$TH, na.rm = TRUE)
+    if(length(current_frequencies) != 1){
+      TH = graph_data %>% filter(complete_block_count > 1) %>% transmute(temp = map_dbl(threshold, ~ filter(., Freq == 4)$TH)) %>% .$temp %>% mean(na.rm = TRUE)
+        
+    } else TH = mean(graph_data$threshold$TH, na.rm = TRUE)
   } else {
     dprime = FALSE
     if (what_to_graph == "dprime") {
