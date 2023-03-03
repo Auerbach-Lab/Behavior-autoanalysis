@@ -188,28 +188,57 @@ Generate_Graph <- function(rat_name, ratID) {
 ################
 # # BBN Training
 # rat_name = "TP6"; set_date = 20221017
+# # BBN Single Duration
+# rat_name = "Orange11", set_date = 20230225
 # # BBN Mixed Duration
 # rat_name = "Purple3"; set_date = 20230302
 
+# Tones
+################
+# # Tones Training
+# rat_name = "RP1"; set_date = 20221004
+# # Tones Single Frequency
+# rat_name = "RP1"; set_date = 20230224
+# # Tones Mixed Frequency
+# rat_name = "Orange4"; set_date = 20221029
+# # Tones Mixed Frequency with BG
+# rat_name = "Orange5"; set_date = 20221022
 
-# rat_name = "GP1" # Octave training
-# Ocatve Rxn time can not be standard as it has one intensity. Should be Freq vs. Rxn and then only on discrimination days
+# Octave
+################
+# Octave Rxn time can not be standard as it has one intensity. Should be Freq vs. Rxn and then only on discrimination days
 # on Training days, the graph needs to be against a range instead of a Line
 # for dprime this requires unlisting reaction to get the Freq
-# rat_name = "RP1" # Tone
-# rat_name = "Blue4" # Oddball
-# rat_name = "LP2" # Oddball training
+
+# # Octave training
+# rat_name = "GP1" 
+# # Octave Discrimination
+# TODO: untested because no runs in run_archives yet
+
+# Oddball
+################
 # No dprime graph for Oddball
 
-ratID = rat_archive %>% filter(Rat_name == rat_name) %>% .$Rat_ID
+# # Tone, training, oddball
+# rat_name = "GP5"; set_date = 20230303
+# # Oddball Training (on trains)
+# rat_name = "RP3"; set_date = 20230302
+# # Oddball 
+# rat_name = "Blue4"; set_date = 20230209
+# # Oddball with BG
+# TODO: untested because no runs in run_archives yet
+# # Oddball with Catch
+# rat_name = "Blue1"; set_date = 20220630
+
 # Gap Detection
 ################
-# Gap
 # # Gap Rxn
 # rat_name = "Red4"; ratID = 254; set_date = 20230303
 # # Gap TH
 # rat_name = "Red2"; ratID = 252; set_date = 20230222 # narrow TH window
 # rat_name = "Red4"; ratID = 254; set_date = 20230301 # larger TH window
+
+if(! exists(ratID)) ratID = rat_archive %>% filter(Rat_name == rat_name) %>% .$Rat_ID
 
 # Can be hits, dprime or reaction
 what_to_graph = "dprime"
