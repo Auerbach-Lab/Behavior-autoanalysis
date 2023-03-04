@@ -66,6 +66,7 @@ Generate_Graph <- function(rat_name, ratID) {
   current_phase = pluck(today_data, "assignment", 1, "phase")
   current_task = pluck(today_data, "assignment", 1, "task")
   current_detail = pluck(today_data, "assignment", 1, "detail")
+  current_durations = pluck(today_data, "summary")[[Type = 1]]$duration[[1]]$`Dur (ms)` %>% unique %>% as.list()
   current_frequencies = pluck(today_data, "summary", 1, "Freq (kHz)") %>% unique %>% as.list()
   today_graph_data = today_data %>% unnest_wider(stats) %>% unnest(dprime) %>% unnest(reaction)
   
@@ -84,22 +85,20 @@ Generate_Graph <- function(rat_name, ratID) {
     {if (str_detect(unique(.$analysis_type), pattern = "Octave|Oddball", negate = TRUE)) filter(., any(frequencies %>% str_split(pattern = ", ", simplify = TRUE) %in% current_frequencies)) else .} %>%
     unnest_wider(stats)
   
-  # Graph production --------------------------------------------------------
+# Graph production --------------------------------------------------------
   # takes graph_data data frame (which has nested dfs) and produces 3 graphs -
   # one for dprime, one for reaction and one for hit%
   
-  # Gap Detection
+
+  # Gap Detection -----------------------------------------------------------
   if (str_detect(current_analysis_type, pattern = "Gap")) {
     # Calculate TH
     # There is no TH possible in Training files
     # In this case we should always only have 1 frequency but to future proof
-    # I put in the code for multiple frequencies
+    # I put in the code to check for multiple frequencies
     if (current_analysis_type != "Training - Gap") {
-      if(length(current_frequencies) != 1) {
-        TH = graph_data %>% filter(complete_block_count > 1) %>% 
-          transmute(temp = map_dbl(threshold, ~ filter(., Freq == 4)$TH)) %>% 
-          .$temp %>% mean(na.rm = TRUE)
-      } else TH = mean(graph_data$threshold$TH, na.rm = TRUE)
+      if(length(current_frequencies) == 1) TH = mean(graph_data$threshold$TH, na.rm = TRUE)
+      else stop("More than one frequency on a Gap file. This requires handling in the graphing code.") 
     }
     
     ################
@@ -140,6 +139,80 @@ Generate_Graph <- function(rat_name, ratID) {
     ################
     # Need to add hit_detailed to do this
 
+  }
+
+
+  # BBN ---------------------------------------------------------------------
+  if (str_detect(current_analysis_type, pattern = "BBN")) {
+    # Check for multiple durations in today's data
+    has_multiple_durations = length(current_durations) > 1
+    
+    if(has_multiple_durations){
+      # Set today's data to 50 ms so only one of the multiple durations is graphed
+      today_graph_data =  today_graph_data %>% filter(Dur == 50 & `Dur (ms)` == 50)
+      
+      # Select only Mixed duration files for comparison, unless today is the 1st
+      # day of Mixed durations (i.e. there is only 1 row which is today)
+      filtered_graph_data = filter(graph_data, detail == current_detail)
+      if(nrow(filtered_graph_data) > 1) graph_data = filtered_graph_data
+    } else {
+      # Select only current duration files for comparison, unless today is the
+      # 1st day of current duration (i.e. there is only 1 row which is today)
+      filtered_graph_data = filter(graph_data, str_detect(file_name, 
+                                                 pattern = glue("_{current_durations}ms_")))
+      if(nrow(filtered_graph_data) > 1) graph_data = filtered_graph_data
+    }
+    
+    # Calculate TH
+    # There is no TH possible in Training files
+    # In the case of multiple durations, we take 50ms as this is the most restrictive
+    if (current_analysis_type != "Training - BBN") {
+      if(length(current_durations) > 1) {
+        TH = graph_data %>% filter(complete_block_count > 1) %>% 
+          transmute(temp = map_dbl(threshold, ~ filter(., Dur == 50)$TH)) %>% 
+          .$temp %>% mean(na.rm = TRUE)
+      } else TH = mean(graph_data$threshold$TH, na.rm = TRUE)
+    }
+    
+    
+    ################
+    # dprime graph
+    ################
+    what_to_graph = "dprime"
+    x_column = "dB"; y_column = "dprime"
+    if (current_analysis_type == "Training - BBN") dprime_graph = Blank_Grapher(ggplot(graph_data))
+    else {
+      # Graph
+      dprime_graph = graph_data %>%
+        unnest(what_to_graph) %>%
+        ggplot(aes(x = dB, y = dprime)) %>%
+        Line_Grapher
+    }
+    # Add axis labels
+    dprime_graph = dprime_graph + labs(x = "Intensity (dB)", y = "d'")
+    
+    ################
+    # Reaction graph
+    ################
+    what_to_graph = "reaction"
+    x_column = "Inten (dB)"; y_column = "Rxn"
+    # Graph
+    rxn_graph = graph_data %>%
+      unnest(what_to_graph) %>%
+      ggplot(aes(x = `Inten (dB)`, y = Rxn)) 
+    
+    if (current_analysis_type == "Training - BBN") rxn_graph = Range_Grapher(rxn_graph)
+    # you can remove non-relevant data by filtering rxn_graph$data but this
+    # seems unnecessary and bad for day 1 of new stim
+    else rxn_graph = Line_Grapher(rxn_graph)
+    # Add axis labels
+    rxn_graph = rxn_graph + labs(x = "Intensity (dB)", y = "Reaction Time")
+    
+    ################
+    # Hit % graph
+    ################
+    # Need to add hit_detailed to do this
+    
   }
   
   
