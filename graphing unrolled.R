@@ -14,14 +14,13 @@ Generate_Graph <- function(rat_name, ratID) {
                    fun.min = function(x) mean(x) - sd(x),
                    fun.max = function(x) mean(x) + sd(x),
                    geom = "errorbar", linewidth = 10, width = 0) +
-      geom_point(data = today_graph_data, shape = 21, color = "black", fill = "mediumslateblue", size = 5) +
-      # Produces warning about group aesthetic b/c only 1 but needed for nice legend
-      geom_line(data = today_graph_data, aes(color = "Today", fill = "Today"), linewidth = 1.5) +
+      geom_point(data = today_graph_data, aes(color = "Today", fill = "Today"), shape = 21, size = 5) +
       { if(current_task == "Training") {annotate(x = pluck(today_graph_data, paste0(what_to_graph, "$", x_column)),
                                                  y = pluck(today_graph_data, paste0(what_to_graph, "$", y_column)), 
                                                  label = "Training", geom = "text", hjust = -0.5)} } +
       ggtitle(glue("{rat_name} {what_to_graph} Range Check")) +
       scale_color_manual(values = c("Today" = "mediumslateblue", "Average" = "thistle"), name = "") +
+      scale_fill_manual(values = c("Today" = "mediumslateblue", "Average" = "thistle"), name = "", guide = "none") +
       coord_cartesian(clip = "off") +
       theme_ipsum_es() +
       theme(legend.position = "bottom")
