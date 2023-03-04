@@ -59,6 +59,9 @@ Generate_Graph <- function(rat_name, ratID) {
   rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID)
   rat_runs = rat_runs %>% mutate(date_asDate = lubridate::ymd(date)) %>% arrange(desc(date))
   
+  # Check to see if rat has had Hearing loss, surgery or any other procedure 
+  is_post_baseline = !is.na(filter(rat_archive, Rat_ID == ratID)$HL_date)
+  
   # only want to graph relevant data so need today's data
   today_data = rat_runs %>% 
     filter(date == set_date) %>%
@@ -77,15 +80,41 @@ Generate_Graph <- function(rat_name, ratID) {
     rat_runs %>%
     unnest_wider(assignment) %>%
     filter(phase == current_phase & analysis_type == current_analysis_type) %>%
-    filter(invalid != "TRUE") %>%
+    filter(invalid != "TRUE")
+  
+  # Remove unnecessary trial data due to being post-baseline
+  if(is_post_baseline){
+    cut_off_date = filter(rat_archive, Rat_ID == ratID)$HL_date
+    # Select only runs since the procedure unless today is the 1st day following
+    # the procedure (i.e. there is only 1 row which is today)
+    filtered_graph_data = filter(graph_data, date > cut_off_date) %>% 
+      # We need to check that there are similar files to catch issues like its
+      # the first time post-HL on BBN but not tones
+      filter(analysis_type == current_analysis_type)
+    if(nrow(filtered_graph_data) > 1) graph_data = filtered_graph_data
+  }
+  
+  graph_data =
+    graph_data %>%
     # need to do rowwise for the pluck
     rowwise() %>%
     mutate(frequencies = pluck(summary, "Freq (kHz)") %>% unique %>% str_flatten_comma()) %>%
     # filter to today's data based on analysis_type
     # Octave can not be limited to Freq
-    {if (str_detect(unique(.$analysis_type), pattern = "Octave|Oddball", negate = TRUE)) filter(., any(frequencies %>% str_split(pattern = ", ", simplify = TRUE) %in% current_frequencies)) else .} %>%
-    unnest_wider(stats)
+    {if (str_detect(unique(.$analysis_type), pattern = "Octave|Oddball", negate = TRUE)) filter(., any(frequencies %>% str_split(pattern = ", ", simplify = TRUE) %in% current_frequencies)) else .}
   
+  #TODO confirm time save
+  graph_data =
+    graph_data %>%
+    group_by(date) %>%
+    mutate(threshold = map_vec(stats, ~ .['threshold']),
+           dprime = map_vec(stats, ~ .['dprime']),
+           reaction = map_vec(stats, ~ .['reaction']))
+
+  # graph_data =
+    # graph_data %>%
+    # unnest_wider(stats)
+
 # Graph production --------------------------------------------------------
   # takes graph_data data frame (which has nested dfs) and produces 3 graphs -
   # one for dprime, one for reaction and one for hit%
@@ -98,12 +127,12 @@ Generate_Graph <- function(rat_name, ratID) {
     # In this case we should always only have 1 frequency but to future proof
     # I put in the code to check for multiple frequencies
     if (current_analysis_type != "Training - Gap") {
-      if(length(current_frequencies) == 1) TH = mean(graph_data$threshold$TH, na.rm = TRUE)
+      if(length(current_frequencies) == 1) TH = unnest(graph_data, threshold)$TH %>% mean(na.rm = TRUE)
       else stop("More than one frequency on a Gap file. This requires handling in the graphing code.") 
     }
     
     ################
-    # dprime graph
+    # dprime graph #
     ################
     what_to_graph = "dprime"
     x_column = "Dur"; y_column = "dprime"
@@ -172,7 +201,7 @@ Generate_Graph <- function(rat_name, ratID) {
         TH = graph_data %>% filter(complete_block_count > 1) %>% 
           transmute(temp = map_dbl(threshold, ~ filter(., Dur == 50)$TH)) %>% 
           .$temp %>% mean(na.rm = TRUE)
-      } else TH = mean(graph_data$threshold$TH, na.rm = TRUE)
+      } else unnest(graph_data, threshold)$TH %>% mean(na.rm = TRUE)
     }
     
     
@@ -223,6 +252,8 @@ Generate_Graph <- function(rat_name, ratID) {
   return(tibble_row(dprime_graph = dprime_graph, rxn_graph = rxn_graph))
 }
 
+
+# Workflow ----------------------------------------------------------------
 ratID = NULL
 
 # BBN
@@ -230,9 +261,9 @@ ratID = NULL
 # # BBN Training
 # rat_name = "TP6"; set_date = 20221017
 # # BBN Single Duration
-# rat_name = "Orange11", set_date = 20230225
+# rat_name = "Orange11"; set_date = 20230225
 # # BBN Mixed Duration
-# rat_name = "Purple3"; set_date = 20230302
+# rat_name = "Purple3"; ratID = 213; set_date = 20230302
 
 # Tones
 ################
@@ -289,3 +320,4 @@ if(is_null(ratID)) ratID = rat_archive %>% filter(Rat_name == rat_name) %>% .$Ra
 Generate_Graph(rat_name = rat_name, ratID = ratID)
 
 rm(list = c("ratID", "rat_name", "set_date"))
+
