@@ -1,8 +1,9 @@
 Generate_Graph <- function(rat_name, ratID) {
   # Thoughts ----------------------------------------------------------------
   # See graphing table for breakdown
-  # ISSUE: BBN & Tone mixed would have 3 lines that have similar ranges.
-  #        Therefore, I will graph 50ms for Mixed BBN and 8kHz for Mixed Tones.
+  # TOD:
+  # This code does not currently differentiate pre vs. post hearing loss/surgery/etc
+  # You can handle this but it requires access to rat_archive, which I believe we have. 
   
   # Functions ---------------------------------------------------------------
   
