@@ -795,7 +795,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       if (analysis$type == "Training - Gap") {
         go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB_")
         catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
-        duration = unique(run_properties$duration) %>% as.numeric()
+        duration = unique(filter(run_properties$stim_encoding_table, Type == 1)$`Dur (ms)`) %>% as.numeric()
         delay = run_properties$delay %>% stringr::str_replace(" ", "-")
         lockout = `if`(length(run_properties$lockout) > 0, run_properties$lockout, 0)
 
