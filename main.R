@@ -557,7 +557,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     ID_Gap <- function() {
       r = NULL
       has_one_dB = unique(run_properties$summary$dB_min) == unique(run_properties$summary$dB_max)
-      has_multiple_durations = length(unique(run_properties$stim_encoding_table$`Dur (ms)`)) > 1
+      has_multiple_durations = length(unique(filter(run_properties$stim_encoding_table, Type == 1)$`Dur (ms)`)) > 1
 
       # For gap detection files (training or otherwise)
       # DO NOT CHANGE THE TEXTUAL DESCRIPTIONS OR YOU WILL BREAK COMPARISONS LATER
