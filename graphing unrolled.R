@@ -72,7 +72,7 @@ Generate_Graph <- function(rat_name, ratID) {
   current_detail = pluck(today_data, "assignment", 1, "detail")
   current_durations = pluck(today_data, "summary")[[Type = 1]]$duration[[1]]$`Dur (ms)` %>% unique %>% as.list()
   current_frequencies = pluck(today_data, "summary", 1, "Freq (kHz)") %>% unique %>% as.list()
-  today_graph_data = today_data %>% unnest_wider(stats) %>% unnest(dprime) %>% unnest(reaction)
+  today_graph_data = today_data %>% unnest_wider(stats) %>% unnest(dprime) %>% unnest(reaction) %>% unnest(FA_detailed, names_sep = "_")
   
   # minimize data to mess with
   # need table with date, hit%, Frequency, Duration, dB, rxn, dprime 
@@ -304,8 +304,13 @@ Generate_Graph <- function(rat_name, ratID) {
     if(has_multiple_frequencies){
       # only go is consistent as the number of no-gos fluctuates
       go_kHz = filter(today_graph_data$summary[[1]], Type == 1)$`Freq (kHz)`
-      octave_step = log(go_kHz/nogo_kHz)/log(2)
-      # Add octave step column
+      
+      # Add octave columns: octave_fraction is the fraction of the octave, 
+      # octave_step is the nearest 16th step (i.e. x/16)
+      graph_data =
+        graph_data %>%
+        mutate(FA_detailed = map(FA_detailed, ~ mutate(., octave_fraction = log(go_kHz/`Freq (kHz)`)/log(2),
+                                                          octave_step = abs(round(octave_fraction * 16)))))
     }
     
     # Calculate TH
@@ -313,12 +318,18 @@ Generate_Graph <- function(rat_name, ratID) {
     
     
     # dprime graph ##########
-    # Does not exist but could do detailed FA graph instead
     what_to_graph = "dprime"
-    x_column = "dB"; y_column = "dprime"
-    dprime_graph = Blank_Grapher(ggplot(graph_data))
+    x_column = "FA_detailed_Freq (kHz)"; y_column = "FA_detailed_dprime"
+    if (current_analysis_type == "Training - Octave") dprime_graph = Blank_Grapher(ggplot(graph_data))
+    else {
+      # Graph
+      dprime_graph = graph_data %>%
+        unnest(FA_detailed, names_sep = "_") %>%
+        ggplot(aes(x = `FA_detailed_Freq (kHz)`, y = FA_detailed_dprime)) %>%
+        Line_Grapher
+    }
     # Add axis labels
-    dprime_graph = dprime_graph + labs(x = "Intensity (dB)", y = "d'")
+    dprime_graph = dprime_graph + labs(x = "Frequency (kHz)", y = "d'")
     
     # Reaction graph ##########
     what_to_graph = "reaction"
@@ -326,18 +337,30 @@ Generate_Graph <- function(rat_name, ratID) {
     # Graph
     rxn_graph = graph_data %>%
       unnest(what_to_graph) %>%
-      ggplot(aes(x = `Inten (dB)`, y = Rxn)) 
-    
-    if (current_analysis_type == "Training - Octave") rxn_graph = Range_Grapher(rxn_graph)
-    # you can remove non-relevant data by filtering rxn_graph$data but this
-    # seems unnecessary and bad for day 1 of new stim
-    else rxn_graph = Line_Grapher(rxn_graph)
+      ggplot(aes(x = `Inten (dB)`, y = Rxn))  %>%
+      Range_Grapher
     # Add axis labels
     rxn_graph = rxn_graph + labs(x = "Intensity (dB)", y = "Reaction Time")
     
     
-    # Hit % graph  ##########
-    # Need to add hit_detailed to do this
+    # FA % graph  ##########
+    what_to_graph = "False Alarm"
+    x_column = "FA_detailed_Freq (kHz)"; y_column = "FA_detailed_FA_percent_detailed"
+    if (current_analysis_type == "Training - Octave") hit_graph = Blank_Grapher(ggplot(graph_data))
+    else {
+      today_graph_data = mutate(today_graph_data, FA_detailed_FA_percent_detailed = FA_detailed_FA_percent_detailed * 100)
+      
+      # Graph
+      hit_graph = graph_data %>%
+        unnest(FA_detailed, names_sep = "_") %>%
+        mutate(FA_detailed_FA_percent_detailed = FA_detailed_FA_percent_detailed * 100) %>%
+        ggplot(aes(x = `FA_detailed_Freq (kHz)`, y = FA_detailed_FA_percent_detailed)) %>%
+        Line_Grapher
+    }
+    # Add axis labels
+    hit_graph = hit_graph + labs(x = "Frequency (kHz)", y = "False Alarm %")
+    
+    print(hit_graph)
     
   }
   
