@@ -33,6 +33,8 @@ Check_Trial_Archives <- function () {
 
     if (length(diff) == 0) {
       writeLines(glue("Runs and trials agree: {trials_uuid_counts} UUIDs."))
+      save(run_archive, file = paste0(projects_folder, "run_archive.Rdata.backup"), ascii = FALSE, compress = FALSE)
+      writeLines(glue("Backed up run_archive."))
     } else {
       difference = setdiff(trials_uuids, unique(run_archive$UUID))
       writeLines("The following UUIDs were in one but not the other:")
