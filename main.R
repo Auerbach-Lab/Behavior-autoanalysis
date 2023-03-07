@@ -315,7 +315,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
       trial_data = dplyr::left_join(x = trial_data_encoded,
                                   y = dplyr::select(run_properties$stim_encoding_table, -Repeat_number, -`Delay (s)`),
-                                  by = "Stim_ID", all.x = TRUE)
+                                  by = "Stim_ID")
       trial_data = dplyr::bind_cols(trial_data, Get_Delay_DF(trial_data))
 
       #TODO: detect same day same rat data, renumber blocks in this list AND in master dataframe to continuous chronological order
