@@ -488,12 +488,16 @@ Workbook_Writer <- function() {
         r = rat_runs %>%
           dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
           dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
+          # highlight file names that are invalid with stars on both sides or wrong file with star at the end
+          mutate(file_name = case_when(invalid == TRUE ~ glue("* {file_name} *"), 
+                                       str_detect(paste(warnings_list), pattern = "wrong file") ~ glue("{file_name} *"),
+                                       TRUE ~ file_name)) %>%
           tidyr::unnest_wider(assignment) %>%
           tidyr::unnest_wider(stats) %>%
           tidyr::unnest_wider(summary) %>%
           dplyr::select(all_of(columns)) %>%
           arrange(desc(date), .by_group = F)
-
+ 
         weight_max = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
 
         #min_duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
