@@ -21,14 +21,22 @@ Grapher <- function(rat_to_graph) {
   
   Today = data %>% filter(date == date_to_graph) 
   
-  Freq_filter = Today %>% .$Freq %>% unique()
+  Freq_filter = unique(Today$Freq)
+  today_analysis_type = unique(Today$analysis_type)
 
-  data = data %>%  
-    filter(Freq == Freq_filter)
+  if(str_detect(today_analysis_type, "Oddball")){
+    data = data %>%  
+      filter(analysis_type == today_analysis_type)
+  } else {
+    data = data %>% 
+      filter(analysis_type == today_analysis_type) %>%
+      filter(Freq == Freq_filter) 
+  }
+
   
   
   suppressMessages(print(ggplot(data = data, aes(x = dB, y = value)) +
-      geom_hline(yintercept = 1.5, color = "blue") +
+      {if(what_to_graph == "dprime") geom_hline(yintercept = 1.5, color = "blue") } +
       geom_point(color = "black") +
       geom_smooth(se = FALSE, linewidth = 2, color = "grey") +
       geom_line(data = Today,
@@ -42,13 +50,3 @@ Grapher <- function(rat_to_graph) {
 
 
 lapply(rat_to_graph, Grapher)
-
-
-# #inidividual data points
-# TBD %>%
-#   filter(rat_name %in% rat_to_graph & date == date_to_graph) %>%
-#   unnest_wider(stats) %>%
-#   unnest(dprime) %>%
-#   ggplot(aes(x = dB, y = dprime)) +
-#   geom_line() +
-#   geom_smooth()
