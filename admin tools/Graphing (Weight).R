@@ -1,7 +1,7 @@
 InitializeMain()
 
 # Clear extant plots
-dev.off(dev.list()["RStudioGD"]) 
+if(!is_null(dev.list()["RStudioGD"])) dev.off(dev.list()["RStudioGD"]) 
 
 Weight_Grapher <- function(rat_to_graph) {
   rat_runs = run_archive %>% dplyr::filter(rat_ID == rat_to_graph)
@@ -36,6 +36,7 @@ Weight_Grapher <- function(rat_to_graph) {
     ))
 }
 
+writeLines(Graphing...)
 rat_archive %>%
   filter(is.na(end_date)) %>%
   #select rats that have NOT been run today
@@ -45,3 +46,4 @@ rat_archive %>%
   arrange(desc(Box)) %>%
   .$Rat_ID %>%
   lapply(Weight_Grapher)
+cat(" Done")
