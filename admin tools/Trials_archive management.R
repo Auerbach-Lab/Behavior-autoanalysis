@@ -124,11 +124,11 @@ Find_Issues_in_Archives <- function(group) {
   } else {
     cat(" good for backup...")
     # Backup
-    fwrite(archive, file = paste0(projects_folder, group, "_archive.csv.gz.backup"))
+    fwrite(trials_archive, file = paste0(projects_folder, group, "_archive.csv.gz.backup"))
     cat(" backed up\n")
   }
 }
 
-list.files(path = projects_folder, pattern = "^.*_archive.csv.gz$") %>% paste0(projects_folder, .) %>%
-  data.frame(file = .) %>% mutate(experiment = stringr::extract(file, pattern = '(?<=s/).*(?=_a)')) %>% .$experiment %>%
+list.files(path = projects_folder, pattern = "^.*_archive.csv.gz$") %>% paste0(projects_folder, .) %>% data.frame(file = .) %>% 
+  mutate(experiment = stringr::str_extract(file, pattern = '(?<=s/).*(?=_a)')) %>% .$experiment %>%
   lapply(Find_Issues_in_Archives)
