@@ -129,6 +129,6 @@ Find_Issues_in_Archives <- function(group) {
   }
 }
 
-list.files(path = projects_folder, pattern = "^.*_archive.csv.gz$") %>% paste0(projects_folder, .) %>%
-  data.frame(file = .) %>% mutate(experiment = stringr::extract(file, pattern = '(?<=s/).*(?=_a)')) %>% .$experiment %>%
+list.files(path = projects_folder, pattern = "^.*_archive.csv.gz$") %>% paste0(projects_folder, .) %>% data.frame(file = .) %>% 
+  mutate(experiment = stringr::str_extract(file, pattern = '(?<=s/).*(?=_a)')) %>% .$experiment %>%
   lapply(Find_Issues_in_Archives)
