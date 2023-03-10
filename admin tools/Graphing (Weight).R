@@ -36,13 +36,14 @@ Weight_Grapher <- function(rat_to_graph) {
     ))
 }
 
-writeLines(Graphing...)
+cat("Graphing...")
 rat_archive %>%
   filter(is.na(end_date)) %>%
   #select rats that have NOT been run today
-  filter(Assigned_Filename != "") %>%
+  # filter(Assigned_Filename != "") %>%
   # filter(Assigned_Experiment  == "Tsc2-LE") %>%
-  # filter(Rat_name == "TP3") %>%
+  # filter(!Rat_name %in% c("Teal3", "Teal4")) %>%
+  filter(str_detect(Box, "2.")) %>%
   arrange(desc(Box)) %>%
   .$Rat_ID %>%
   lapply(Weight_Grapher)
