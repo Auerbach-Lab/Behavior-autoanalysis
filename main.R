@@ -706,15 +706,27 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         nogo_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% dplyr::arrange(Stim_ID) %>% tail(n = 1) %>% .$`Inten (dB)`)
         has_dB_range = go_dB != nogo_dB
 
-        computed_file_name = paste0(go_kHz, nogo_kHz)
+        computed_file_name1 = paste0(go_kHz, nogo_kHz)
         computed_file_name2 = paste0(go_kHz, nogo_kHz2)
         if (has_dB_range) {
-          computed_file_name = paste0(computed_file_name, go_dB, "-")
+          computed_file_name1 = paste0(computed_file_name1, go_dB, "-")
           computed_file_name2 = paste0(computed_file_name2, go_dB, "-")
         }
-        computed_file_name = paste0(computed_file_name, nogo_dB, "dB_", run_properties$duration, "ms_", run_properties$lockout, "s")
+        computed_file_name1 = paste0(computed_file_name1, nogo_dB, "dB_", run_properties$duration, "ms_", run_properties$lockout, "s")
         computed_file_name2 = paste0(computed_file_name2, nogo_dB, "dB_", run_properties$duration, "ms_", run_properties$lockout, "s")
-        computed_file_name = list(computed_file_name, computed_file_name2) # list should be safe from the later pastes because they shouldn't fire
+        # computed_file_name = list(computed_file_name, computed_file_name2) # list should be safe from the later pastes because they shouldn't fire
+        
+        
+        # Test for 1/6 or the zoom in on 1/12. If it is 1/12 then there will be odd steps
+        stim_in_octave = run_properties$stim_encoding_table %>% mutate(octave_fraction = log(as.numeric(str_extract(go_kHz, pattern = "[:digit:]+"))/`Freq (kHz)`)/log(2),
+                                                                       octave_step = abs(round(octave_fraction * 12)),
+                                                                       even = (octave_step %% 2) == 0)
+        is_6th_of_octave = all(stim_in_octave$even == TRUE)
+        
+        if(is_6th_of_octave) computed_file_name = computed_file_name1
+        else computed_file_name = computed_file_name2
+        
+        return(computed_file_name)
       }
 
       else if (analysis$type == "Training - Octave")
