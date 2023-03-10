@@ -14,21 +14,27 @@ Weight_Grapher <- function(rat_to_graph) {
   
   min_trials = pluck(user_settings, "minimum_trials", 
                      arrange(rat_runs, desc(date)) %>% head(n = 1) %>% .$analysis_type)
+  annotation_x = max(rat_runs$weight)
+  
+  trials_model = lm(trial_count ~ date_asDate, data= rat_runs)
+  trails_label_x = predict(trials_model)[[1]]
+  
   
   suppressMessages(print(
       rat_runs %>% 
       ggplot(aes(x = date_asDate, y = weight)) +
       geom_hline(yintercept = min_trials, linetype = "longdash") +
+      geom_text(aes(x = min(date_asDate), y = min_trials - 5), label = "Minimum trials")+
       geom_smooth(color = "grey", linewidth = 2,
                   se = FALSE, na.rm = TRUE, method = "lm", formula= y~x) +
       geom_point(shape=21, color="black", fill="#69b3a2", size=5) +
-      geom_text(aes(x = min(date_asDate) + 1, y = max(weight) + 10), label = "Weight", color="#69b3a2")+
+      geom_text(aes(x = min(date_asDate), y = annotation_x), nudge_x = -0.5, label = "Weight", color="#69b3a2")+
       geom_smooth(aes(x = date_asDate, y = trial_count),
                   color = "black", linewidth = 2,
                   se = FALSE, na.rm = TRUE, method = "lm", formula= y~x) +
       geom_text(data = filter(rat_runs, !is.na(weight_annotation)),
-                aes(label = weight_annotation), color="darkred", nudge_y = 20, size = 3)+
-      geom_text(aes(x = min(date_asDate) + 1, y = mean(trial_count) + 3), label = "Trial trend")+
+                aes(y = annotation_x + 6, label = weight_annotation), color="darkred", size = 3)+
+      geom_text(aes(x = min(date_asDate), y = trails_label_x + 6), label = "Trial trend")+
       ggtitle(glue("{unique(rat_runs$rat_name)} 2 week Weight vs. Trail count")) +
       scale_y_continuous(expand = c(0.1, 0)) +
       theme_ipsum_es() +
