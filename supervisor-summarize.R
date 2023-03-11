@@ -685,9 +685,24 @@ Workbook_Writer <- function() {
             df_discrimination =
               df_discrimination %>%
               group_by(date) %>%
-              do(mutate(., Oct = c(1:6), dprime = max(dprime))) %>% # mutate(Oct_position = c(1:6)) %>% print) %>%
-              select(-FA, -trials, -`Freq (kHz)`) %>%
+              # copy the max d' to every value because its the only one we want outputted at the end
+              do(mutate(.,dprime = max(dprime))) %>% 
+              # calculate fraction of the octave by pulling the go frequency from the file_name (only source we have at this point)
+              mutate(octave_fraction = log(as.numeric(str_extract(file_name, pattern = "[:digit:]+(?=-[:digit:]+?kHz)"))/`Freq (kHz)`)/log(2),
+                     Oct = abs(round(octave_fraction * 12))) %>%
+              select(-octave_fraction, -FA, -trials, -`Freq (kHz)`) %>%
               pivot_wider(names_from = Oct, values_from = FA_percent_detailed)
+            
+            #create columns for Octave fractions that are missing:
+            column_holder =
+              #make a list containing the common column names up through spacer1 and append columns named 1 through 12
+              c(names(select(df_discrimination, task:Spacer1)), seq(1:12))
+            
+            # add the missing columns as dbls
+            df_discrimination[column_holder[!(column_holder %in% colnames(df_discrimination))]] = na_dbl
+            
+            # reorder columns
+            df_discrimination = select(df_discrimination, task:Spacer1, "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")
           }
 
 
