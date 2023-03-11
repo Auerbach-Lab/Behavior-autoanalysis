@@ -8,7 +8,7 @@ Box_file_location = "C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)"
 
 # Functions ---------------------------------------------------------------
 Find_Issues_in_Archives <- function(group) {
-  cat(glue("Checking {group}..."))
+  cat(glue("     Checking {group}..."))
   # Load file
   trials_archive = fread(paste0(projects_folder, group, "_archive.csv.gz"))
   
@@ -21,7 +21,7 @@ Find_Issues_in_Archives <- function(group) {
   trials_total = sum(trial_counts$trials)
   
   if(nrow(trials_archive) != trials_total) {
-    cat(glue(" Issue with archive: off by {abs(trials_total-nrow(trials_archive))}"))
+    writeLines(glue(" Issue with archive: off by {abs(trials_total-nrow(trials_archive))}"))
     
     trial_count_comparison = trials_archive %>% group_by(UUID) %>% summarise(rows = length(UUID)) %>%
       left_join(trial_counts, by = "UUID") %>%
@@ -33,7 +33,7 @@ Find_Issues_in_Archives <- function(group) {
       writeLines(glue("ISSUE IN {group}_archive.csv.gz
                           NOT backed up"))
     } else {
-      glue_data(Bad_UUIDs)
+      writeLines(glue_data(Bad_UUIDs))
       
       # Finding missing runs ----------------------------------------------------
       # Find what is missing
@@ -41,7 +41,7 @@ Find_Issues_in_Archives <- function(group) {
       UUIDs_without_runs = keep(UUIDs_in_trials, ~ ! . %in% UUIDs_in_runs)
       
       if(is_empty(UUIDs_without_runs)) {
-        writeLines(glue("No extra data for {group}"))
+        writeLines(glue("          No extra data for {group}"))
       } else {
         writeLines("Removing orphan trial data... ")
         trials_archive = filter(trials_archive, ! UUID %in% UUIDs_without_runs)
@@ -109,16 +109,20 @@ Find_Issues_in_Archives <- function(group) {
 
       # Find and load orphan runs -----------------------------------------------
       
-      if(length(UUIDs_missing) > 0) writeLines(glue("Missing trials for runs in {group}"))
-      else writeLines(glue("No missing data for {group}"))
+      if(length(UUIDs_missing) > 0) {
+        writeLines(glue("          Missing trials for runs in {group}"))
+        # Write out list to load
+        bad_runs = run_archive %>% filter(UUID %in% UUIDs_missing) %>% arrange(date)
+        
+        ## TODO: in-progress
+        # 1) need to backup data but not restore assignment through remove entry.R AND save the key_data for autoloading
+        # This will need an apply with 1 for rows and will require that the remove entry be in a 'safetied' state
+        # 2) reload data from key_data using main with the assignment from the key_data
+        
+        
+        } else writeLines(glue("No missing trials data for {group}"))
       
-      # Write out list to load
-      bad_runs = run_archive %>% filter(UUID %in% UUIDs_missing) %>% arrange(date)
       
-      ## TODO: in-progress
-      # 1) need to backup data but not restore assignment through remove entry.R AND save the key_data for autoloading
-      # This will need an apply with 1 for rows and will require that the remove entry be in a 'safetied' state
-      # 2) reload data from key_data using main with the assignment from the key_data
 
     }
   } else {
@@ -128,6 +132,8 @@ Find_Issues_in_Archives <- function(group) {
     cat(" backed up\n")
   }
 }
+
+writeLines("Checking and backing up trials")
 
 list.files(path = projects_folder, pattern = "^.*_archive.csv.gz$") %>% paste0(projects_folder, .) %>% data.frame(file = .) %>% 
   mutate(experiment = stringr::str_extract(file, pattern = '(?<=s/).*(?=_a)')) %>% .$experiment %>%
