@@ -20,7 +20,7 @@ Workbook_Reader <- function() {
   assignments_df = assignments_df %>% mutate(Assigned_Filename = stringr::str_replace_all(Assigned_Filename, " ", ""))
   if (nrow(assignments_df) != user_settings$runs_per_day) {
     warn = paste0("Only ", nrow(assignments_df), " assignments were found. (Expected ", user_settings$runs_per_day, ")")
-    warning(paste0(warn, "\n"))
+    writeLines(paste0(warn, "\n"))
   }
   assignments_mandatory_data = assignments_df %>% dplyr::select(-Persistent_Comment) # comments are allowed to be NA, but nothing else is
   if (any(is.na(assignments_mandatory_data))) stop("ERROR: Mandatory values are NA. (Are there non-green cells in the supervisor spreadsheet?)")
