@@ -465,7 +465,8 @@ Workbook_Writer <- function() {
           arrange(desc(date))
 
         weight_max = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
-        min_duration = r %>% unnest(reaction) %>% dplyr::filter(task == task_current & detail == detail_current) %>% .$`Dur (ms)` %>% unique() %>% min()
+        min_duration = r %>% filter(task == task_current & detail == detail_current) %>%
+          transmute(foo = map_dbl(reaction, ~ min(.$`Dur (ms)`))) %>% min()
         analysis_type = r %>% head(1) %>% .$analysis_type         # Needed to deal with the initial training
 
         # Task-specific RXN column ------------------------------------------------
@@ -486,8 +487,10 @@ Workbook_Writer <- function() {
             df_TH_BBN = NULL
             df_TH_tones = NULL
             df_Rxn = NULL
+
             r = r %>% unnest(reaction)
 
+            # days with broadband (freq 0) and TH, then pull the row for each day that is the quietest
             df_TH_BBN = r %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` == 0)  %>%
               group_by(date) %>%
