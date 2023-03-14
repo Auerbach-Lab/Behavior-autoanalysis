@@ -502,6 +502,9 @@ Workbook_Writer <- function() {
 
         #min_duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
         min_duration = r %>% unnest(reaction) %>% dplyr::filter(task == task_current & detail == detail_current) %>% .$`Dur (ms)` %>% unique() %>% min()
+        
+        # Needed for gap detection
+        current_frequency = r %>% arrange(desc(date)) %>% head(1) %>% pluck("reaction", 1, "Inten (dB)")
 
         # Needed to deal with the initial training
         analysis_type = r %>% arrange(desc(date)) %>% head(1) %>% .$analysis_type
@@ -593,11 +596,20 @@ Workbook_Writer <- function() {
         r = r %>% select(-analysis_type) %>% relocate(Rxn, .before = mean_attempts_per_trial) %>%
           mutate(Spacer1 = NA)
 
-        # Phase-specific Columns --------------------------------------------------------
+      # Phase-specific Columns --------------------------------------------------------
         if (analysis_type %in% c("Training - Gap")) {
           # Training has no TH
-          r = r %>% unnest(threshold) %>%
+          r = r %>% 
+            # unnesting reaction has caused an amplification of rows - this is to remove that
+            select(-threshold) %>% unique() %>%
             group_by(task, detail) %>%
+            relocate(Spacer1, .after = mean_attempts_per_trial) %>%
+            select(-FA_detailed)
+        } else if (phase_current %in% c("Gap Detection")) {
+          r = r %>% unnest(threshold) %>% select(-Freq, -Dur) %>%
+            group_by(task, detail) %>%
+            mutate(THrange = paste0(suppressWarnings(min(TH, na.rm = TRUE)) %>% round(digits = 0), "-", suppressWarnings(max(TH, na.rm = TRUE)) %>% round(digits = 0))) %>%
+            relocate(THrange, .after = TH) %>%
             relocate(Spacer1, .after = mean_attempts_per_trial) %>%
             select(-FA_detailed)
         } else if (analysis_type %in% c("Training - BBN")) {
@@ -952,7 +964,7 @@ Workbook_Writer <- function() {
   rat_archive %>%
     filter(is.na(end_date)) %>%
     filter(Assigned_Filename == "") %>%
-    # filter(Assigned_Experiment  == "GD") %>%
+    # filter(Old_Assigned_Experiment  == "GD") %>%
     .$Rat_ID %>%
     lapply(Add_Rat_To_Workbook)
 
