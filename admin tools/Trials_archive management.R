@@ -126,7 +126,7 @@ Find_Issues_in_Archives <- function(group) {
 
     }
   } else {
-    cat(" good for backup...")
+    cat(" good ...")
     # Backup
     fwrite(trials_archive, file = paste0(projects_folder, group, "_archive.csv.gz.backup"))
     cat(" backed up\n")
