@@ -35,7 +35,7 @@ Weight_Grapher <- function(rat_to_graph) {
       geom_text(data = filter(rat_runs, !is.na(weight_annotation)),
                 aes(y = annotation_x + 6, label = weight_annotation), color="darkred", size = 3)+
       geom_text(aes(x = min(date_asDate), y = trails_label_x + 6), label = "Trial trend")+
-      ggtitle(glue("{unique(rat_runs$rat_name)} 2 week Weight vs. Trail count")) +
+      ggtitle(glue("{unique(rat_runs$rat_name)} two week Weight vs. Trail count")) +
       scale_y_continuous(expand = c(0.1, 0)) +
       theme_ipsum_es() +
       labs(x = "Date", y = "Weight & Trial Count")
