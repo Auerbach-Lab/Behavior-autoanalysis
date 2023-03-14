@@ -119,58 +119,13 @@ Find_Issues_in_Archives <- function(group) {
         # This will need an apply with 1 for rows and will require that the remove entry be in a 'safetied' state
         # 2) reload data from key_data using main with the assignment from the key_data
         
-        # Reload bad files ---------------------------------------------------------------
-        clean_archives <- function(entry, date, restore = TRUE, backup_data = TRUE) {
-          df = run_archive %>% filter(UUID == entry)
-          writeLines(paste0("\t\tCleaning ", df$rat_name, "'s entry on ", df$date, " ..."))
-          
-          # Backup lose-able data
-            # Get data to save
-            key_data = df %>% select(all_of(c("date", "rat_ID", "rat_name", "weight", "omit_list", "comments", "assignment", "UUID"))) %>% unnest_wider(assignment) %>% 
-              mutate(date_removed = Sys.Date() %>% as.character())
-            # append to running CSV
-            fwrite(key_data, file = paste0(projects_folder, "deleted_entries.csv"), append = file.exists(paste0(projects_folder, "deleted_entries.csv")))
-            writeLines("\tData backed up")
-          
-          # Wipe from trials archive:
-          experiment = df$assignment %>% .[[1]] %>% pluck("experiment")
-          variable_name = paste0(experiment, "_archive")
-          filename = paste0(projects_folder, variable_name, ".csv.gz")
-          # load archive
-          trial_archive = fread(filename)
-          # clean archive
-          temp = filter(trial_archive, UUID != df$UUID)
-          # save cleaned archive
-          fwrite(temp, file = filename)
-          writeLines(paste0("\tTrials removed from ", variable_name))
-          
-          # Wipe UUID from run archive
-          run_archive = filter(run_archive, UUID != df$UUID)
-          save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = FALSE, compress = FALSE)
-          writeLines("\tRun archive cleaned")
-          
-          writeLines("Done.")
-          InitializeMain()
-        }
-        
-        # Check prior to cleaning bad entries -------------------------------------
-        switch(menu(c("Yes", "No"), 
-                    title=paste0("Proceed with cleaning bad runs from run_archive?\n 
-                                 Note: Data WILL be saved"), 
-                    graphics = FALSE),
-               # 1 (Yes): Write file
-               lapply(bad_runs %>% .$UUID, clean_archives), 
-               # 2 (No): Abort
-               writeLines("Stopped. Entries remain."))
-        
-        
         } else writeLines(glue("No missing trials data for {group}"))
       
       
 
     }
   } else {
-    cat(" good ...")
+    cat(" good...")
     # Backup
     fwrite(trials_archive, file = paste0(projects_folder, group, "_archive.csv.gz.backup"))
     cat(" backed up\n")
