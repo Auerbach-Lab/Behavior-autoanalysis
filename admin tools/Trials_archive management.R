@@ -119,7 +119,7 @@ Find_Issues_in_Archives <- function(group) {
         # This will need an apply with 1 for rows and will require that the remove entry be in a 'safetied' state
         # 2) reload data from key_data using main with the assignment from the key_data
         
-        # Function ---------------------------------------------------------------_
+        # Reload bad files ---------------------------------------------------------------
         clean_archives <- function(entry, date, restore = TRUE, backup_data = TRUE) {
           df = run_archive %>% filter(UUID == entry)
           writeLines(paste0("\t\tCleaning ", df$rat_name, "'s entry on ", df$date, " ..."))
