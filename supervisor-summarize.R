@@ -967,14 +967,18 @@ Workbook_Writer <- function() {
 # Workflow -----------------------------------------------------------
 
 InitializeWriter()
-Workbook_Writer()
-rm(list = c("experiment_config_df", "run_today", "wb"))
-source(paste0(projects_folder, "admin tools\\check UUIDs and backup trials archives.R"))
 
+# Find runs not entered today
 rats_not_entered_today = rat_archive %>% filter(is.na(end_date)) %>%
   filter(! Rat_name %in% c(run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>% .$rat_name %>% as.list)) %>%
   arrange(Box)
-
 cat("\n\nRats with no runs in the system for today yet:\n\t")
-cat(str_flatten_comma(rats_not_entered_today$Rat_name))
+cat(str_flatten_comma(rats_not_entered_today$Rat_name), "\n")
+
+Workbook_Writer()
+rm(list = c("experiment_config_df", "run_today", "wb"))
+# Validate and back-up archives
+source(paste0(projects_folder, "admin tools\\check UUIDs and backup trials archives.R"))
+
+
 
