@@ -1,9 +1,9 @@
-# bad_rats = c("Purple2")
-# bad_date = "20230311"
-# # Restore assignment from the 'old' setting
-# restore = TRUE
-# # Backs up loseable data such as comments, weight, omit list
-# backup_data = TRUE
+bad_rats = c("Red6")
+bad_date = "today"
+# Restore assignment from the 'old' setting
+restore = TRUE
+# Backs up loseable data such as comments, weight, omit list
+backup_data = TRUE
 
 
 # Function ---------------------------------------------------------------_
@@ -14,7 +14,7 @@ clean_archives <- function(entry, date, restore = TRUE, backup_data = TRUE) {
 # Backup lose-able data
   if(backup_data) {
     # Get data to save
-    key_data = df %>% select(all_of(c("date", "rat_ID", "rat_name", "weight", "omit_list", "comments", "assignment"))) %>% unnest_wider(assignment) %>% 
+    key_data = df %>% select(all_of(c("date", "rat_ID", "rat_name", "weight", "omit_list", "comments", "assignment", "UUID"))) %>% unnest_wider(assignment) %>% 
       mutate(date_removed = Sys.Date() %>% as.character(),
              omit_list = as.numeric(omit_list))
     # append to running CSV
@@ -62,6 +62,7 @@ InitializeMain()
 #Test or check files to be removed
 Bad_entries = run_archive %>% filter(date == bad_date & rat_name %in% bad_rats)
 print(select(Bad_entries, all_of(c("date", "rat_name"))))
+bad_date = if_else(bad_date == "today", str_remove_all(Sys.Date(), "-"), bad_date)
 
 switch(menu(c("Yes", "No"), 
             title=paste0("Do you want to DELETE the runs from run_archive?\n Note: ", 
