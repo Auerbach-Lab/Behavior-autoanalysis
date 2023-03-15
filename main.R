@@ -1072,11 +1072,15 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
       # Calculate d' and save (along with hit/miss/CR/FA table)
       dprime_table <-
-        trial_data %>% #TODO add a way to calculate using full trials archive history
+        trial_data %>%
+        # remove 1st block which is a warm up
         dplyr::filter(Block_number != 1) %>%
+        # get counts of responses grouped by all factors that could be used to calculate TH
         group_by(`Dur (ms)`, Type, `Freq (kHz)`, `Inten (dB)`, Response) %>%
         summarise(count = n(), .groups = "keep") %>%
-        spread(Response, count) %>% #View
+        # convert from long format to wide format, however this is NOT ready to send to psycho yet
+        # the catch trials (type 0; CRs/FAs) need to be provided along side each of the go's for psycho and NA's need to be 0
+        spread(Response, count) %>%
         ungroup()
 
       dprime_table = Format_for_Psycho(dprime_table)
@@ -1084,9 +1088,16 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       dprime <<- select(dprime_data, Freq, dB, Dur, dprime)
       # save this to stats
 
-      # Check for to small a dataset to calculate TH
-      less_than_two_blocks = is.na(trial_data %>% #TODO add a way to calculate using full trials archive history
-                                    dplyr::filter(Block_number > 1) %>% .$complete_block_number %>% unique() %>% {if(is_empty(.)) {NA} else {head(., n = 1)} })
+      # Check for too small a data set (i.e. not one full block remains) to calculate TH
+      less_than_two_blocks = is.na(trial_data %>% 
+                                     # only look at block numbers above 1
+                                    dplyr::filter(Block_number > 1) %>% .$complete_block_number %>% unique() %>% 
+                                     # return NA if there is less than 1 block as nothing will remain in the list
+                                     # otherwise, select the 1st block number, which should be NA if block 2 was not complete or the number 2
+                                     # Thus, in the case that you have <2 complete blocks, you get NA otherwise you get a number
+                                     {if(is_empty(.)) {NA} else {head(., n = 1)} })
+      
+      # Calculate threshold if you have enough data (i.e. 2+ full blocks were run with this file)
       if(less_than_two_blocks){
         r = dprime_data %>%
           select(Freq, Dur, dB, dprime) %>%
@@ -1095,12 +1106,15 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           mutate(TH = NA_integer_) %>%
           select(-data)
 
-        # Warning
+        # Warning: Threshold can not be calcuated 
         warn = paste0("Can not caluclate TH due to < 1 block of trials.")
         warning(paste0(warn, "\n"))
         warnings_list <<- append(warnings_list, warn)
 
       } else {
+        # d' should be calculated by:
+        #   Duration for Tone & BBN files (so drop Frequency and Intensity are extra factors)
+        #   Duration for Octave files (so drop Frequency and Intensity are extra factors)
         groupings = case_when(analysis$type == "Gap (Standard)" ~ c("Freq", "dB"), 
                               TRUE ~ c("Freq", "Dur"))
         
@@ -1141,37 +1155,49 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
       return(r)
     }
+    
+    Calculate_Threshold_Inverted <- function() {
+      dprime_table <-
+        trial_data %>%
+        dplyr::filter(Block_number != 1) %>%
+        group_by(`Dur (ms)`, Type, `Freq (kHz)`, `Inten (dB)`, Response) %>%
+        summarise(count = n(), .groups = "keep") %>%
+        spread(Response, count) %>% #View
+        ungroup()
+      
+      dprime_table = Format_for_Psycho_Octave(dprime_table) # type = 0 for inverted (no-go) d'
+      dprime_data = Calculate_dprime(dprime_table) %>%
+        rename(`Freq (kHz)` = Freq)
+      
+      r = trial_data %>%
+        filter(Trial_type == 0) %>% # select no-go trials
+        group_by(`Freq (kHz)`) %>%
+        summarise(FA = sum(Response == 'FA'),
+                  trials = n(),
+                  FA_percent_detailed = FA/trials) %>%
+        left_join(dprime_data %>% select(`Freq (kHz)`, dprime), by = "Freq (kHz)")
+      
+      return(r)
+    }
 
     Calculate_Reaction_Time <- function(audible_only = FALSE, min_time_s = 0.015) {
-      Filter_to_Audible <- function(df) { #TODO do we WANT filtered to audible? Probably no for graph, yes for analyses
-        ms = unique(df$`Dur (ms)`)
-        kHz = unique(df$`Freq (kHz)`)
-
-        #TODO: use overall cutoff rather than daily
-        cutoff = TH_by_frequency_and_duration %>% # have to use UQ to force the evaluation of the variable
-          filter(Dur == UQ(ms) & Freq == UQ(kHz)) %>% .$TH
-
-        r = df %>% filter(`Inten (dB)` >= UQ(cutoff))
-        return(r)
-      }
-
+      # only calculate response time for Hits as CRs are capped and anything else (FA/miss) is an incorrect response
       r = trial_data %>% dplyr::filter(Response == "Hit")
 
+      # Filter to response time above cutoff where the cutoff is below the
+      # actual physical reaction time, so the animal had a lucky guess
       r = dplyr::filter(r, `Reaction_(s)` > min_time_s)
 
-      if (audible_only) {
-        r = r %>%
-          mutate(Dur = `Dur (ms)`, Freq = `Freq (kHz)`) %>%
-          group_by(Freq, Dur) %>%
-          nest() %>%
-          mutate(Rxn = map(.x = data, .f = Filter_to_Audible)) %>%
-          select(-data) %>%
-          unnest(Rxn)
-      }
-
-        r = r %>%
-          group_by(`Dur (ms)`, `Freq (kHz)`, `Inten (dB)`) %>%
-          summarise(Rxn = mean(`Reaction_(s)`, na.rm = T), .groups = "keep")
+      # Calculate daily average reaction time by duration, frequency and
+      # intensity from trial data Kept in seconds as this is what the raw data
+      # has, so I am preferring to keep as close to the raw data as possible.
+      # However, if milliseconds is preferred, it can be changed here.
+      # Currently, I change to ms in all analysis.
+      r = r %>%
+        group_by(`Dur (ms)`, `Freq (kHz)`, `Inten (dB)`) %>%
+        summarise(Rxn = mean(`Reaction_(s)`, na.rm = T), .groups = "keep")
+      
+      # Returns a table of 4 columns and variable rows (though 6 is probably the most common)
       return(r)
     }
 
@@ -1186,31 +1212,6 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
       return(r)
     }
-
-    Calculate_FA_Detailed_Octave <- function() {
-      dprime_table <-
-        trial_data %>%
-        dplyr::filter(Block_number != 1) %>%
-        group_by(`Dur (ms)`, Type, `Freq (kHz)`, `Inten (dB)`, Response) %>%
-        summarise(count = n(), .groups = "keep") %>%
-        spread(Response, count) %>% #View
-        ungroup()
-
-      dprime_table = Format_for_Psycho_Octave(dprime_table) # type = 0 for inverted (no-go) d'
-      dprime_data = Calculate_dprime(dprime_table) %>%
-        rename(`Freq (kHz)` = Freq)
-
-      r = trial_data %>%
-        filter(Trial_type == 0) %>% # select no-go trials
-        group_by(`Freq (kHz)`) %>%
-        summarise(FA = sum(Response == 'FA'),
-                  trials = n(),
-                  FA_percent_detailed = FA/trials) %>%
-        left_join(dprime_data %>% select(`Freq (kHz)`, dprime), by = "Freq (kHz)")
-
-      return(r)
-    }
-
 
 
     # Statistics Workflow -----------------------------------------------------
@@ -1232,22 +1233,23 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
                                                                            n_miss = misses,
                                                                            n_cr = CRs,
                                                                            adjusted = TRUE) %>% .$dprime)
-
-    if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Training - Oddball", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
+    # No Threshold can be calculated for training or Oddball files
+    if(analysis$type %in% c("Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Training - Oddball", 
+                            "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
       TH_by_frequency_and_duration = NA
+    } else if(analysis$type == "Octave") {
+      TH_by_frequency_and_duration = Calculate_Threshold_Inverted()
     } else {
       TH_by_frequency_and_duration = Calculate_Threshold()
     }
 
-    if(analysis$type == "Octave") {
-      FA_detailed = Calculate_FA_Detailed_Octave()
-    } else if(analysis$type %in% c("Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
+    if(analysis$type %in% c("Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
       FA_detailed = Calculate_FA_Detailed_Oddball()
     } else {
       FA_detailed = NA
     }
     #overall_TH = Calculate_Threshold() #TODO overall calculation using trials archive
-    reaction = Calculate_Reaction_Time() #NOTE this can take audible only (default false) or min time (default 0.015)
+    reaction = Calculate_Reaction_Time() #NOTE you can change the min time (default 0.015) to a setting in the settings file here.
 
 
     stats = list(
