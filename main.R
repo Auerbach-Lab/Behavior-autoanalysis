@@ -403,7 +403,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       r = trial_data
       block_status = r %>%
         dplyr::group_by(Block_number) %>%
-        dplyr::summarise(Block_number = unique(Block_number), size = n(), complete = size == run_properties$stim_block_size) %>%
+        dplyr::summarise(Block_number = unique(Block_number), size = n(), complete = size == run_properties$stim_block_size, .groups = "drop") %>%
         dplyr::filter(complete) %>%
         dplyr::mutate(complete_block_number = row_number()) %>%
         dplyr::select(Block_number, complete_block_number)
@@ -1316,7 +1316,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
       block_status = r %>%
         dplyr::group_by(time, Block_number) %>%
-        dplyr::summarise(Block_number = unique(Block_number), size = n(), complete = size == run_properties$stim_block_size) %>%
+        dplyr::summarise(Block_number = unique(Block_number), size = n(), complete = size == run_properties$stim_block_size, .groups = "drop") %>%
         dplyr::filter(complete) %>%
         dplyr::mutate(complete_block_number = row_number()) %>%
         dplyr::select(Block_number, complete_block_number, UUID)
