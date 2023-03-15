@@ -690,7 +690,7 @@ Workbook_Writer <- function() {
 
 
           #TODO NOT MVP convert to 1/12 of octaves based on summary kHz range
-          df_discrimination = r %>% filter(task != "Training") %>%
+          df_discrimination = r %>% filter(! task %in% c("Training", "Holding")) %>%
             unnest(FA_detailed)
 
           if(nrow(df_discrimination) > 0){
@@ -718,7 +718,7 @@ Workbook_Writer <- function() {
           }
 
 
-          df_training = r %>% filter(task == "Training") %>% select(-FA_detailed)
+          df_training = r %>% filter(task %in% c("Training", "Holding")) %>% select(-FA_detailed)
 
           x = rat_runs %>%
             dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
@@ -984,8 +984,13 @@ InitializeWriter()
 rats_not_entered_today = rat_archive %>% filter(is.na(end_date)) %>%
   filter(! Rat_name %in% c(run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>% .$rat_name %>% as.list)) %>%
   arrange(Box)
-cat("\n\nRats with no runs in the system for today yet:\n\t")
-cat(str_flatten_comma(rats_not_entered_today$Rat_name), "\n")
+
+if(nrow(rats_not_entered_today) == 0) { writeLines("All rats have data for today\n") 
+  } else {
+  cat("\n\nRats with no runs in the system for today yet:\n\t")
+  cat(str_flatten_comma(rats_not_entered_today$Rat_name), "\n\n")
+  }
+
 
 Workbook_Writer()
 rm(list = c("experiment_config_df", "run_today", "wb"))
