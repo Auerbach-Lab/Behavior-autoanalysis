@@ -1003,7 +1003,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       return(new_df)
     }
 
-    Format_for_Psycho_Octave <- function(df) {
+    Format_for_Psycho_Inverted <- function(df) {
       check = df %>% filter(Type == 1) %>% count() %>% as.numeric()
       Hitnum = (if (check == 1) filter(df, Type == 1) %>% .$Hit %>% as.numeric() else check)
       Missnum = (if (check == 1) filter(df, Type == 1) %>% .$Miss %>% as.numeric() else check)
@@ -1083,11 +1083,52 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         spread(Response, count) %>%
         ungroup()
 
-      dprime_table = Format_for_Psycho(dprime_table)
-      dprime_data = Calculate_dprime(dprime_table)
-      dprime <<- select(dprime_data, Freq, dB, Dur, dprime)
-      # save this to stats
+      # Normal i.e. Go trials are used to calculate d' (Tones, BBN, Gap
+      # Detection) i.e. there is more than one go stimulus.
+        # NOTE: This could be replaced with an analysis$type check but I choose
+        # to handle this with a more generic check so that future new case
+        # SHOULD be handled automatically
+      dprime_from_go = nrow(filter(dprime_table, Type == 1)) > 1
+      # Inverse i.e. Go trials are used to calculate d' (Octave)
+      # i.e. there is more than one no-go stimulus
+      dprime_from_nogo = nrow(filter(dprime_table, Type == 0)) > 1
+      
+      # Should be unreachable
+      if(dprime_from_go & dprime_from_nogo) stop(("ABORT: Critical error in threshold calulation as there are multiple go and no-go stimuli"))
+      # normal d' caclulation
+      # results in over-writing dprime to a table instead of a single value, and a detailed table
+      else if (dprime_from_go) {
+        dprime_table = Format_for_Psycho(dprime_table)
+        dprime_data = Calculate_dprime(dprime_table)
+        dprime <<- select(dprime_data, Freq, dB, Dur, dprime) # save this to stats, over-writing the one calculated in the workflow
+        
+        
+        stats_detail <<- trial_data %>%
+          filter(Trial_type == 1) %>% # select no-go trials
+          group_by(`Dur (ms)`, `Freq (kHz)`, `Inten (dB)`) %>%
+          summarise(Hit = sum(Response == 'Hit'),
+                    trials = n(),
+                    hit_percent_detailed = Hit/trials,
+                    .groups = "drop") %>%
+          left_join(dprime_data %>% select(Dur, Freq, dB, dprime), by = c("Dur (ms)" = "Dur", "Freq (kHz)" = "Freq", "Inten (dB)" = "dB"))
+        
+      } else if (dprime_from_nogo) {
+        
+        dprime_table = Format_for_Psycho_Inverted(dprime_table) # type = 0 for inverted (no-go) d'
+        dprime_data = Calculate_dprime(dprime_table)
+        # we do not overwrite the dprime value as this is not the go d', instead its calculated in the workflow
+        
+        stats_detail <<- trial_data %>%
+          filter(Trial_type == 0) %>% # select no-go trials
+          group_by(`Dur (ms)`, `Freq (kHz)`, `Inten (dB)`) %>%
+          summarise(FA = sum(Response == 'FA'),
+                    trials = n(),
+                    FA_percent_detailed = FA/trials,
+                    .groups = "drop") %>%
+          left_join(dprime_data %>% select(Dur, Freq, dB, dprime), by = c("Dur (ms)" = "Dur", "Freq (kHz)" = "Freq", "Inten (dB)" = "dB"))
+      }
 
+      # Calculate Threshold from d' ---------------------------------------------
       # Check for too small a data set (i.e. not one full block remains) to calculate TH
       less_than_two_blocks = is.na(trial_data %>% 
                                      # only look at block numbers above 1
@@ -1098,15 +1139,17 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
                                      {if(is_empty(.)) {NA} else {head(., n = 1)} })
       
       # Calculate threshold if you have enough data (i.e. 2+ full blocks were run with this file)
+      # in both cases, you should get a table of 6 columns:
+      # Frequency (Freq), Duration (Dur), Intensity (dB), dprime, hit_percent, TH
       if(less_than_two_blocks){
         r = dprime_data %>%
-          select(Freq, Dur, dB, dprime) %>%
+          select(Freq, Dur, dB, dprime, hit_percent) %>%
           group_by(Freq, Dur) %>%
           nest() %>%
           mutate(TH = NA_integer_) %>%
           select(-data)
 
-        # Warning: Threshold can not be calcuated 
+        # Warning: Threshold can not be calculated 
         warn = paste0("Can not caluclate TH due to < 1 block of trials.")
         warning(paste0(warn, "\n"))
         warnings_list <<- append(warnings_list, warn)
@@ -1159,30 +1202,6 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
       return(r)
     }
-    
-    Calculate_Threshold_Inverted <- function() {
-      dprime_table <-
-        trial_data %>%
-        dplyr::filter(Block_number != 1) %>%
-        group_by(`Dur (ms)`, Type, `Freq (kHz)`, `Inten (dB)`, Response) %>%
-        summarise(count = n(), .groups = "keep") %>%
-        spread(Response, count) %>% #View
-        ungroup()
-      
-      dprime_table = Format_for_Psycho_Octave(dprime_table) # type = 0 for inverted (no-go) d'
-      dprime_data = Calculate_dprime(dprime_table) %>%
-        rename(`Freq (kHz)` = Freq)
-      
-      r = trial_data %>%
-        filter(Trial_type == 0) %>% # select no-go trials
-        group_by(`Freq (kHz)`) %>%
-        summarise(FA = sum(Response == 'FA'),
-                  trials = n(),
-                  FA_percent_detailed = FA/trials) %>%
-        left_join(dprime_data %>% select(`Freq (kHz)`, dprime), by = "Freq (kHz)")
-      
-      return(r)
-    }
 
     Calculate_Reaction_Time <- function(audible_only = FALSE, min_time_s = 0.015) {
       # only calculate response time for Hits as CRs are capped and anything else (FA/miss) is an incorrect response
@@ -1212,7 +1231,8 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         group_by(position) %>%
         summarise(FA = sum(Response == 'FA'),
                   trials = n(),
-                  FA_percent_detailed = FA/trials)
+                  FA_percent_detailed = FA/trials,
+                  .groups = "drop")
 
       return(r)
     }
@@ -1232,43 +1252,41 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     else if (trial_count_nogo > 0) FA_percent = FAs / trial_count_nogo
     else FA_percent = NA
     mean_attempts_per_trial = dplyr::summarise_at(trial_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
+    # dprime will be over-written in the case of multiple go trials (i.e Gap, Tone and BBN)
     dprime = ifelse(trial_count_nogo == 0, NA, psycho::dprime(n_hit = hits,
-                                                                           n_fa = FAs,
-                                                                           n_miss = misses,
-                                                                           n_cr = CRs,
-                                                                           adjusted = TRUE) %>% .$dprime)
+                                                              n_fa = FAs,
+                                                              n_miss = misses,
+                                                              n_cr = CRs,
+                                                              adjusted = TRUE) %>% .$dprime)
     # No Threshold can be calculated for training or Oddball files
     if(analysis$type %in% c("Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Training - Oddball", 
                             "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
       TH_by_frequency_and_duration = NA
-    } else if(analysis$type == "Octave") {
-      TH_by_frequency_and_duration = Calculate_Threshold_Inverted()
     } else {
+      # Octave can calculate a threshold, but its inverted i.e. based off of no-go trials
       TH_by_frequency_and_duration = Calculate_Threshold()
     }
 
     if(analysis$type %in% c("Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
-      FA_detailed = Calculate_FA_Detailed_Oddball()
-    } else {
-      FA_detailed = NA
+      stats_detail = Calculate_FA_Detailed_Oddball()
     }
-    #overall_TH = Calculate_Threshold() #TODO overall calculation using trials archive
-    reaction = Calculate_Reaction_Time() #NOTE you can change the min time (default 0.015) to a setting in the settings file here.
-
+    
+    #NOTE you can change the min time (default 0.015) to a setting in the settings file here.
+    reaction = Calculate_Reaction_Time() 
 
     stats = list(
-      trial_count = trial_count,
-      hits = hits,
-      misses = misses,
-      CRs = CRs,
-      FAs = FAs,
-      hit_percent = hit_percent,
-      FA_percent = FA_percent,
-      mean_attempts_per_trial = mean_attempts_per_trial,
-      dprime = tibble(dprime),
-      threshold = TH_by_frequency_and_duration,
-      reaction = reaction,
-      FA_detailed = FA_detailed
+      trial_count = trial_count, # overall/total, single number
+      hits = hits, # overall/total, single number
+      misses = misses, # overall/total, single number
+      CRs = CRs, # overall/total, single number
+      FAs = FAs, # overall/total, single number
+      hit_percent = hit_percent, # overall/total, single number
+      FA_percent = FA_percent, # overall/total, single number
+      mean_attempts_per_trial = mean_attempts_per_trial, # overall/total, single number
+      dprime = tibble(dprime), # typically either Table or NA but may be a single value in stiutation like Octave files where the threshold is determined off of no-gos; Expected Columns: Freq, dB, Dur, dprime
+      threshold = TH_by_frequency_and_duration, # Table, typically single row (Gap, BBN, Tones, Octave) but may be multi-rowed in the case of mixed files; Expected Columns: Freq, Dur, TH
+      reaction = reaction, # Table but may have single row in case of training; Expected Columns: Dur (ms), Freq (kHz), Inten (dB), Rxn: Freq (kHz), Dur (ms), Inten (dB), 
+      stats_detail = stats_detail # should be a table of but the specific columns may vary
     )
     return(stats)
   }
