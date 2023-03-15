@@ -1077,7 +1077,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         dplyr::filter(Block_number != 1) %>%
         # get counts of responses grouped by all factors that could be used to calculate TH
         group_by(`Dur (ms)`, Type, `Freq (kHz)`, `Inten (dB)`, Response) %>%
-        summarise(count = n(), .groups = "keep") %>%
+        summarise(count = n(), .groups = "drop") %>%
         # convert from long format to wide format, however this is NOT ready to send to psycho yet
         # the catch trials (type 0; CRs/FAs) need to be provided along side each of the go's for psycho and NA's need to be 0
         spread(Response, count) %>%
@@ -1196,7 +1196,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           r = r %>% select(Freq, Dur, TH)
         }
         
-        r = r %>% unique()
+        r = r %>% ungroup() %>% unique()
         
       }
 
@@ -1218,7 +1218,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       # Currently, I change to ms in all analysis.
       r = r %>%
         group_by(`Dur (ms)`, `Freq (kHz)`, `Inten (dB)`) %>%
-        summarise(Rxn = mean(`Reaction_(s)`, na.rm = T), .groups = "keep")
+        summarise(Rxn = mean(`Reaction_(s)`, na.rm = T), .groups = "drop")
       
       # Returns a table of 4 columns and variable rows (though 6 is probably the most common)
       return(r)
