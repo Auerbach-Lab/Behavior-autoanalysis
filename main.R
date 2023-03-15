@@ -1123,24 +1123,28 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           group_by_at(groupings) 
         
         # To remove psycho warnings cause by a single dprime, check to see if there are multiple dprimes
-        need_evaluation = r %>% summarise(dprime_check = unique(dprime) %>% as.list() %>% length,
-                                          .groups = "keep") %>% filter(dprime_check > 1)
+        # a single dprime (typically caused by a 100% hit rate across all conditions) can not be fitted properly
+        good_for_TH = r %>% summarise(dprime_check = unique(dprime) %>% as.list() %>% length, .groups = "keep") %>% 
+          # filtering removes any case with only 1 d' which can't be fitted,
+          # however, this means that "good_for_TH" must be the 1st join as the
+          # authoritative table
+          filter(dprime_check > 1)
         
-        need_evaluation = left_join(need_evaluation, r, by = groupings) %>% select(-dprime_check) %>% nest()
+        good_for_TH = left_join(good_for_TH, r, by = groupings) %>% select(-dprime_check) %>% nest()
         
-        if(nrow(need_evaluation) == 0) {
+        if(nrow(good_for_TH) == 0) {
           r$TH = NA_integer_
         } else if (analysis$type == "Gap (Standard)") {
-          need_evaluation = need_evaluation %>% 
+          good_for_TH = good_for_TH %>% 
             mutate(TH = map_dbl(data, Calculate_TH_gap))
         } else {
-          need_evaluation = need_evaluation %>% 
+          good_for_TH = good_for_TH %>% 
             mutate(TH = map_dbl(data, Calculate_TH))
         }
         
-        need_evaluation = select(need_evaluation, -data)
+        good_for_TH = select(good_for_TH, -data)
         
-        r = left_join(r, need_evaluation, by = groupings)
+        r = left_join(r, good_for_TH, by = groupings)
         
         
         if (analysis$type == "Gap (Standard)") {
