@@ -60,9 +60,10 @@ clean_archives <- function(entry, date, restore = TRUE, backup_data = TRUE) {
 InitializeMain()
 
 #Test or check files to be removed
+bad_date = if_else(bad_date == "today", str_remove_all(Sys.Date(), "-"), bad_date)
+
 Bad_entries = run_archive %>% filter(date == bad_date & rat_name %in% bad_rats)
 print(select(Bad_entries, all_of(c("date", "rat_name"))))
-bad_date = if_else(bad_date == "today", str_remove_all(Sys.Date(), "-"), bad_date)
 
 switch(menu(c("Yes", "No"), 
             title=paste0("Do you want to DELETE the runs from run_archive?\n Note: ", 
