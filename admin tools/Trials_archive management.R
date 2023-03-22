@@ -179,8 +179,18 @@ Find_Issues_in_Archives <- function(group) {
 
 writeLines("Checking and backing up trials")
 
-list.files(path = projects_folder, pattern = "^.*_archive.csv.gz$") %>% paste0(projects_folder, .) %>% data.frame(file = .) %>% 
-  mutate(experiment = stringr::str_extract(file, pattern = '(?<=s/).*(?=_a)')) %>% .$experiment %>%
+archives = list.files(path = projects_folder, pattern = "^.*_archive.csv.gz$") %>% paste0(projects_folder, .) %>% data.frame(file = .) %>% 
+  mutate(experiment = stringr::str_extract(file, pattern = '(?<=s/).*(?=_a)'))
+
+# NA_archives are problematic these need to found and fixed
+# to find them, check for blank experiment
+if(any(archives$experiment == "")) {
+  warn("NA_archive exists. Clean runs from it manualy.")
+  # do not run these through the fixer as the don't need to be backed up.
+  archives = filter(archives, experiment != "")
+}
+
+archives$experiment %>%
   lapply(Find_Issues_in_Archives)
 
 cat("\nBacking up runs...")
