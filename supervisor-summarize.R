@@ -767,7 +767,7 @@ Workbook_Writer <- function() {
         order = r %>% arrange(desc(date)) %>% group_by(task) %>% do(head(., 1)) %>% arrange(desc(date)) %>% .$task
 
         r = r %>% arrange(desc(date)) %>% group_by(task) %>%
-          do(if (unique(.$task) %in% c("TH", "CNO 3mg/kg")) head(., 10)
+          do(if (unique(.$task) %in% c("TH", "CNO 3mg/kg", "Discrimination")) head(., 10)
              else head(., 3)) %>%
           arrange(match(task, order)) %>%
           dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
