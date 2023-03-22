@@ -693,14 +693,22 @@ Workbook_Writer <- function() {
           df_discrimination = r %>% filter(! task %in% c("Training", "Holding")) %>%
             unnest(FA_detailed)
 
-          if(nrow(df_discrimination) > 0){
+          if(nrow(df_discrimination) > 0){          
+            # get a cononical no_go value
+            # no_go = r %>% 
+            #   # easiest access is the 2nd value in the training/holding file names
+            #   filter(task %in% c("Training", "Holding")) %>% 
+            #   # to guard against bad files, select the last 5 and pick the most common no_go value
+            #   arrange(desc(date)) %>% head(n = 5) %>% transmute(no_go = as.numeric(str_extract(file_name, pattern = "[:digit:]+?(?=kHz_[:digit:]+?dB_300ms)"))) %>% 
+            #   group_by(no_go) %>% summarize(n = n()) %>% arrange(n) %>% head(n = 1) %>% .$no_go
+            
             df_discrimination =
               df_discrimination %>%
               group_by(date) %>%
               # copy the max d' to every value because its the only one we want outputted at the end
               do(mutate(.,dprime = max(dprime))) %>% 
               # calculate fraction of the octave by pulling the go frequency from the file_name (only source we have at this point)
-              mutate(octave_fraction = log(as.numeric(str_extract(file_name, pattern = "[:digit:]+(?=-[:digit:]+?kHz)"))/`Freq (kHz)`)/log(2),
+              mutate(octave_fraction = log(as.numeric(str_extract(file_name, pattern = "[:digit:]+?(?=-.+?kHz)"))/`Freq (kHz)`)/log(2),
                      Oct = abs(round(octave_fraction * 12))) %>%
               select(-octave_fraction, -FA, -trials, -`Freq (kHz)`) %>%
               pivot_wider(names_from = Oct, values_from = FA_percent_detailed)
