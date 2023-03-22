@@ -606,7 +606,7 @@ Workbook_Writer <- function() {
             relocate(Spacer1, .after = mean_attempts_per_trial) %>%
             select(-FA_detailed)
         } else if (phase_current %in% c("Gap Detection")) {
-          r = r %>% unnest(threshold) %>% select(-Freq, -Dur) %>%
+          r = r %>% unnest(threshold) %>% select(-Freq, -dB) %>%
             group_by(task, detail) %>%
             mutate(THrange = paste0(suppressWarnings(min(TH, na.rm = TRUE)) %>% round(digits = 0), "-", suppressWarnings(max(TH, na.rm = TRUE)) %>% round(digits = 0))) %>%
             relocate(THrange, .after = TH) %>%
