@@ -972,7 +972,8 @@ Workbook_Writer <- function() {
   rat_archive %>%
     filter(is.na(end_date)) %>%
     filter(Assigned_Filename == "") %>%
-    # filter(Old_Assigned_Experiment  == "GD") %>%
+    filter(Old_Assigned_Experiment  != "GD") %>%
+    # filter(Rat_name == "RP6") %>%
     .$Rat_ID %>%
     lapply(Add_Rat_To_Workbook)
 
