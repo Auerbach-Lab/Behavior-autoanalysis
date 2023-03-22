@@ -5,7 +5,9 @@ if(!is_null(dev.list()["RStudioGD"])) dev.off(dev.list()["RStudioGD"])
 
 Weight_Grapher <- function(rat_to_graph) {
   rat_runs = run_archive %>% dplyr::filter(rat_ID == rat_to_graph)
-  max_weight = max(rat_runs$weight, na.rm = TRUE)
+  max_weight_runs = max(rat_runs$weight, na.rm = TRUE)
+  max_weight_freefeed = dplyr::filter(rat_archive, Rat_ID == rat_to_graph)$Max_Weight
+  max_weight = max(max_weight_runs, max_weight_freefeed)
   rat_runs = rat_runs %>% filter(date > str_remove_all(Sys.Date()-30, "-")) %>%
     mutate(date_asDate = lubridate::ymd(date),
            trial_count = map_dbl(stats, ~.$trial_count),
@@ -24,6 +26,7 @@ Weight_Grapher <- function(rat_to_graph) {
       rat_runs %>% 
       ggplot(aes(x = date_asDate, y = weight)) +
       geom_hline(yintercept = min_trials, linetype = "longdash") +
+      geom_point(aes(x = min(date_asDate), y = max_weight), fill = "black", size = 5, position = position_nudge(x = -0.5)) +
       geom_text(aes(x = min(date_asDate), y = min_trials - 5), label = "Minimum trials")+
       geom_smooth(color = "grey", linewidth = 2,
                   se = FALSE, na.rm = TRUE, method = "lm", formula= y~x) +
