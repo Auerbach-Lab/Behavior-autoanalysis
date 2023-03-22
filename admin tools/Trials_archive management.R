@@ -89,7 +89,12 @@ Find_Issues_in_Archives <- function(group) {
           }
           
           files_checked = lapply(files, old_assignment_check)
-          files_checked = discard(files_checked, is_null)
+          
+          # ID files that can't be auto-delt with because of having multiple or no matches
+          if(any(is_null(files_checked))) {
+            writeLines(glue("Unable to find entries for: {keep(files_checked, is_null)}"))
+            files_checked = discard(files_checked, is_null)
+          }
           
           if(length(files_checked) > 0) {
             cat(glue(" attempting to load {length(files_checked)}"))
@@ -102,7 +107,7 @@ Find_Issues_in_Archives <- function(group) {
         writeLines(paste0("\nLoading ", length(UUIDs_without_runs), " files."))
         # try to get files and then run through main
         lapply(UUIDs_without_runs, Load_old_file_from_UUID)
-        writeLines(glue("Done attempting to load missing runs"))
+        writeLines("\nDone attempting to load missing runs")
         
       }
       
@@ -162,8 +167,6 @@ Find_Issues_in_Archives <- function(group) {
                lapply(bad_runs %>% .$UUID, clean_archives), 
                # 2 (No): Abort
                writeLines("Stopped. Entries remain."))
-        
-        
         } else writeLines(glue("No missing trials data for {group}"))
       
       
