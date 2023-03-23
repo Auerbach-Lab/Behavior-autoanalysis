@@ -59,10 +59,17 @@ clean_archives <- function(entry, date, restore = TRUE, backup_data = TRUE) {
 #Get current run_achive
 InitializeMain()
 
-#Test or check files to be removed
+# Test or check files to be removed
 bad_date = if_else(bad_date == "today", str_remove_all(Sys.Date(), "-"), bad_date)
-
 Bad_entries = run_archive %>% filter(date == bad_date & rat_name %in% bad_rats)
+
+# Clean NA file
+# NA_archive = fread(paste0(projects_folder, "_archive.csv.gz"))
+# Bad_UUIDs = NA_archive$UUID %>% unique()
+# Bad_entries = run_archive %>% filter(UUID %in% Bad_UUIDs)
+# writeLines(paste(length(Bad_UUIDs), "entries in the NA_archive"))
+
+# Show entries to be cleaned
 print(select(Bad_entries, all_of(c("date", "rat_name"))))
 
 switch(menu(c("Yes", "No"), 
@@ -74,6 +81,10 @@ switch(menu(c("Yes", "No"),
         lapply(Bad_entries %>% .$UUID, clean_archives), 
        # 2 (No): Abort
         writeLines("Stopped. Entries remain."))
+
+InitializeMain()
+# check they are gone
+filter(run_archive, UUID %in% Bad_entries$UUID) %>% print
 
 rm(list = c("Bad_entries", "restore", "bad_rats", "bad_date"))
 
