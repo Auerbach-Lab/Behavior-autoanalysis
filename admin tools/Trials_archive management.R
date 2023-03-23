@@ -156,12 +156,13 @@ Find_Issues_in_Archives <- function(group) {
           
           writeLines("Done.")
           InitializeMain()
+          source(paste0(projects_folder, "import_deleted_entries.R"))
         }
         
         # Check prior to cleaning bad entries -------------------------------------
         switch(menu(c("Yes", "No"), 
                     title=paste0("Proceed with cleaning bad runs from run_archive?\n 
-                                 Note: Data WILL be saved"), 
+                                 Note: Data WILL be saved and attempted to reload"), 
                     graphics = FALSE),
                # 1 (Yes): Write file
                lapply(bad_runs %>% .$UUID, clean_archives), 
@@ -173,7 +174,7 @@ Find_Issues_in_Archives <- function(group) {
 
     }
   } else {
-    cat(" good ...")
+    cat(" good...")
     # Backup
     fwrite(trials_archive, file = paste0(projects_folder, group, "_archive.csv.gz.backup"))
     cat(" backed up\n")
