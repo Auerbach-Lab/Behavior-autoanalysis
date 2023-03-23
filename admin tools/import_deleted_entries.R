@@ -63,7 +63,7 @@ Load_old_file <- function(df) {
 
 
 # Workflow ----------------------------------------------------------------
-
+InitializeMain()
 
 # Append repaired entry to old_excel_archive ------------------------------
 # load old_excel_archive
