@@ -1,3 +1,11 @@
+# User Variables ----------------------------------------------------------
+
+# slashes must be either / or \\
+modern_matlab_file_location = "Z:/Daily Matlab files"
+Box_file_location = "C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)"
+
+
+# Functions ---------------------------------------------------------------
 Load_old_file <- function(df) {
   bad_date = df["date"]
   group = df["experiment"]
@@ -6,6 +14,7 @@ Load_old_file <- function(df) {
   
   # Determine project from the group we are in
   if (group == "Tsc2-LE") project = "Tsc2 Eker"
+  else if (group == "Fmr1 SD") project = "Archive/Fmr1 SD"
   else project = group
   
   # find location of bad file
@@ -13,7 +22,11 @@ Load_old_file <- function(df) {
   else file_location = glue("{Box_file_location}/{project}/data")
   
   # Get possible files
-  files = list.files(paste0(file_location, "/", bad_date), pattern = paste0(rat, ".*", bad_date, ".*.mat$"), recursive = TRUE)
+  if (group == "Fmr1 SD") {
+    files = list.files(paste0(file_location), pattern = paste0(rat, ".*", bad_date, ".*.mat$"), recursive = TRUE, full.names = TRUE)
+  } else {
+    files = list.files(paste0(file_location, "/", bad_date), pattern = paste0(rat, ".*", bad_date, ".*.mat$"), recursive = TRUE, full.names = TRUE)
+  }
   cat(glue("
                         Found {length(files)} possible files "))
   
@@ -30,12 +43,13 @@ Load_old_file <- function(df) {
     
   }
   
-  files_checked = lapply(files, old_assignment_check) %>%
-    lapply(function(x) paste0(file_location, "/", bad_date, "/", x))
+  files_checked = lapply(files, old_assignment_check)
+  files = tibble(file = files, no_auto = lapply(files_checked, is_null) %>% as.logical)
   
   # ID files that can't be auto-delt with because of having multiple or no matches
-  if(any(is_null(files_checked))) {
-    writeLines(glue("Unable to find entries for: {keep(files_checked, is_null)}"))
+  if(any(files$no_auto)) {
+    writeLines(",  Unable to find old_excel entries for:")
+    writeLines(filter(files, no_auto == TRUE)$file)
     files_checked = discard(files_checked, is_null)
   }
   
@@ -61,7 +75,7 @@ deleted_entries_check =
   deleted_entries %>% 
   # create new column of UUID from the current run_archive
   bind_cols(apply(deleted_entries, 1,
-                  function(x) filter(run_archive, date == x["date"] & rat_ID == x["rat_ID"])$UUID) %>%
+                  function(x) filter(run_archive, date == x["date"] & rat_ID == as.numeric(x["rat_ID"]))$UUID) %>%
               as_tibble_col(column_name = "UUIDnew")) %>%
   # convert no results to NA
   mutate(UUIDnew = if_else(UUIDnew == "character(0)", NA_character_, paste(UUIDnew)))
@@ -77,31 +91,36 @@ old_excel_archive =
               mutate(Date = lubridate::ymd(date), Invalid = "") %>% select(-date) %>%
               rename(Filename = assigned_file_name,
                      Weight = weight, "Comments/Observations" = comments,
-                     Experiment = experiment, Phase = phase, Task = task, Detail = detail))
+                     Experiment = experiment, Phase = phase, Task = task, Detail = detail)) %>%
+  unique
 
 
-writeLines(paste0("\nLoading ", nrow(missing_entries), " files."))
-# try to get files and then run through main
-apply(missing_entries, 1, Load_old_file)
-
-# check that everything loaded
-InitializeMain()
-
-deleted_entries_final_check = 
-  deleted_entries %>% 
-  # create new column of UUID from the current run_archive
-  bind_cols(apply(deleted_entries, 1,
-                  function(x) filter(run_archive, date == x["date"] & rat_ID == x["rat_ID"])$UUID) %>%
-              as_tibble_col(column_name = "UUIDnew")) %>%
-  # convert no results to NA
-  mutate(UUIDnew = if_else(UUIDnew == "character(0)", NA_character_, paste(UUIDnew)))
-
-# get entries that need to put into the system
-failed_entries = filter(deleted_entries_final_check, is.na(UUIDnew))
-
-writeLines("\n")
-if(nrow(failed_entries) == 0) { writeLines("Done attempting to load missing runs")
+if (nrow(missing_entries) == 0) {
+  writeLines("All deleted entries have already been re-loaded into the system")
 } else {
-  writeLines("Some runs failed to load data:")
-  print(failed_entries)
+  writeLines(paste0("\nLoading ", nrow(missing_entries), " files."))
+  # try to get files and then run through main
+  apply(missing_entries, 1, Load_old_file)
+  
+  # check that everything loaded
+  InitializeMain()
+  
+  deleted_entries_final_check = 
+    deleted_entries %>% 
+    # create new column of UUID from the current run_archive
+    bind_cols(apply(deleted_entries, 1,
+                    function(x) filter(run_archive, date == x["date"] & rat_ID == as.numeric(x["rat_ID"]))$UUID) %>%
+                as_tibble_col(column_name = "UUIDnew")) %>%
+    # convert no results to NA
+    mutate(UUIDnew = if_else(UUIDnew == "character(0)", NA_character_, paste(UUIDnew)))
+  
+  # get entries that need to put into the system
+  failed_entries = filter(deleted_entries_final_check, is.na(UUIDnew))
+  
+  writeLines("\n")
+  if(nrow(failed_entries) == 0) { writeLines("Done attempting to load missing runs")
+  } else {
+    writeLines("Some runs failed to load data:")
+    print(failed_entries)
   }
+}
