@@ -369,7 +369,7 @@ server <- function(input, output, session) {
     req(v$row) #TODO at the moment I'm constructing a fake vrow to feed to warnings for when the file is already loaded, but this thinks it has a real one and dies. Check existence of columns or something and skip evaluation if they're absent.
     rat_name = v$row %>% .$rat_name
     rat_ID = v$row %>% .$rat_ID
-    Generate_Rxn_Graph(rat_name, rat_ID)
+    Generate_Extra_Graph(rat_name, rat_ID)
   }, height = 500)
 
   requirements_for_save <- reactive({

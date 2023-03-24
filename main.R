@@ -1639,11 +1639,12 @@ Generate_Weight_Graph <- function(rat_name, ratID) {
 }
 
 Generate_Weight_Trials_Graph <- function(rat_name, ratID) {
-  rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID)
+  rat_runs <<- run_archive %>% dplyr::filter(rat_ID == ratID)
   rat_runs = rat_runs %>% mutate(date_asDate = lubridate::ymd(date))
+  run_date = head(rat_runs, 1)$date_asDate
 
   weight_and_trials_graph =
-    rat_runs %>% unnest_wider(stats) %>% filter(date > str_remove_all(Sys.Date() - 30, "-")) %>%
+    rat_runs %>% unnest_wider(stats) %>% filter(date > str_remove_all(run_date - 30, "-")) %>%
     ggplot() +
     geom_smooth(aes(x = date_asDate, y = weight, color = "Weight"),
                 color = "#bed6ce", linewidth = 2,
@@ -1663,6 +1664,12 @@ Generate_Weight_Trials_Graph <- function(rat_name, ratID) {
     labs(x = NULL, y = NULL)
 
   return(weight_and_trials_graph)
+}
+
+Generate_Extra_Graph <- function(rat_name, ratID) {
+  source(paste0(projects_folder, "graphing unrolled.R"))
+  df <- Generate_Graph(rat_name, ratID)
+  return(df$rxn_graph)
 }
 
 Generate_Rxn_Graph <- function(rat_name, ratID) {
