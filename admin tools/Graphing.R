@@ -12,7 +12,6 @@ Grapher <- function(rat_to_graph) {
   data = run_archive %>%
     filter(rat_name %in% rat_to_graph) %>%
     unnest_wider(assignment) %>%
-    filter(! task %in% c("Training", "Reset")) %>%
     unnest_wider(stats) %>%
     unnest(what_to_graph) %>%
     rename_at(vars(contains("Freq")), ~ str_extract(., pattern = "Freq")) %>%
@@ -23,6 +22,8 @@ Grapher <- function(rat_to_graph) {
   
   Freq_filter = unique(Today$Freq)
   today_analysis_type = unique(Today$analysis_type)
+  
+  data = filter(data, ! task %in% c("Training", "Reset"))
 
   if(str_detect(today_analysis_type, "Oddball")){
     data = data %>%  
