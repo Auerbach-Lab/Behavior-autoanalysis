@@ -510,8 +510,10 @@ Workbook_Writer <- function() {
         analysis_type = r %>% arrange(desc(date)) %>% head(1) %>% .$analysis_type
 
         # Task-specific RXN column ------------------------------------------------
-
-        if (experiment_current == "Oddball") {
+        if (experiment_current == "" | is.na(experiment_current)) {
+          # I don't currently know which will match but neither should be true
+          r = r
+        } else if (experiment_current == "Oddball") {
           r = r %>% mutate(reaction1 = reaction) %>%
             unnest(reaction) %>%
             group_by(date) %>%
@@ -776,7 +778,7 @@ Workbook_Writer <- function() {
 
         r = r %>% arrange(desc(date)) %>% group_by(task) %>%
           do(if (unique(.$task) %in% c("TH", "CNO 3mg/kg", "Discrimination")) head(., 10)
-             else head(., 3)) %>%
+             else head(., 5)) %>%
           arrange(match(task, order)) %>%
           dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
           mutate(date = as.character(date))
