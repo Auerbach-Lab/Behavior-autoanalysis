@@ -44,7 +44,8 @@ user_settings = list(
     "Oddball (Standard)" = 300,
     "Oddball (Uneven Odds)" = 300,
     "Oddball (Uneven Odds & Catch)" = 300,
-    "Oddball (Catch)" = 300),
+    "Oddball (Catch)" = 300,
+    "Oddball (Background)" = 300),
 
   minimum_hit_percent = 0.850,
   maximum_FA_percent = 0.200,

@@ -573,12 +573,14 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       has_catch_trials = run_properties$summary$catch
       # Determine if even odds
       has_uneven_trial_odds = length(unique(run_properties$summary$odds.odds)) > 1
+      has_BG = run_properties$background_file != "None"
 
       # For Oddball files (training or otherwise)
       # DO NOT CHANGE THE TEXTUAL DESCRIPTIONS OR YOU WILL BREAK COMPARISONS LATER
       if (has_catch_trials & has_uneven_trial_odds) r = "Oddball (Uneven Odds & Catch)"
       else if (has_uneven_trial_odds) r = "Oddball (Uneven Odds)"
       else if (has_catch_trials) r = "Oddball (Catch)"
+      else if (has_BG) r = "Oddball (Background)"
       else if (!has_catch_trials & !has_uneven_trial_odds) r = "Oddball (Standard)"
       else stop("ABORT: Unknown Oddball file type.")
       return(r)
@@ -860,10 +862,14 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       if (run_properties$summary$nogo_freq == 0) nogo_freq = "BBN"
       else nogo_freq = paste0(run_properties$summary$nogo_freq, "kHz")
 
-      computed_file_name = paste0(run_properties$summary$go_freq, "kHz_", run_properties$summary$go_dB, "dB_", nogo_freq, "_", run_properties$summary$nogo_dB, "dB_", run_properties$lockout, "s_", run_properties$summary$go_position_start, "-", run_properties$summary$go_position_stop)
+      computed_file_name = paste0(run_properties$summary$go_freq, "kHz_", run_properties$summary$go_dB, "dB_", nogo_freq, "_", 
+                                  run_properties$summary$nogo_dB, "dB_", run_properties$lockout, "s_", run_properties$summary$go_position_start, "-", run_properties$summary$go_position_stop)
       if (analysis$type == "Oddball (Uneven Odds & Catch)") computed_file_name = paste0(computed_file_name, "_odds_NG")
       if (analysis$type == "Oddball (Uneven Odds)") computed_file_name = paste0(computed_file_name, "_odds")
       if (analysis$type == "Oddball (Catch)") computed_file_name = paste0(computed_file_name, "_catch")
+      if (analysis$type == "Oddball (Background)") computed_file_name = paste0(computed_file_name, "_", 
+                                                                               str_extract(run_properties$background_file, pattern = "^.*(?=.mat)"),
+                                                                               "_", run_properties$background_dB, "dB")
 
       return(computed_file_name)
     }
@@ -1656,4 +1662,5 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 InitializeMain()
 
 # Process_File(file.choose(), name = name, weight = weight, observations = observations, exclude_trials = exclude_trials)
+
 
