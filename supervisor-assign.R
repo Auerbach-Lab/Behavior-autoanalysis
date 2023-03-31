@@ -82,7 +82,14 @@ Assignments_Writer <- function() {
   old_wd = getwd()
   setwd(projects_folder)
 
-  saveWorkbook(wb, "assignments.xlsx", overwrite = TRUE)
+  tryCatch(
+    saveWorkbook(wb, "assignments.xlsx", overwrite = TRUE),
+    warning = function(warning) if (str_detect(as.character(warning), "Permission denied")) {
+      writeLines("Assignments.xlsx already open so can't be updated.")
+    } else {
+      warning(warning)
+    }
+  )
   openXL(file = "assignments.xlsx")
 
   # cleanup
