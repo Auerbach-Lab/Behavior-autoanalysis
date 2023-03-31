@@ -1229,7 +1229,8 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     trial_count_go = trial_data %>% dplyr::filter(Trial_type != 0) %>% dplyr::count() %>% as.numeric()
     trial_count_nogo = trial_data %>% dplyr::filter(Trial_type == 0) %>% dplyr::count() %>% as.numeric()
     hit_percent = hits / trial_count_go
-    if (analysis$type %in% c("Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) FA_percent = FAs / trial_count
+    # if Oddball experiment, FAs is out of total trials since they can always FA
+    if (str_detect(analysis$type, pattern = "Oddball")) FA_percent = FAs / trial_count
     else if (trial_count_nogo > 0) FA_percent = FAs / trial_count_nogo
     else FA_percent = NA
     mean_attempts_per_trial = dplyr::summarise_at(trial_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
@@ -1239,7 +1240,8 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
                                                                            n_cr = CRs,
                                                                            adjusted = TRUE) %>% .$dprime)
 
-    if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Training - Oddball", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
+    if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Training - Oddball", 
+                            "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Background)", "Oddball (Standard)")) {
       TH_by_frequency_and_duration = NA
     } else {
       TH_by_frequency_and_duration = Calculate_Threshold()
@@ -1247,7 +1249,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
     if(analysis$type == "Octave") {
       FA_detailed = Calculate_FA_Detailed_Octave()
-    } else if(analysis$type %in% c("Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
+    } else if(str_detect(analysis$type, pattern = "Oddball")) {
       FA_detailed = Calculate_FA_Detailed_Oddball()
     } else {
       FA_detailed = NA
