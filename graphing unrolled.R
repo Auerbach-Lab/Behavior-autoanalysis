@@ -82,7 +82,7 @@ Generate_Graph <- function(rat_name, ratID) {
     filter(phase == current_phase & analysis_type == current_analysis_type) %>%
     filter(invalid != "TRUE")
 
-  print(graph_data)
+  #print(graph_data)
 
   # Remove unnecessary trial data due to being post-baseline
   if(is_post_baseline){
@@ -96,7 +96,7 @@ Generate_Graph <- function(rat_name, ratID) {
     if(nrow(filtered_graph_data) > 1) graph_data = filtered_graph_data
   }
 
-  print(graph_data)
+  #print(graph_data)
 
   graph_data =
     graph_data %>%

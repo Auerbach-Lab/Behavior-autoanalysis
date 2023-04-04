@@ -109,7 +109,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           filename = file_name_override
           ignore_name_check = TRUE
         }
-        print(filename)
+        #print(filename)
 
         r = stringr::str_match_all(filename, pattern = pattern) %>%
           unlist(recursive = TRUE) %>%
