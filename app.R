@@ -85,7 +85,10 @@ ui <- fluidPage(
           column(width = 6,
             conditionalPanel(
               condition = "output.plotWeight",
-              withLoader(plotOutput("plotRxn", height = "500px"), type = "html", loader = "dnaspin"),
+              tabsetPanel(type = "tabs",
+                          tabPanel("Rxn", withLoader(plotOutput("plotRxn", height = "500px"), type = "html", loader = "dnaspin"),),
+                          tabPanel("d\'", withLoader(plotOutput("plotDprime", height = "500px"), type = "html", loader = "dnaspin"),),
+              ),
               conditionalPanel(
                 condition = "output.plotWeight",
                 span(tags$div(
@@ -364,14 +367,24 @@ server <- function(input, output, session) {
     Generate_Weight_Trials_Graph(rat_name, rat_ID)
   }, height = 500)
 
-  output$plotRxn <- renderPlot({
+  extra_graphs  <- reactive({
     req(input$btnAnalyze)
     req(v$row) #TODO at the moment I'm constructing a fake vrow to feed to warnings for when the file is already loaded, but this thinks it has a real one and dies. Check existence of columns or something and skip evaluation if they're absent.
     req(no_fatal_error())
     rat_name = v$row %>% .$rat_name
     rat_ID = v$row %>% .$rat_ID
-    Generate_Extra_Graph(rat_name, rat_ID)
+    Generate_Extra_Graphs(rat_name, rat_ID)
+  })
+
+  output$plotRxn <- renderPlot({
+    extra_graphs()$rxn_graph
   }, height = 500)
+
+  output$plotDprime <- renderPlot({
+    extra_graphs()$dprime_graph
+  }, height = 500)
+
+
 
   requirements_for_save <- reactive({
     req(input$weightCheck)

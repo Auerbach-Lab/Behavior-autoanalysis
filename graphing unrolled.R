@@ -19,7 +19,7 @@ Generate_Graph <- function(rat_name, ratID) {
       { if(current_task == "Training") {annotate(x = pluck(today_graph_data, paste0(what_to_graph, "$", x_column)),
                                                  y = pluck(today_graph_data, paste0(what_to_graph, "$", y_column)),
                                                  label = "Training", geom = "text", hjust = -0.5)} } +
-      ggtitle(glue("{rat_name} {what_to_graph} Range Check")) +
+      ggtitle(glue("{rat_name} {str_to_title(what_to_graph)} Range Check")) +
       scale_color_manual(values = c("Today" = "mediumslateblue", "Average" = "thistle"), name = "") +
       scale_fill_manual(values = c("Today" = "mediumslateblue", "Average" = "thistle"), name = "", guide = "none") +
       coord_cartesian(clip = "off") +
@@ -39,7 +39,7 @@ Generate_Graph <- function(rat_name, ratID) {
       { if (exists("TH")) annotate(x = TH, y = Inf, label = "Threshold", geom = "text", vjust = -0.5) } +
       geom_line(data = today_graph_data, aes(color = "Today"), linewidth = 1.5) +
       geom_point(data = today_graph_data, shape=21, color="black", fill = "mediumslateblue", size = 5) +
-      ggtitle(glue("{rat_name} {what_to_graph} Curve Check")) +
+      ggtitle(glue("{rat_name} {str_to_title(what_to_graph)} Curve Check")) +
       scale_color_manual(values = c("Today" = "mediumslateblue", "Average" = "thistle"), name = "") +
       coord_cartesian(clip = "off") +
       theme_ipsum_es() +
@@ -50,7 +50,7 @@ Generate_Graph <- function(rat_name, ratID) {
     plot +
       xlim(0, 100) +
       ylim(0, 100) +
-      ggtitle(glue("{rat_name} {what_to_graph} does not exist")) +
+      ggtitle(glue("{rat_name} {str_to_title(what_to_graph)} does not exist")) +
       theme_ipsum_es() +
       theme(legend.position = "bottom")
   }
@@ -64,8 +64,8 @@ Generate_Graph <- function(rat_name, ratID) {
 
   # only want to graph relevant data so need today's data
   today_data = rat_runs %>%
-    #filter(date == set_date) %>%      #BRIAN ASKS set_date doesn't exist, so I'm commenting this out
-    head(graph_data, n = 1) # this should probably be a filter date          #BRIAN ASKS graph_data doesn't exist either does it?
+    head(n = 1) # this should probably be a filter date, or like, select(max) or something.
+
   current_analysis_type = today_data$analysis_type
   current_phase = pluck(today_data, "assignment", 1, "phase")
   current_task = pluck(today_data, "assignment", 1, "task")
@@ -82,6 +82,8 @@ Generate_Graph <- function(rat_name, ratID) {
     filter(phase == current_phase & analysis_type == current_analysis_type) %>%
     filter(invalid != "TRUE")
 
+  print(graph_data)
+
   # Remove unnecessary trial data due to being post-baseline
   if(is_post_baseline){
     cut_off_date = filter(rat_archive, Rat_ID == ratID)$HL_date
@@ -94,6 +96,8 @@ Generate_Graph <- function(rat_name, ratID) {
     if(nrow(filtered_graph_data) > 1) graph_data = filtered_graph_data
   }
 
+  print(graph_data)
+
   graph_data =
     graph_data %>%
     # need to do rowwise for the pluck
@@ -101,9 +105,13 @@ Generate_Graph <- function(rat_name, ratID) {
     mutate(frequencies = pluck(summary, "Freq (kHz)") %>% unique %>% str_flatten_comma()) %>%
     # filter to today's data based on analysis_type
     # Octave can not be limited to Freq
-    {if (str_detect(unique(.$analysis_type), pattern = "Octave|Oddball", negate = TRUE)) filter(., any(frequencies %>% str_split(pattern = ", ", simplify = TRUE) %in% current_frequencies)) else .}
+    {
+      if (str_detect(unique(.$analysis_type), pattern = "Octave|Oddball", negate = TRUE))
+        filter(., any(frequencies %>% str_split(pattern = ", ", simplify = TRUE) %in% current_frequencies))
+      else
+        .
+    }
 
-  #BRIAN ASKS why is the above line wrapped in braces and formatted this way?
 
   #TODO confirm time save
   # graph_data =
@@ -208,7 +216,7 @@ Generate_Graph <- function(rat_name, ratID) {
     else {
       # Graph
       dprime_graph = graph_data %>%
-        unnest(what_to_graph) %>%
+        unnest(all_of(what_to_graph)) %>%
         ggplot(aes(x = dB, y = dprime)) %>%
         Line_Grapher
     }
@@ -220,7 +228,7 @@ Generate_Graph <- function(rat_name, ratID) {
     x_column = "Inten (dB)"; y_column = "Rxn"
     # Graph
     rxn_graph = graph_data %>%
-      unnest(what_to_graph) %>%
+      unnest(all_of(what_to_graph)) %>%
       ggplot(aes(x = `Inten (dB)`, y = Rxn))
 
     if (current_analysis_type == "Training - BBN") rxn_graph = Range_Grapher(rxn_graph)
@@ -362,8 +370,6 @@ Generate_Graph <- function(rat_name, ratID) {
     # Add axis labels
     hit_graph = hit_graph + labs(x = "Frequency (kHz)", y = "False Alarm %")
 
-    print(hit_graph)
-
   }
 
   # Oddball ---------------------------------------------------------------------
@@ -400,9 +406,6 @@ Generate_Graph <- function(rat_name, ratID) {
     # Need to add hit_detailed to do this
 
   }
-
-  print(dprime_graph)
-  print(rxn_graph)
 
   return(tibble_row(dprime_graph = dprime_graph, rxn_graph = rxn_graph))
 }

@@ -1666,56 +1666,12 @@ Generate_Weight_Trials_Graph <- function(rat_name, ratID) {
   return(weight_and_trials_graph)
 }
 
-Generate_Extra_Graph <- function(rat_name, ratID) {
+Generate_Extra_Graphs <- function(rat_name, ratID) {
   source(paste0(projects_folder, "graphing unrolled.R"))
-  df <- Generate_Graph(rat_name, ratID)
-  return(df$rxn_graph)
+  return(Generate_Graph(rat_name, ratID))
 }
 
-Generate_Rxn_Graph <- function(rat_name, ratID) {
-  rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID)
-  rat_runs = rat_runs %>% mutate(date_asDate = lubridate::ymd(date))
 
-  Rxn_today =
-    rat_runs %>%
-    arrange(desc(date)) %>%
-    head(n = 1) %>%
-    unnest_wider(stats) %>%
-    unnest(reaction) %>%
-    mutate(Rxn = Rxn * 1000)
-
-  test_graph_Rxn =
-    rat_runs %>%
-    unnest_wider(stats) %>%
-    # Omit invalid days
-    filter(invalid != "TRUE") %>%
-    # Match today's frequency
-    unnest_wider(summary) %>%
-    arrange(desc(date)) %>%
-    filter(`Freq (kHz)` %in% Rxn_today$`Freq (kHz)`) %>%
-    # Omit days with > 45% FA, i.e. guessing
-    filter(FA_percent < user_settings$FA_cutoff) %>%
-    # Get Reaction times:
-    select(all_of(c("date", "rat_name", "rat_ID", "reaction"))) %>%
-    unnest(reaction) %>%
-    mutate(Rxn = Rxn * 1000) %>%
-    ggplot(aes(x = `Inten (dB)`, y = Rxn)) +
-    stat_summary(aes(color = "Average"),
-                 fun = mean,
-                 fun.min = function(x) mean(x) - sd(x),
-                 fun.max = function(x) mean(x) + sd(x),
-                 geom = "errorbar", linewidth = 2, width = 1.5) +
-    stat_summary(aes(color = "Average"), fun = mean, geom = "line", linewidth = 2) +
-    stat_summary(fun = mean, geom = "point", shape=24, color="black", fill="thistle", size=5) +
-    geom_line(data = Rxn_today, aes(color = "Today"), linewidth = 1.5) +
-    geom_point(data = Rxn_today, shape=21, color="black", fill = "mediumslateblue", size = 5) +
-    ggtitle(paste0(rat_name, " Reaction Curve Check")) +
-    scale_color_manual(values = c("Today" = "mediumslateblue", "Average" = "thistle"), name = "") +
-    theme_ipsum_es() +
-    theme(legend.position = c(.9,.75)) +
-    labs(x = NULL, y = NULL)
-  return(test_graph_Rxn)
-}
 
 Write_To_Archives <- function(row_added) {
   uuid = row_added$UUID
