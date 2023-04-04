@@ -466,7 +466,7 @@ server <- function(input, output, session) {
   })
 
   output$requirements_for_save <- renderText({
-    req(input$btnSave)
+    req(v$pushedSave)
     if(isolate(v$readySave)) {
       r = v$row
       r$scientist = input$scientist
@@ -498,7 +498,7 @@ server <- function(input, output, session) {
   })
 }
 
-#sink(paste0(projects_folder, paste0(Sys.Date() %>% format("%Y-%m-%d"), ".log")), append=TRUE, split=TRUE)
+sink(paste0(projects_folder, paste0(Sys.Date() %>% format("%Y-%m-%d"), ".log")), append=TRUE, split=TRUE)
 source(paste0(projects_folder, "main.R"))
 options(shiny.host = "127.0.0.1") #setting this to an external IP address forces browser instead of rstudio window
 shinyApp(ui, server)
