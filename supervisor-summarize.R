@@ -510,8 +510,10 @@ Workbook_Writer <- function() {
         analysis_type = r %>% arrange(desc(date)) %>% head(1) %>% .$analysis_type
 
         # Task-specific RXN column ------------------------------------------------
-
-        if (experiment_current == "Oddball") {
+        if (experiment_current == "" | is.na(experiment_current)) {
+          # I don't currently know which will match but neither should be true
+          r = r
+        } else if (experiment_current == "Oddball") {
           r = r %>% mutate(reaction1 = reaction) %>%
             unnest(reaction) %>%
             group_by(date) %>%
@@ -606,7 +608,7 @@ Workbook_Writer <- function() {
             relocate(Spacer1, .after = mean_attempts_per_trial) %>%
             select(-FA_detailed)
         } else if (phase_current %in% c("Gap Detection")) {
-          r = r %>% unnest(threshold) %>% select(-Freq, -Dur) %>%
+          r = r %>% unnest(threshold) %>% select(-Freq, -dB) %>%
             group_by(task, detail) %>%
             mutate(THrange = paste0(suppressWarnings(min(TH, na.rm = TRUE)) %>% round(digits = 0), "-", suppressWarnings(max(TH, na.rm = TRUE)) %>% round(digits = 0))) %>%
             relocate(THrange, .after = TH) %>%
@@ -690,17 +692,25 @@ Workbook_Writer <- function() {
 
 
           #TODO NOT MVP convert to 1/12 of octaves based on summary kHz range
-          df_discrimination = r %>% filter(task != "Training") %>%
+          df_discrimination = r %>% filter(! task %in% c("Training", "Holding")) %>%
             unnest(FA_detailed)
 
-          if(nrow(df_discrimination) > 0){
+          if(nrow(df_discrimination) > 0){          
+            # get a cononical no_go value
+            # no_go = r %>% 
+            #   # easiest access is the 2nd value in the training/holding file names
+            #   filter(task %in% c("Training", "Holding")) %>% 
+            #   # to guard against bad files, select the last 5 and pick the most common no_go value
+            #   arrange(desc(date)) %>% head(n = 5) %>% transmute(no_go = as.numeric(str_extract(file_name, pattern = "[:digit:]+?(?=kHz_[:digit:]+?dB_300ms)"))) %>% 
+            #   group_by(no_go) %>% summarize(n = n()) %>% arrange(n) %>% head(n = 1) %>% .$no_go
+            
             df_discrimination =
               df_discrimination %>%
               group_by(date) %>%
               # copy the max d' to every value because its the only one we want outputted at the end
               do(mutate(.,dprime = max(dprime))) %>% 
               # calculate fraction of the octave by pulling the go frequency from the file_name (only source we have at this point)
-              mutate(octave_fraction = log(as.numeric(str_extract(file_name, pattern = "[:digit:]+(?=-[:digit:]+?kHz)"))/`Freq (kHz)`)/log(2),
+              mutate(octave_fraction = log(as.numeric(str_extract(file_name, pattern = "[:digit:]+?(?=-.+?kHz)"))/`Freq (kHz)`)/log(2),
                      Oct = abs(round(octave_fraction * 12))) %>%
               select(-octave_fraction, -FA, -trials, -`Freq (kHz)`) %>%
               pivot_wider(names_from = Oct, values_from = FA_percent_detailed)
@@ -718,7 +728,7 @@ Workbook_Writer <- function() {
           }
 
 
-          df_training = r %>% filter(task == "Training") %>% select(-FA_detailed)
+          df_training = r %>% filter(task %in% c("Training", "Holding")) %>% select(-FA_detailed)
 
           x = rat_runs %>%
             dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
@@ -767,8 +777,8 @@ Workbook_Writer <- function() {
         order = r %>% arrange(desc(date)) %>% group_by(task) %>% do(head(., 1)) %>% arrange(desc(date)) %>% .$task
 
         r = r %>% arrange(desc(date)) %>% group_by(task) %>%
-          do(if (unique(.$task) %in% c("TH", "CNO 3mg/kg")) head(., 10)
-             else head(., 3)) %>%
+          do(if (unique(.$task) %in% c("TH", "CNO 3mg/kg", "Discrimination")) head(., 10)
+             else head(., 5)) %>%
           arrange(match(task, order)) %>%
           dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
           mutate(date = as.character(date))
@@ -964,7 +974,8 @@ Workbook_Writer <- function() {
   rat_archive %>%
     filter(is.na(end_date)) %>%
     filter(Assigned_Filename == "") %>%
-    # filter(Old_Assigned_Experiment  == "GD") %>%
+    filter(Old_Assigned_Experiment  != "GD") %>%
+    # filter(Rat_name == "RP6") %>%
     .$Rat_ID %>%
     lapply(Add_Rat_To_Workbook)
 
@@ -984,8 +995,13 @@ InitializeWriter()
 rats_not_entered_today = rat_archive %>% filter(is.na(end_date)) %>%
   filter(! Rat_name %in% c(run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>% .$rat_name %>% as.list)) %>%
   arrange(Box)
-cat("\n\nRats with no runs in the system for today yet:\n\t")
-cat(str_flatten_comma(rats_not_entered_today$Rat_name), "\n")
+
+if(nrow(rats_not_entered_today) == 0) { writeLines("All rats have data for today\n") 
+  } else {
+  cat("\n\nRats with no runs in the system for today yet:\n\t")
+  cat(str_flatten_comma(rats_not_entered_today$Rat_name), "\n\n")
+  }
+
 
 Workbook_Writer()
 rm(list = c("experiment_config_df", "run_today", "wb"))

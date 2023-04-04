@@ -573,12 +573,14 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       has_catch_trials = run_properties$summary$catch
       # Determine if even odds
       has_uneven_trial_odds = length(unique(run_properties$summary$odds.odds)) > 1
+      has_BG = run_properties$background_file != "None"
 
       # For Oddball files (training or otherwise)
       # DO NOT CHANGE THE TEXTUAL DESCRIPTIONS OR YOU WILL BREAK COMPARISONS LATER
       if (has_catch_trials & has_uneven_trial_odds) r = "Oddball (Uneven Odds & Catch)"
       else if (has_uneven_trial_odds) r = "Oddball (Uneven Odds)"
       else if (has_catch_trials) r = "Oddball (Catch)"
+      else if (has_BG) r = "Oddball (Background)"
       else if (!has_catch_trials & !has_uneven_trial_odds) r = "Oddball (Standard)"
       else stop("ABORT: Unknown Oddball file type.")
       return(r)
@@ -860,10 +862,14 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       if (run_properties$summary$nogo_freq == 0) nogo_freq = "BBN"
       else nogo_freq = paste0(run_properties$summary$nogo_freq, "kHz")
 
-      computed_file_name = paste0(run_properties$summary$go_freq, "kHz_", run_properties$summary$go_dB, "dB_", nogo_freq, "_", run_properties$summary$nogo_dB, "dB_", run_properties$lockout, "s_", run_properties$summary$go_position_start, "-", run_properties$summary$go_position_stop)
+      computed_file_name = paste0(run_properties$summary$go_freq, "kHz_", run_properties$summary$go_dB, "dB_", nogo_freq, "_", 
+                                  run_properties$summary$nogo_dB, "dB_", run_properties$lockout, "s_", run_properties$summary$go_position_start, "-", run_properties$summary$go_position_stop)
       if (analysis$type == "Oddball (Uneven Odds & Catch)") computed_file_name = paste0(computed_file_name, "_odds_NG")
       if (analysis$type == "Oddball (Uneven Odds)") computed_file_name = paste0(computed_file_name, "_odds")
       if (analysis$type == "Oddball (Catch)") computed_file_name = paste0(computed_file_name, "_catch")
+      if (analysis$type == "Oddball (Background)") computed_file_name = paste0(computed_file_name, "_", 
+                                                                               str_extract(run_properties$background_file, pattern = "^.*(?=.mat)"),
+                                                                               "_", run_properties$background_dB, "dB")
 
       return(computed_file_name)
     }
@@ -1223,7 +1229,8 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     trial_count_go = trial_data %>% dplyr::filter(Trial_type != 0) %>% dplyr::count() %>% as.numeric()
     trial_count_nogo = trial_data %>% dplyr::filter(Trial_type == 0) %>% dplyr::count() %>% as.numeric()
     hit_percent = hits / trial_count_go
-    if (analysis$type %in% c("Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) FA_percent = FAs / trial_count
+    # if Oddball experiment, FAs is out of total trials since they can always FA
+    if (str_detect(analysis$type, pattern = "Oddball")) FA_percent = FAs / trial_count
     else if (trial_count_nogo > 0) FA_percent = FAs / trial_count_nogo
     else FA_percent = NA
     mean_attempts_per_trial = dplyr::summarise_at(trial_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
@@ -1233,7 +1240,8 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
                                                                            n_cr = CRs,
                                                                            adjusted = TRUE) %>% .$dprime)
 
-    if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Training - Oddball", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
+    if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Training - Oddball", 
+                            "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Background)", "Oddball (Standard)")) {
       TH_by_frequency_and_duration = NA
     } else {
       TH_by_frequency_and_duration = Calculate_Threshold()
@@ -1241,7 +1249,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
     if(analysis$type == "Octave") {
       FA_detailed = Calculate_FA_Detailed_Octave()
-    } else if(analysis$type %in% c("Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
+    } else if(str_detect(analysis$type, pattern = "Oddball")) {
       FA_detailed = Calculate_FA_Detailed_Oddball()
     } else {
       FA_detailed = NA
@@ -1656,4 +1664,5 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 InitializeMain()
 
 # Process_File(file.choose(), name = name, weight = weight, observations = observations, exclude_trials = exclude_trials)
+
 
