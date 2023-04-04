@@ -89,7 +89,12 @@ Find_Issues_in_Archives <- function(group) {
           }
           
           files_checked = lapply(files, old_assignment_check)
-          files_checked = discard(files_checked, is_null)
+          
+          # ID files that can't be auto-delt with because of having multiple or no matches
+          if(any(is_null(files_checked))) {
+            writeLines(glue("Unable to find entries for: {keep(files_checked, is_null)}"))
+            files_checked = discard(files_checked, is_null)
+          }
           
           if(length(files_checked) > 0) {
             cat(glue(" attempting to load {length(files_checked)}"))
@@ -102,7 +107,7 @@ Find_Issues_in_Archives <- function(group) {
         writeLines(paste0("\nLoading ", length(UUIDs_without_runs), " files."))
         # try to get files and then run through main
         lapply(UUIDs_without_runs, Load_old_file_from_UUID)
-        writeLines(glue("Done attempting to load missing runs"))
+        writeLines("\nDone attempting to load missing runs")
         
       }
       
@@ -119,6 +124,51 @@ Find_Issues_in_Archives <- function(group) {
         # This will need an apply with 1 for rows and will require that the remove entry be in a 'safetied' state
         # 2) reload data from key_data using main with the assignment from the key_data
         
+
+        # Function ---------------------------------------------------------------_
+        clean_archives <- function(entry, date, restore = TRUE, backup_data = TRUE) {
+          df = run_archive %>% filter(UUID == entry)
+          writeLines(paste0("\t\tCleaning ", df$rat_name, "'s entry on ", df$date, " ..."))
+          
+          # Backup lose-able data
+            # Get data to save
+            key_data = df %>% select(all_of(c("date", "rat_ID", "rat_name", "weight", "omit_list", "comments", "assignment", "UUID"))) %>% unnest_wider(assignment) %>% 
+              mutate(date_removed = Sys.Date() %>% as.character())
+            # append to running CSV
+            fwrite(key_data, file = paste0(projects_folder, "deleted_entries.csv"), append = file.exists(paste0(projects_folder, "deleted_entries.csv")))
+            writeLines("\tData backed up")
+          
+          # Wipe from trials archive:
+          experiment = df$assignment %>% .[[1]] %>% pluck("experiment")
+          variable_name = paste0(experiment, "_archive")
+          filename = paste0(projects_folder, variable_name, ".csv.gz")
+          # load archive
+          trial_archive = fread(filename)
+          # clean archive
+          temp = filter(trial_archive, UUID != df$UUID)
+          # save cleaned archive
+          fwrite(temp, file = filename)
+          writeLines(paste0("\tTrials removed from ", variable_name))
+          
+          # Wipe UUID from run archive
+          run_archive = filter(run_archive, UUID != df$UUID)
+          save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = FALSE, compress = FALSE)
+          writeLines("\tRun archive cleaned")
+          
+          writeLines("Done.")
+          InitializeMain()
+          source(paste0(projects_folder, "import_deleted_entries.R"))
+        }
+        
+        # Check prior to cleaning bad entries -------------------------------------
+        switch(menu(c("Yes", "No"), 
+                    title=paste0("Proceed with cleaning bad runs from run_archive?\n 
+                                 Note: Data WILL be saved and attempted to reload"), 
+                    graphics = FALSE),
+               # 1 (Yes): Write file
+               lapply(bad_runs %>% .$UUID, clean_archives), 
+               # 2 (No): Abort
+               writeLines("Stopped. Entries remain."))
         } else writeLines(glue("No missing trials data for {group}"))
       
       
@@ -134,8 +184,18 @@ Find_Issues_in_Archives <- function(group) {
 
 writeLines("Checking and backing up trials")
 
-list.files(path = projects_folder, pattern = "^.*_archive.csv.gz$") %>% paste0(projects_folder, .) %>% data.frame(file = .) %>% 
-  mutate(experiment = stringr::str_extract(file, pattern = '(?<=s/).*(?=_a)')) %>% .$experiment %>%
+archives = list.files(path = projects_folder, pattern = "^.*_archive.csv.gz$") %>% paste0(projects_folder, .) %>% data.frame(file = .) %>% 
+  mutate(experiment = stringr::str_extract(file, pattern = '(?<=s/).*(?=_a)'))
+
+# NA_archives are problematic these need to found and fixed
+# to find them, check for blank experiment
+if(any(archives$experiment == "")) {
+  warn("NA_archive exists. Clean runs from it manualy.")
+  # do not run these through the fixer as the don't need to be backed up.
+  archives = filter(archives, experiment != "")
+}
+
+archives$experiment %>%
   lapply(Find_Issues_in_Archives)
 
 cat("\nBacking up runs...")
