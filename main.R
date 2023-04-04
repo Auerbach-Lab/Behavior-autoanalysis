@@ -5,7 +5,7 @@ InitializeMain <- function() {
     library(R.matlab); library(data.table);
 
     # data manipulation
-    library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr); library(lubridate);
+    library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr); library(lubridate); library(glue);
 
     # analysis & visualization
     library(psycho); library(ggplot2); library(hrbrthemes); library(shiny);
@@ -337,7 +337,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
       trial_data = dplyr::left_join(x = trial_data_encoded,
                                   y = dplyr::select(run_properties$stim_encoding_table, -Repeat_number, -`Delay (s)`),
-                                  by = "Stim_ID", all.x = TRUE)
+                                  by = "Stim_ID")
       trial_data = dplyr::bind_cols(trial_data, Get_Delay_DF(trial_data))
 
       #TODO: detect same day same rat data, renumber blocks in this list AND in master dataframe to continuous chronological order
@@ -1740,5 +1740,5 @@ InitializeMain()
 #r = Process_File(file.choose(), name, weight, observations, exclude_trials)
 #WriteToArchive(r)
 
-# Process_File(file.choose(), name = name, weight = weight, observations = observations, exclude_trials = exclude_trials)
+#Process_File(file.choose(), name = name, weight = weight, observations = observations, exclude_trials = exclude_trials)
 
