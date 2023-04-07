@@ -548,18 +548,18 @@ Workbook_Writer <- function() {
 
             df_TH_BBN = r %>% unnest(reaction) %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` == 0)  %>%
-              group_by(date) %>%
+              group_by(date, time) %>%
               slice(which.min(`Inten (dB)`))
 
             intensity = r %>% unnest(reaction) %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
-              group_by(date) %>%
+              group_by(date, time) %>%
               count(`Inten (dB)`) %>% arrange(desc(`Inten (dB)`)) %>% slice(which.max(n)) %>%
               rename(desired_dB = `Inten (dB)`) %>% select(-n)
 
             df_TH_tones = r %>% unnest(reaction) %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
-              right_join(intensity, by = "date") %>%
+              right_join(intensity, by = c("date", "time")) %>%
               filter(`Inten (dB)` == desired_dB) %>%
               group_by(date) %>%
               mutate(Rxn = mean(Rxn)) %>%
@@ -569,7 +569,7 @@ Workbook_Writer <- function() {
             df_Temp = r %>%
               unnest(reaction) %>%
               dplyr::filter(task != "TH" & `Dur (ms)` == min_duration & `Inten (dB)` == 60) %>% # not equal TH
-              group_by(date) %>%
+              group_by(date, time) %>%
               mutate(Rxn = mean(Rxn))
 
             # for all dates, take their 55 and 65 entries (stepsize 5 will have potentially all of 55, 60, 65, stepsize 10 will have either 60 or both 55 and 65)
@@ -656,13 +656,13 @@ Workbook_Writer <- function() {
             dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
             tidyr::unnest_wider(assignment) %>%
             tidyr::unnest(summary) %>%
-            select(task, detail, date, `Freq (kHz)`, dB_min, dB_max) %>%
+            select(task, detail, date, time, `Freq (kHz)`, dB_min, dB_max) %>%
             group_by(date, task, detail, `Freq (kHz)`) %>% #do(print(.))
             mutate(Spacer3 = NA,
                    Stimrange = paste0(unique(dB_min), "-", unique(dB_max))) %>%
-            select(task, detail, date, Spacer3, `Freq (kHz)`, Stimrange)
+            select(task, detail, date, time, Spacer3, `Freq (kHz)`, Stimrange)
 
-          r = left_join(r, x, by = c("task", "detail", "date")) %>%
+          r = left_join(r, x, by = c("task", "detail", "date", "time")) %>%
             unique() %>%
             pivot_wider(names_from = `Freq (kHz)`, values_from = Stimrange)
 
@@ -736,9 +736,9 @@ Workbook_Writer <- function() {
             tidyr::unnest_wider(assignment) %>%
             tidyr::unnest_wider(stats) %>%
             unnest(dprime) %>%
-            select(task, detail, date, dprime)
+            select(task, detail, date, time, dprime)
 
-          df_training = left_join(df_training, x, by = c("task", "detail", "date"))
+          df_training = left_join(df_training, x, by = c("task", "detail", "date", "time"))
 
           r = rbind(df_discrimination, df_training) %>%
             relocate(dprime, .after = Spacer1) %>%
@@ -977,7 +977,7 @@ Workbook_Writer <- function() {
   rat_archive %>%
     filter(is.na(end_date)) %>%
     filter(Assigned_Filename == "" | Assigned_Filename == "ABR") %>%
-    # filter(Old_Assigned_Experiment  != "GD") %>%
+    filter(Old_Assigned_Experiment  != "GD") %>%
     # filter(Rat_name %in% c("BP3")) %>%
     # filter(str_detect(Rat_name, "LP")) %>%
     .$Rat_ID %>%
