@@ -483,7 +483,7 @@ Workbook_Writer <- function() {
 
       Build_Table <- function() {
         # Common Columns ----------------------------------------------------------
-        columns = c("task", "detail", "date", "file_name", "weight", "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial", "threshold", "reaction", "FA_detailed", "warnings_list", "comments", "analysis_type")
+        columns = c("task", "detail", "date", "time", "file_name", "weight", "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial", "threshold", "reaction", "FA_detailed", "warnings_list", "comments", "analysis_type")
 
         r = rat_runs %>%
           dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
@@ -682,10 +682,10 @@ Workbook_Writer <- function() {
             filter(detail == detail_current) %>%
             tidyr::unnest_wider(stats) %>%
             unnest(dprime) %>%
-            select(task, detail, date, dprime)
+            select(task, detail, date, time, dprime)
 
 
-          r = left_join(r, x, by = c("task", "detail", "date"))
+          r = left_join(r, x, by = c("task", "detail", "date", "time"))
 
         } else if (phase_current == "Octave") {
           r = r %>% select(-threshold)
@@ -764,8 +764,7 @@ Workbook_Writer <- function() {
             relocate(Spacer1, .before = TH) %>%
             relocate(THrange, .after = TH)
         }
-
-
+        
         averages = r %>%
           dplyr::group_by(task, detail) %>%
           dplyr::summarise_if(.predicate = is.numeric, .funs = mean, na.rm = TRUE) %>%
@@ -776,7 +775,11 @@ Workbook_Writer <- function() {
 
         order = r %>% arrange(desc(date)) %>% group_by(task) %>% do(head(., 1)) %>% arrange(desc(date)) %>% .$task
 
-        r = r %>% arrange(desc(date)) %>% group_by(task) %>%
+        r = r %>% 
+          # sort by date and time descending
+          arrange(desc(date), desc(time)) %>% group_by(task) %>%
+          # remove time column as its only for merges caused by multi-run days
+          select(-time) %>%
           do(if (unique(.$task) %in% c("TH", "CNO 3mg/kg", "Discrimination")) head(., 10)
              else head(., 5)) %>%
           arrange(match(task, order)) %>%
@@ -973,9 +976,10 @@ Workbook_Writer <- function() {
   #OR
   rat_archive %>%
     filter(is.na(end_date)) %>%
-    filter(Assigned_Filename == "") %>%
-    filter(Old_Assigned_Experiment  != "GD") %>%
-    # filter(Rat_name == "RP6") %>%
+    filter(Assigned_Filename == "" | Assigned_Filename == "ABR") %>%
+    # filter(Old_Assigned_Experiment  != "GD") %>%
+    # filter(Rat_name %in% c("BP3")) %>%
+    # filter(str_detect(Rat_name, "LP")) %>%
     .$Rat_ID %>%
     lapply(Add_Rat_To_Workbook)
 
