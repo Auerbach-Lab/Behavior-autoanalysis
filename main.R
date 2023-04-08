@@ -169,12 +169,13 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         if ("train" %in% stim_type$`Stim Source`) {
           stim_type = "train"
         }
-        else {
+        # if multiple types of go stimulus warn because mutliple types are excpected for oddball training but it should be go/nogo
+        else if (nrow(filter(stim_encoding_table, Type == 1)) > 1) {
           warn = paste0("WARNING: Multiple non-oddball stim types: ", stim_type)
           warning(paste0(warn, "\n"))
           warnings_list <<- append(warnings_list, warn)
           stim_type = stim_encoding_table %>% filter(Type == "1") %>% .$`Stim Source`
-        }
+        } else {stim_type = stim_encoding_table %>% filter(Type == "1") %>% .$`Stim Source`}
       } else {
         stim_type = stim_type %>% as.character()
       }
