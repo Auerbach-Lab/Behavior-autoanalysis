@@ -745,16 +745,32 @@ Workbook_Writer <- function() {
             mutate(Spacer2 = NA) %>% relocate(Spacer2, .after = dprime)
 
         } else if (experiment_current == "Oddball") {
-          r = r %>%
+          # handled as 2 separate tables to deal with edge case of missing all of a specific type of trial
+          FA_table = r %>%
             select(-threshold) %>%
             rename(Rxn_avg = Rxn) %>%
-            unnest(c(reaction1, FA_detailed)) %>%
+            unnest(FA_detailed) %>%
+            # drop the duplicate column that is being used in the next (Rxn) table
+            select(-reaction1)
+          
+          Rxn_table = r %>%
+            select(-threshold) %>%
+            rename(Rxn_avg = Rxn) %>%
+            unnest(reaction1) %>%
+            # only keep necessary columns
+            select(date, time, Rxn, `Inten (dB)`)
+          
+          # use a full_join so that if somehow Rxn_table has more rows (shouldn't happen), they aren't silently dropped
+          r = full_join(FA_table, Rxn_table, by = c("date", "time", "position" = "Inten (dB)"))
+          
+          r = r %>%
             group_by(date) %>%
-            do(filter(., `Inten (dB)` %in% c(min(`Inten (dB)`), median(`Inten (dB)`), max(`Inten (dB)`))) %>%
+            do(filter(., position %in% c(min(position), median(position), max(position))) %>%
                  mutate(position = c("early", "mid", "late"))) %>%
-            select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`, -FA, -trials) %>%
+            select(-FA, -trials) %>%
             pivot_wider(names_from = position, values_from = c(Rxn, FA_percent_detailed)) %>%
             mutate(Spacer2 = NA) %>% relocate(Spacer2, .after = Rxn_late)
+          
         } else if (experiment_current == "GD") {
           r = r %>%
             select(-FA_detailed) %>%
@@ -978,8 +994,9 @@ Workbook_Writer <- function() {
     filter(is.na(end_date)) %>%
     filter(Assigned_Filename == "" | Assigned_Filename == "ABR") %>%
     filter(Old_Assigned_Experiment  != "GD") %>%
-    # filter(Rat_name %in% c("BP3")) %>%
-    # filter(str_detect(Rat_name, "LP")) %>%
+    # filter(Rat_name %in% c("GP6")) %>%
+    # filter(! Rat_ID %in% rats_not_entered_today$Rat_ID) %>%
+    # filter(str_detect(Rat_name, "TP")) %>%
     .$Rat_ID %>%
     lapply(Add_Rat_To_Workbook)
 
