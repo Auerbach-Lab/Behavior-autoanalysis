@@ -286,10 +286,23 @@ Workbook_Writer <- function() {
 
 
         # Gap Detection Training/Reset PreHL
-        if (phase_current == "Gap Detection" & ! task_current %in% c("Reset") & pre_HL) {
+        if (phase_current == "Gap Detection" & task_current %in% c("Training", "Reset") & pre_HL) {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "Gap Detection") %>%
+            group_by(task) %>%
+            summarise(task = unique(task), detail = unique(detail),
+                      date = tail(date, 1), n = n(),
+                      condition = "baseline",
+                      .groups = "drop")
+        }
+        
+        # Gap Detection Rxn/TH PreHL
+        if (phase_current == "Gap Detection" & task_current %in% c("Rxn", "TH") & pre_HL) {
+          count_df = rat_runs %>%
+            tidyr::unnest_wider(assignment) %>%
+            dplyr::filter(phase == "Gap Detection") %>%
+            filter(! task %in% c("Training", "Reset")) %>%
             group_by(task) %>%
             summarise(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
@@ -470,28 +483,37 @@ Workbook_Writer <- function() {
 
       Build_Table <- function() {
         # Common Columns ----------------------------------------------------------
-        columns = c("task", "detail", "date", "file_name", "weight", "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial", "threshold", "reaction", "FA_detailed", "warnings_list", "comments", "analysis_type")
+        columns = c("task", "detail", "date", "time", "file_name", "weight", "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial", "threshold", "reaction", "FA_detailed", "warnings_list", "comments", "analysis_type")
 
         r = rat_runs %>%
           dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
           dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
+          # highlight file names that are invalid with stars on both sides or wrong file with star at the end
+          mutate(file_name = case_when(invalid == TRUE ~ glue("* {file_name} *"), 
+                                       str_detect(paste(warnings_list), pattern = "wrong file") ~ glue("{file_name} *"),
+                                       TRUE ~ file_name)) %>%
           tidyr::unnest_wider(assignment) %>%
           tidyr::unnest_wider(stats) %>%
           tidyr::unnest_wider(summary) %>%
           dplyr::select(all_of(columns)) %>%
           arrange(desc(date), .by_group = F)
-
+ 
         weight_max = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
 
         #min_duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
         min_duration = r %>% unnest(reaction) %>% dplyr::filter(task == task_current & detail == detail_current) %>% .$`Dur (ms)` %>% unique() %>% min()
+        
+        # Needed for gap detection
+        current_frequency = r %>% arrange(desc(date)) %>% head(1) %>% pluck("reaction", 1, "Inten (dB)")
 
         # Needed to deal with the initial training
         analysis_type = r %>% arrange(desc(date)) %>% head(1) %>% .$analysis_type
 
         # Task-specific RXN column ------------------------------------------------
-
-        if (experiment_current == "Oddball") {
+        if (experiment_current == "" | is.na(experiment_current)) {
+          # I don't currently know which will match but neither should be true
+          r = r
+        } else if (experiment_current == "Oddball") {
           r = r %>% mutate(reaction1 = reaction) %>%
             unnest(reaction) %>%
             group_by(date) %>%
@@ -526,18 +548,18 @@ Workbook_Writer <- function() {
 
             df_TH_BBN = r %>% unnest(reaction) %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` == 0)  %>%
-              group_by(date) %>%
+              group_by(date, time) %>%
               slice(which.min(`Inten (dB)`))
 
             intensity = r %>% unnest(reaction) %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
-              group_by(date) %>%
+              group_by(date, time) %>%
               count(`Inten (dB)`) %>% arrange(desc(`Inten (dB)`)) %>% slice(which.max(n)) %>%
               rename(desired_dB = `Inten (dB)`) %>% select(-n)
 
             df_TH_tones = r %>% unnest(reaction) %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
-              right_join(intensity, by = "date") %>%
+              right_join(intensity, by = c("date", "time")) %>%
               filter(`Inten (dB)` == desired_dB) %>%
               group_by(date) %>%
               mutate(Rxn = mean(Rxn)) %>%
@@ -547,7 +569,7 @@ Workbook_Writer <- function() {
             df_Temp = r %>%
               unnest(reaction) %>%
               dplyr::filter(task != "TH" & `Dur (ms)` == min_duration & `Inten (dB)` == 60) %>% # not equal TH
-              group_by(date) %>%
+              group_by(date, time) %>%
               mutate(Rxn = mean(Rxn))
 
             # for all dates, take their 55 and 65 entries (stepsize 5 will have potentially all of 55, 60, 65, stepsize 10 will have either 60 or both 55 and 65)
@@ -576,11 +598,20 @@ Workbook_Writer <- function() {
         r = r %>% select(-analysis_type) %>% relocate(Rxn, .before = mean_attempts_per_trial) %>%
           mutate(Spacer1 = NA)
 
-        # Phase-specific Columns --------------------------------------------------------
+      # Phase-specific Columns --------------------------------------------------------
         if (analysis_type %in% c("Training - Gap")) {
           # Training has no TH
-          r = r %>% unnest(threshold) %>%
+          r = r %>% 
+            # unnesting reaction has caused an amplification of rows - this is to remove that
+            select(-threshold) %>% unique() %>%
             group_by(task, detail) %>%
+            relocate(Spacer1, .after = mean_attempts_per_trial) %>%
+            select(-FA_detailed)
+        } else if (phase_current %in% c("Gap Detection")) {
+          r = r %>% unnest(threshold) %>% select(-Freq, -dB) %>%
+            group_by(task, detail) %>%
+            mutate(THrange = paste0(suppressWarnings(min(TH, na.rm = TRUE)) %>% round(digits = 0), "-", suppressWarnings(max(TH, na.rm = TRUE)) %>% round(digits = 0))) %>%
+            relocate(THrange, .after = TH) %>%
             relocate(Spacer1, .after = mean_attempts_per_trial) %>%
             select(-FA_detailed)
         } else if (analysis_type %in% c("Training - BBN")) {
@@ -625,13 +656,13 @@ Workbook_Writer <- function() {
             dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
             tidyr::unnest_wider(assignment) %>%
             tidyr::unnest(summary) %>%
-            select(task, detail, date, `Freq (kHz)`, dB_min, dB_max) %>%
+            select(task, detail, date, time, `Freq (kHz)`, dB_min, dB_max) %>%
             group_by(date, task, detail, `Freq (kHz)`) %>% #do(print(.))
             mutate(Spacer3 = NA,
                    Stimrange = paste0(unique(dB_min), "-", unique(dB_max))) %>%
-            select(task, detail, date, Spacer3, `Freq (kHz)`, Stimrange)
+            select(task, detail, date, time, Spacer3, `Freq (kHz)`, Stimrange)
 
-          r = left_join(r, x, by = c("task", "detail", "date")) %>%
+          r = left_join(r, x, by = c("task", "detail", "date", "time")) %>%
             unique() %>%
             pivot_wider(names_from = `Freq (kHz)`, values_from = Stimrange)
 
@@ -651,30 +682,53 @@ Workbook_Writer <- function() {
             filter(detail == detail_current) %>%
             tidyr::unnest_wider(stats) %>%
             unnest(dprime) %>%
-            select(task, detail, date, dprime)
+            select(task, detail, date, time, dprime)
 
 
-          r = left_join(r, x, by = c("task", "detail", "date"))
+          r = left_join(r, x, by = c("task", "detail", "date", "time"))
 
         } else if (phase_current == "Octave") {
           r = r %>% select(-threshold)
 
 
           #TODO NOT MVP convert to 1/12 of octaves based on summary kHz range
-          df_discrimination = r %>% filter(task != "Training") %>%
+          df_discrimination = r %>% filter(! task %in% c("Training", "Holding")) %>%
             unnest(FA_detailed)
 
-          if(nrow(df_discrimination) > 0){
+          if(nrow(df_discrimination) > 0){          
+            # get a cononical no_go value
+            # no_go = r %>% 
+            #   # easiest access is the 2nd value in the training/holding file names
+            #   filter(task %in% c("Training", "Holding")) %>% 
+            #   # to guard against bad files, select the last 5 and pick the most common no_go value
+            #   arrange(desc(date)) %>% head(n = 5) %>% transmute(no_go = as.numeric(str_extract(file_name, pattern = "[:digit:]+?(?=kHz_[:digit:]+?dB_300ms)"))) %>% 
+            #   group_by(no_go) %>% summarize(n = n()) %>% arrange(n) %>% head(n = 1) %>% .$no_go
+            
             df_discrimination =
               df_discrimination %>%
               group_by(date) %>%
-              do(mutate(., Oct = c(1:6), dprime = max(dprime))) %>% # mutate(Oct_position = c(1:6)) %>% print) %>%
-              select(-FA, -trials, -`Freq (kHz)`) %>%
+              # copy the max d' to every value because its the only one we want outputted at the end
+              do(mutate(.,dprime = max(dprime))) %>% 
+              # calculate fraction of the octave by pulling the go frequency from the file_name (only source we have at this point)
+              mutate(octave_fraction = log(as.numeric(str_extract(file_name, pattern = "[:digit:]+?(?=-.+?kHz)"))/`Freq (kHz)`)/log(2),
+                     Oct = abs(round(octave_fraction * 12))) %>%
+              select(-octave_fraction, -FA, -trials, -`Freq (kHz)`) %>%
               pivot_wider(names_from = Oct, values_from = FA_percent_detailed)
+            
+            #create columns for Octave fractions that are missing:
+            column_holder =
+              #make a list containing the common column names up through spacer1 and append columns named 1 through 12
+              c(names(select(df_discrimination, task:Spacer1)), seq(1:12))
+            
+            # add the missing columns as dbls
+            df_discrimination[column_holder[!(column_holder %in% colnames(df_discrimination))]] = na_dbl
+            
+            # reorder columns
+            df_discrimination = select(df_discrimination, task:Spacer1, "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")
           }
 
 
-          df_training = r %>% filter(task == "Training") %>% select(-FA_detailed)
+          df_training = r %>% filter(task %in% c("Training", "Holding")) %>% select(-FA_detailed)
 
           x = rat_runs %>%
             dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
@@ -682,25 +736,41 @@ Workbook_Writer <- function() {
             tidyr::unnest_wider(assignment) %>%
             tidyr::unnest_wider(stats) %>%
             unnest(dprime) %>%
-            select(task, detail, date, dprime)
+            select(task, detail, date, time, dprime)
 
-          df_training = left_join(df_training, x, by = c("task", "detail", "date"))
+          df_training = left_join(df_training, x, by = c("task", "detail", "date", "time"))
 
           r = rbind(df_discrimination, df_training) %>%
             relocate(dprime, .after = Spacer1) %>%
             mutate(Spacer2 = NA) %>% relocate(Spacer2, .after = dprime)
 
         } else if (experiment_current == "Oddball") {
-          r = r %>%
+          # handled as 2 separate tables to deal with edge case of missing all of a specific type of trial
+          FA_table = r %>%
             select(-threshold) %>%
             rename(Rxn_avg = Rxn) %>%
-            unnest(c(reaction1, FA_detailed)) %>%
+            unnest(FA_detailed) %>%
+            # drop the duplicate column that is being used in the next (Rxn) table
+            select(-reaction1)
+          
+          Rxn_table = r %>%
+            select(-threshold) %>%
+            rename(Rxn_avg = Rxn) %>%
+            unnest(reaction1) %>%
+            # only keep necessary columns
+            select(date, time, Rxn, `Inten (dB)`)
+          
+          # use a full_join so that if somehow Rxn_table has more rows (shouldn't happen), they aren't silently dropped
+          r = full_join(FA_table, Rxn_table, by = c("date", "time", "position" = "Inten (dB)"))
+          
+          r = r %>%
             group_by(date) %>%
-            do(filter(., `Inten (dB)` %in% c(min(`Inten (dB)`), median(`Inten (dB)`), max(`Inten (dB)`))) %>%
+            do(filter(., position %in% c(min(position), median(position), max(position))) %>%
                  mutate(position = c("early", "mid", "late"))) %>%
-            select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`, -FA, -trials) %>%
+            select(-FA, -trials) %>%
             pivot_wider(names_from = position, values_from = c(Rxn, FA_percent_detailed)) %>%
             mutate(Spacer2 = NA) %>% relocate(Spacer2, .after = Rxn_late)
+          
         } else if (experiment_current == "GD") {
           r = r %>%
             select(-FA_detailed) %>%
@@ -710,8 +780,7 @@ Workbook_Writer <- function() {
             relocate(Spacer1, .before = TH) %>%
             relocate(THrange, .after = TH)
         }
-
-
+        
         averages = r %>%
           dplyr::group_by(task, detail) %>%
           dplyr::summarise_if(.predicate = is.numeric, .funs = mean, na.rm = TRUE) %>%
@@ -722,9 +791,13 @@ Workbook_Writer <- function() {
 
         order = r %>% arrange(desc(date)) %>% group_by(task) %>% do(head(., 1)) %>% arrange(desc(date)) %>% .$task
 
-        r = r %>% arrange(desc(date)) %>% group_by(task) %>%
-          do(if (unique(.$task) %in% c("TH", "CNO 3mg/kg")) head(., 10)
-             else head(., 3)) %>%
+        r = r %>% 
+          # sort by date and time descending
+          arrange(desc(date), desc(time)) %>% group_by(task) %>%
+          # remove time column as its only for merges caused by multi-run days
+          select(-time) %>%
+          do(if (unique(.$task) %in% c("TH", "CNO 3mg/kg", "Discrimination")) head(., 10)
+             else head(., 5)) %>%
           arrange(match(task, order)) %>%
           dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
           mutate(date = as.character(date))
@@ -919,7 +992,11 @@ Workbook_Writer <- function() {
   #OR
   rat_archive %>%
     filter(is.na(end_date)) %>%
-    filter(Assigned_Filename = "") %>%
+    filter(Assigned_Filename == "" | Assigned_Filename == "ABR") %>%
+    filter(Old_Assigned_Experiment  != "GD") %>%
+    # filter(Rat_name %in% c("GP6")) %>%
+    # filter(! Rat_ID %in% rats_not_entered_today$Rat_ID) %>%
+    # filter(str_detect(Rat_name, "TP")) %>%
     .$Rat_ID %>%
     lapply(Add_Rat_To_Workbook)
 
@@ -934,7 +1011,23 @@ Workbook_Writer <- function() {
 # Workflow -----------------------------------------------------------
 
 InitializeWriter()
+
+# Find runs not entered today
+rats_not_entered_today = rat_archive %>% filter(is.na(end_date)) %>%
+  filter(! Rat_name %in% c(run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>% .$rat_name %>% as.list)) %>%
+  arrange(Box)
+
+if(nrow(rats_not_entered_today) == 0) { writeLines("All rats have data for today\n") 
+  } else {
+  cat("\n\nRats with no runs in the system for today yet:\n\t")
+  cat(str_flatten_comma(rats_not_entered_today$Rat_name), "\n\n")
+  }
+
+
 Workbook_Writer()
 rm(list = c("experiment_config_df", "run_today", "wb"))
+# Validate and back-up archives
 source(paste0(projects_folder, "admin tools\\check UUIDs and backup trials archives.R"))
+
+
 

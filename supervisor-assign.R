@@ -20,7 +20,7 @@ Workbook_Reader <- function() {
   assignments_df = assignments_df %>% mutate(Assigned_Filename = stringr::str_replace_all(Assigned_Filename, " ", ""))
   if (nrow(assignments_df) != user_settings$runs_per_day) {
     warn = paste0("Only ", nrow(assignments_df), " assignments were found. (Expected ", user_settings$runs_per_day, ")")
-    warning(paste0(warn, "\n"))
+    writeLines(paste0(warn, "\n"))
   }
   assignments_mandatory_data = assignments_df %>% dplyr::select(-Persistent_Comment) # comments are allowed to be NA, but nothing else is
   if (any(is.na(assignments_mandatory_data))) stop("ERROR: Mandatory values are NA. (Are there non-green cells in the supervisor spreadsheet?)")
@@ -43,6 +43,12 @@ Workbook_Reader <- function() {
       return(rat_archive) #return unmodified
     }
   )
+  
+  # warn about unassigned rats
+  unassigned_rats = rat_archive %>% filter(is.na(end_date)) %>% filter(Assigned_Filename == "")
+  if (nrow(unassigned_rats) > 0) {
+    warn = warn(paste0(nrow(unassigned_rats), " rats are missing assignments. (", str_flatten_comma(unassigned_rats$Rat_name), ")"))
+  }
 }
 
 Assignments_Writer <- function() {
@@ -51,8 +57,13 @@ Assignments_Writer <- function() {
   addWorksheet(wb, sheetName = "Files Summary")
   data_table = rat_archive %>% filter(is.na(end_date)) %>%
     arrange(Box) %>%
-    mutate(Changed = ifelse(Assigned_Filename == Old_Assigned_Filename, "", "*")) %>%
-    select(Rat_name, Box, Assigned_Filename, Changed, Assigned_Experiment) %>%
+    mutate(Changed = ifelse(Assigned_Filename == Old_Assigned_Filename, "", "*"),
+           Note = ifelse(Assigned_Task == "Discrimination" &
+                         str_detect(Persistent_Comment, pattern = "[:digit:]\\.[:digit:]+?,"),
+                            str_extract(Persistent_Comment, pattern = "^.*[\r|\n]"),
+                        "")
+           ) %>%
+    select(Rat_name, Box, Assigned_Filename, Changed, Assigned_Experiment, Note) %>%
     rename(Experiment = Assigned_Experiment)
   writeDataTable(wb, 1, x = data_table, startRow = 1, colNames = TRUE, rowNames = FALSE, bandedRows = TRUE, tableStyle = "TableStyleMedium2", na.string = "")
 
@@ -71,7 +82,14 @@ Assignments_Writer <- function() {
   old_wd = getwd()
   setwd(projects_folder)
 
-  saveWorkbook(wb, "assignments.xlsx", overwrite = TRUE)
+  tryCatch(
+    saveWorkbook(wb, "assignments.xlsx", overwrite = TRUE),
+    warning = function(warning) if (str_detect(as.character(warning), "Permission denied")) {
+      writeLines("Assignments.xlsx already open so can't be updated.")
+    } else {
+      warning(warning)
+    }
+  )
   openXL(file = "assignments.xlsx")
 
   # cleanup

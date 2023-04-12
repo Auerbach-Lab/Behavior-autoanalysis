@@ -1,5 +1,5 @@
 InitializeMain()
-load(paste0(projects_folder, "NA_archive.Rdata"))
+load(paste0(projects_folder, "NA_archive.csv.gz"))
 
 
 Bad_UUIDs = NA_archive %>% .$UUID %>% unique()

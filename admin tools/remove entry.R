@@ -1,6 +1,5 @@
-#TODO: make this work filter_arguments = 
-bad_rats = c("GP6")
-bad_date = "20230217"
+bad_rats = c("Red6")
+bad_date = "today"
 # Restore assignment from the 'old' setting
 restore = TRUE
 # Backs up loseable data such as comments, weight, omit list
@@ -8,18 +7,18 @@ backup_data = TRUE
 
 
 # Function ---------------------------------------------------------------_
-clean_archives <- function(entry) {
+clean_archives <- function(entry, date, restore = TRUE, backup_data = TRUE) {
   df = run_archive %>% filter(UUID == entry)
   writeLines(paste0("Cleaning ", df$rat_name, "'s entry on ", df$date, " ..."))
   
 # Backup lose-able data
   if(backup_data) {
-    key_data = df %>% select(all_of(c("date", "rat_ID", "rat_name", "weight", "omit_list", "comments"))) %>% 
+    # Get data to save
+    key_data = df %>% select(all_of(c("date", "rat_ID", "rat_name", "weight", "omit_list", "comments", "assignment", "UUID"))) %>% unnest_wider(assignment) %>% 
       mutate(date_removed = Sys.Date() %>% as.character(),
              omit_list = as.numeric(omit_list))
-    deleted_entries = read.csv(paste0(projects_folder, "deleted_entries.csv"))
-    deleted_entries = rows_append(deleted_entries, key_data)
-    write.csv(deleted_entries, paste0(projects_folder, "deleted_entries.csv"), row.names = FALSE)
+    # append to running CSV
+    fwrite(key_data, file = paste0(projects_folder, "deleted_entries.csv"), append = file.exists(paste0(projects_folder, "deleted_entries.csv")))
     writeLines("\tData backed up")
   } else writeLines("\tData NOT backed up")
   
@@ -27,12 +26,12 @@ clean_archives <- function(entry) {
   experiment = df$assignment %>% .[[1]] %>% pluck("experiment")
   variable_name = paste0(experiment, "_archive")
   filename = paste0(projects_folder, variable_name, ".csv.gz")
-  # load archive & clean
-  temp = fread(filename) %>%
-    filter(UUID != df$UUID)
+  # load archive
+  trial_archive = fread(filename)
+  # clean archive
+  temp = filter(trial_archive, UUID != df$UUID)
+  # save cleaned archive
   fwrite(temp, file = filename)
-  rm(temp)
-  # save archive
   writeLines(paste0("\tTrials removed from ", variable_name))
   
 # Wipe UUID from run archive
@@ -60,16 +59,32 @@ clean_archives <- function(entry) {
 #Get current run_achive
 InitializeMain()
 
-#Test or check files to be removed
+# Test or check files to be removed
+bad_date = if_else(bad_date == "today", str_remove_all(Sys.Date(), "-"), bad_date)
 Bad_entries = run_archive %>% filter(date == bad_date & rat_name %in% bad_rats)
+
+# Clean NA file
+# NA_archive = fread(paste0(projects_folder, "_archive.csv.gz"))
+# Bad_UUIDs = NA_archive$UUID %>% unique()
+# Bad_entries = run_archive %>% filter(UUID %in% Bad_UUIDs)
+# writeLines(paste(length(Bad_UUIDs), "entries in the NA_archive"))
+
+# Show entries to be cleaned
 print(select(Bad_entries, all_of(c("date", "rat_name"))))
 
 switch(menu(c("Yes", "No"), 
             title=paste0("Do you want to DELETE the runs from run_archive?\n Note: ", 
                          "Data ", if_else(backup_data, "WILL", "will NOT"), " be saved and ", 
                          "previous assignment ", if_else(restore, "WILL", "will NOT"), " be restored"), 
-            graphics = FALSE), 
-       lapply(Bad_entries %>% .$UUID, clean_archives), writeLines("Stopped. Entries remain."))
+            graphics = FALSE),
+       # 1 (Yes): Write file
+        lapply(Bad_entries %>% .$UUID, clean_archives), 
+       # 2 (No): Abort
+        writeLines("Stopped. Entries remain."))
+
+InitializeMain()
+# check they are gone
+filter(run_archive, UUID %in% Bad_entries$UUID) %>% print
 
 rm(list = c("Bad_entries", "restore", "bad_rats", "bad_date"))
 

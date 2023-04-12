@@ -111,7 +111,6 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         #print(filename)
 
         r = stringr::str_match_all(filename, pattern = pattern) %>%
-
           unlist(recursive = TRUE) %>%
           tail (n = 1)
 
@@ -181,12 +180,13 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         if ("train" %in% stim_type$`Stim Source`) {
           stim_type = "train"
         }
-        else {
+        # if multiple types of go stimulus warn because mutliple types are excpected for oddball training but it should be go/nogo
+        else if (nrow(filter(stim_encoding_table, Type == 1)) > 1) {
           warn = paste0("WARNING: Multiple non-oddball stim types: ", stim_type)
           warning(paste0(warn, "\n"))
           warnings_list <<- append(warnings_list, warn)
           stim_type = stim_encoding_table %>% filter(Type == "1") %>% .$`Stim Source`
-        }
+        } else {stim_type = stim_encoding_table %>% filter(Type == "1") %>% .$`Stim Source`}
       } else {
         stim_type = stim_type %>% as.character()
       }
@@ -204,7 +204,8 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         background_type = background_type,
 
         # Maximum number of back to back no go trials (0 or blank is infinite)
-        nogo_max_touching = run_properties$no.go.trial.max.num[[1]],
+        nogo_max_touching = ifelse(is_empty(run_properties$no.go.trial.max.num), "0",
+                                    run_properties$no.go.trial.max.num[[1]]),
 
         # settings from run_properties$stim_encoding_table
         lockout = unique(stim_encoding_table$`Time Out (s)`)[unique(stim_encoding_table$`Time Out (s)`) > 0],
@@ -568,7 +569,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     ID_Gap <- function() {
       r = NULL
       has_one_dB = unique(run_properties$summary$dB_min) == unique(run_properties$summary$dB_max)
-      has_multiple_durations = length(unique(run_properties$stim_encoding_table$`Dur (ms)`)) > 1
+      has_multiple_durations = length(unique(filter(run_properties$stim_encoding_table, Type == 1)$`Dur (ms)`)) > 1
 
       # For gap detection files (training or otherwise)
       # DO NOT CHANGE THE TEXTUAL DESCRIPTIONS OR YOU WILL BREAK COMPARISONS LATER
@@ -584,12 +585,14 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       has_catch_trials = run_properties$summary$catch
       # Determine if even odds
       has_uneven_trial_odds = length(unique(run_properties$summary$odds.odds)) > 1
+      has_BG = run_properties$background_file != "None"
 
       # For Oddball files (training or otherwise)
       # DO NOT CHANGE THE TEXTUAL DESCRIPTIONS OR YOU WILL BREAK COMPARISONS LATER
       if (has_catch_trials & has_uneven_trial_odds) r = "Oddball (Uneven Odds & Catch)"
       else if (has_uneven_trial_odds) r = "Oddball (Uneven Odds)"
       else if (has_catch_trials) r = "Oddball (Catch)"
+      else if (has_BG) r = "Oddball (Background)"
       else if (!has_catch_trials & !has_uneven_trial_odds) r = "Oddball (Standard)"
       else stop("ABORT: Unknown Oddball file type.")
       return(r)
@@ -675,7 +678,6 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
         computed_file_name = paste0(go_kHz, go_dB, nogo_kHz, nogo_dB, run_properties$duration, "ms_", run_properties$lockout, "s")
         if (catch_number != 3) computed_file_name = paste0(computed_file_name, "_c", catch_number)
-        if (run_properties$nogo_max_touching != 1) computed_file_name = paste0(computed_file_name, "_NG", run_properties$nogo_max_touching)
 
         analysis$minimum_trials <<- user_settings$minimum_trials$`Training - Oddball`
       }
@@ -718,15 +720,27 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         nogo_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% dplyr::arrange(Stim_ID) %>% tail(n = 1) %>% .$`Inten (dB)`)
         has_dB_range = go_dB != nogo_dB
 
-        computed_file_name = paste0(go_kHz, nogo_kHz)
+        computed_file_name1 = paste0(go_kHz, nogo_kHz)
         computed_file_name2 = paste0(go_kHz, nogo_kHz2)
         if (has_dB_range) {
-          computed_file_name = paste0(computed_file_name, go_dB, "-")
+          computed_file_name1 = paste0(computed_file_name1, go_dB, "-")
           computed_file_name2 = paste0(computed_file_name2, go_dB, "-")
         }
-        computed_file_name = paste0(computed_file_name, nogo_dB, "dB_", run_properties$duration, "ms_", run_properties$lockout, "s")
+        computed_file_name1 = paste0(computed_file_name1, nogo_dB, "dB_", run_properties$duration, "ms_", run_properties$lockout, "s")
         computed_file_name2 = paste0(computed_file_name2, nogo_dB, "dB_", run_properties$duration, "ms_", run_properties$lockout, "s")
-        computed_file_name = list(computed_file_name, computed_file_name2) # list should be safe from the later pastes because they shouldn't fire
+        # computed_file_name = list(computed_file_name, computed_file_name2) # list should be safe from the later pastes because they shouldn't fire
+
+
+        # Test for 1/6 or the zoom in on 1/12. If it is 1/12 then there will be odd steps
+        stim_in_octave = run_properties$stim_encoding_table %>% mutate(octave_fraction = log(as.numeric(str_extract(go_kHz, pattern = "[:digit:]+"))/`Freq (kHz)`)/log(2),
+                                                                       octave_step = abs(round(octave_fraction * 12)),
+                                                                       even = (octave_step %% 2) == 0)
+        is_6th_of_octave = all(stim_in_octave$even == TRUE)
+
+        if(is_6th_of_octave) computed_file_name = computed_file_name1
+        else computed_file_name = computed_file_name2
+
+        return(computed_file_name)
       }
 
       else if (analysis$type == "Training - Octave")
@@ -739,7 +753,6 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
         computed_file_name = paste0(go_kHz, go_dB, nogo_kHz, nogo_dB, run_properties$duration, "ms_", run_properties$lockout, "s")
         if (catch_number != 3) computed_file_name = paste0(computed_file_name, "_c", catch_number)
-        if (run_properties$nogo_max_touching != 1) computed_file_name = paste0(computed_file_name, "_NG", run_properties$nogo_max_touching)
       }
 
       response_window = unique(run_properties$stim_encoding_table["Nose Out TL (s)"]) %>% as.numeric()
@@ -808,7 +821,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       if (analysis$type == "Training - Gap") {
         go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB_")
         catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
-        duration = unique(run_properties$duration) %>% as.numeric()
+        duration = unique(filter(run_properties$stim_encoding_table, Type == 1)$`Dur (ms)`) %>% as.numeric()
         delay = run_properties$delay %>% stringr::str_replace(" ", "-")
         lockout = `if`(length(run_properties$lockout) > 0, run_properties$lockout, 0)
 
@@ -829,15 +842,16 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       else
       {
         go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)` %>% unique(), "dB")
+        catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
 
-        has_duration_range = nrow(unique(run_properties$duration)) > 1
+        has_duration_range = filter(run_properties$stim_encoding_table, Type != 0) %>% unique() %>% nrow() > 1
         if (has_duration_range) {
           duration = run_properties$stim_encoding_table %>%
             filter(Type != 0) %>%
             transmute(x = paste0(min(`Dur (ms)`), "-",
                                  max(`Dur (ms)`), "")) %>% .$x %>% unique()
         } else {
-          duration = run_properties$duration
+          duration = filter(run_properties$stim_encoding_table, Type != 0) %>% .$`Dur (ms)`
         }
 
         response_window = unique(run_properties$stim_encoding_table["Nose Out TL (s)"]) %>% as.numeric()
@@ -846,7 +860,9 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
         # Note there is not BG test here because there is expected to always be background in a Gap Detection file.
 
-        computed_file_name = paste0("gap_", go_dB, "_", duration, "ms_", run_properties$lockout, "s")
+        computed_file_name = paste0("gap_", go_dB, "_", duration, "ms_")
+        if (catch_number != 3) computed_file_name = paste0(computed_file_name, catch_number, "catch_")
+        computed_file_name = paste0(computed_file_name, run_properties$lockout, "s")
         if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
         if (has_TR) computed_file_name = paste0(computed_file_name, "_", "TR", run_properties$trigger_sensitivity, "ms")
       }
@@ -858,10 +874,14 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       if (run_properties$summary$nogo_freq == 0) nogo_freq = "BBN"
       else nogo_freq = paste0(run_properties$summary$nogo_freq, "kHz")
 
-      computed_file_name = paste0(run_properties$summary$go_freq, "kHz_", run_properties$summary$go_dB, "dB_", nogo_freq, "_", run_properties$summary$nogo_dB, "dB_", run_properties$lockout, "s_", run_properties$summary$go_position_start, "-", run_properties$summary$go_position_stop)
+      computed_file_name = paste0(run_properties$summary$go_freq, "kHz_", run_properties$summary$go_dB, "dB_", nogo_freq, "_",
+                                  run_properties$summary$nogo_dB, "dB_", run_properties$lockout, "s_", run_properties$summary$go_position_start, "-", run_properties$summary$go_position_stop)
       if (analysis$type == "Oddball (Uneven Odds & Catch)") computed_file_name = paste0(computed_file_name, "_odds_NG")
       if (analysis$type == "Oddball (Uneven Odds)") computed_file_name = paste0(computed_file_name, "_odds")
       if (analysis$type == "Oddball (Catch)") computed_file_name = paste0(computed_file_name, "_catch")
+      if (analysis$type == "Oddball (Background)") computed_file_name = paste0(computed_file_name, "_",
+                                                                               str_extract(run_properties$background_file, pattern = "^.*(?=.mat)"),
+                                                                               "_", run_properties$background_dB, "dB")
 
       return(computed_file_name)
     }
@@ -876,6 +896,10 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
                                 "BBN" = BBN_Filename(),
                                 "gap" = Gap_Filename(),
                                 "train" = Oddball_Filename())
+
+    has_different_NG = run_properties$nogo_max_touching != 1
+    if (has_different_NG) computed_file_name = paste0(computed_file_name, "_NG", run_properties$nogo_max_touching)
+
     if (is.null(computed_file_name)) stop("ABORT: Unknown file type. Can not create filename.")
 
     if (!delay_in_filename) Check_Delay(expected_delay)
@@ -1123,7 +1147,6 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         r = left_join(r, need_evaluation, by = groupings) %>%
           select(-dB, -dprime) %>%
           unique()
-
       }
 
       return(r)
@@ -1210,7 +1233,8 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     trial_count_go = trial_data %>% dplyr::filter(Trial_type != 0) %>% dplyr::count() %>% as.numeric()
     trial_count_nogo = trial_data %>% dplyr::filter(Trial_type == 0) %>% dplyr::count() %>% as.numeric()
     hit_percent = hits / trial_count_go
-    if (analysis$type %in% c("Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) FA_percent = FAs / trial_count
+    # if Oddball experiment, FAs is out of total trials since they can always FA
+    if (str_detect(analysis$type, pattern = "Oddball")) FA_percent = FAs / trial_count
     else if (trial_count_nogo > 0) FA_percent = FAs / trial_count_nogo
     else FA_percent = NA
     mean_attempts_per_trial = dplyr::summarise_at(trial_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
@@ -1220,7 +1244,8 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
                                                                            n_cr = CRs,
                                                                            adjusted = TRUE) %>% .$dprime)
 
-    if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Training - Oddball", "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
+    if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Training - Oddball",
+                            "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Background)", "Oddball (Standard)")) {
       TH_by_frequency_and_duration = NA
     } else {
       TH_by_frequency_and_duration = Calculate_Threshold()
@@ -1228,7 +1253,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
     if(analysis$type == "Octave") {
       FA_detailed = Calculate_FA_Detailed_Octave()
-    } else if(analysis$type %in% c("Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Standard)")) {
+    } else if(str_detect(analysis$type, pattern = "Oddball")) {
       FA_detailed = Calculate_FA_Detailed_Oddball()
     } else {
       FA_detailed = NA
@@ -1359,9 +1384,10 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     if(old_file) {
       # need to fetch corresponding weight from old_excel_archive
       analysis$weight <<- old_excel_archive %>% dplyr::filter(Date == date_asDate & rat_name == run_properties$rat_name) %>% .$Weight
-      if(rlang::is_empty(analysis$weight)) {
-        warn = paste0("No weight found in excel document for ", run_properties$rat_name, " on ", date, ".")
+      if(is.na(analysis$weight)) {
+        warn = paste0("No weight found in excel document for ", run_properties$rat_name, " on ", date_asDate, ".")
         warnings_list <<- append(warnings_list, warn)
+        rat_weights = NULL
       }
     } else {
       #use the weight from the undergrad file's variable
@@ -1374,7 +1400,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       warnings_list <<- append(warnings_list, warn)
       analysis$weight_change <<- 0
     } else {
-      last_run = rat_weights %>% dplyr::filter(date < date_asNumeric) %>% dplyr::arrange(date) %>% tail(1)
+      last_run = rat_weights %>% dplyr::filter(date < date_asNumeric & ! is.na(weight)) %>% dplyr::arrange(date) %>% tail(1)
       old_date = last_run$date
       old_weight = last_run$weight
 
@@ -1384,7 +1410,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         warnings_list <<- append(warnings_list, warn)
         analysis$weight_change <<- 0
       } else {
-        max_weight = max(rat_weights$weight) #TODO add a column to rat_archive called e.g. override_weight to use instead of true max weight for chunky bois, or calculate max in past month or something else
+        max_weight = max(rat_weights$weight, na.rm = TRUE) #TODO add a column to rat_archive called e.g. override_weight to use instead of true max weight for chunky bois, or calculate max in past month or something else
         analysis$weight_change <<- analysis$weight - old_weight  # negative if lost weight
         weight_change_percent = analysis$weight_change / old_weight # negative if lost weight
         weight_change_overall_percent = (analysis$weight - max_weight) / max_weight # negative if lost weight
@@ -1725,4 +1751,5 @@ Write_To_Archives <- function(row_added) {
 InitializeMain()
 
 #Process_File(file.choose(), name = name, weight = weight, observations = observations, exclude_trials = exclude_trials)
+
 

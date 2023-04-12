@@ -1,7 +1,7 @@
 InitializeMain <- function() {
   Load_Packages <- function() {
     # data loading external file formats
-    library(R.matlab); library(data.table);
+    library(R.matlab); library(data.table); library(openxlsx); library(xml2); library(zip); library(data.table);
     
     # data manipulation
     library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr); library(lubridate); library(glue)

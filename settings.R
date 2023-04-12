@@ -41,14 +41,18 @@ user_settings = list(
     "Gap Mixed Duration" = 330,
 
     "Training - Oddball" = 240,
-    "Oddball (Standard)" = 330,
-    "Oddball (Uneven Odds)" = 330,
-    "Oddball (Uneven Odds & Catch)" = 330,
-    "Oddball (Catch)" = 330),
+    "Oddball (Standard)" = 300,
+    "Oddball (Uneven Odds)" = 300,
+    "Oddball (Uneven Odds & Catch)" = 300,
+    "Oddball (Catch)" = 300,
+    "Oddball (Background)" = 300),
 
   minimum_hit_percent = 0.850,
   maximum_FA_percent = 0.200,
   maximum_attempts_per_trial = 2.0,
+
+  # FA cutoff for analysis
+  FA_cutoff = .40,
 
   # weight change as percent of bodyweight
   maximum_weight_change_daily_percent = 0.05,
