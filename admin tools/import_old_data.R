@@ -1,0 +1,25 @@
+# For loading old files:
+
+projects_folder = "Z:/Behavior-autoanalysis/"
+source(paste0(projects_folder, "main.R"))
+
+# Get files
+load(paste0(projects_folder, "old_excel_archive.Rdata"))
+directory = "C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)"  # slashes must be either / or \\
+files = list.files(directory, pattern = "\\.mat$", recursive = TRUE)
+files = files[str_which(files, pattern = "^(?!.*(Archive|Oddball|Gap|Tsc|Fmr))")] # Drop un-annotated files
+# files = files[str_which(files, pattern = ".*Tsc2.*/data/.*/(?!((Blue|Red).*))")] # Exclude Blue Pilot Group as they are all WT
+files = files[str_which(files, pattern = ".*TTS.*/data/.*/(?!((Orange6).*))")] # Exclude Orange 6 as she is dropped
+files = files[str_which(files, pattern = ".*/data/(?!(2022060(9|7)/RP1.*))")] # Bad second file for RP1 on 6/9/22 - dprime giving error but transiently
+files = files[str_which(files, pattern = ".*/data/(?!(20221128/GP3.*))")] # Bad second file for RP1 on 6/9/22 - dprime giving error but transiently
+files = files[str_which(files, pattern = ".*/data/(?!(20220829/BP3.*))")] # Bad second file for RP1 on 6/9/22 - dprime giving error but transiently
+files = files[str_which(files, pattern = ".*/data/(?!(20220706))")] # Bad data on 7/6/22 - no creation date.
+
+# Select Month to load
+files = files[str_which(files, pattern = ".*/data/202106")] 
+files = paste0(directory, "/", files)
+writeLines(paste0("Loading ", length(files), " files.\n\n"))
+
+# run main
+lapply(files, Process_File, old_file = TRUE, ignore_name_check = TRUE, exclude_trials = "")
+writeLines(paste0("Done with back date loading. ", length(files), " files added."))

@@ -50,9 +50,6 @@ user_settings = list(
   maximum_FA_percent = 0.200,
   maximum_attempts_per_trial = 2.0,
 
-  # FA cutoff for analysis
-  FA_cutoff = .40,
-
   # weight change as percent of bodyweight
   maximum_weight_change_daily_percent = 0.05,
   maximum_weight_change_overall_percent = 0.15,
