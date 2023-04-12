@@ -5,7 +5,7 @@ InitializeMain <- function() {
     library(R.matlab); library(data.table);
 
     # data manipulation
-    library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr); library(lubridate);
+    library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr); library(lubridate); library(glue);
 
     # analysis & visualization
     library(psycho); library(ggplot2); library(hrbrthemes); library(shiny);
@@ -98,8 +98,19 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           # important! \\\\ is specific to R, for testing this pattern in e.g. RegExr you have to use \\ but remember to change it back to \\\\ for r!
           # capture of the rat name, lazy to avoid underscores: .+?
           # lookahead for a _: (?=_)
-        # print(file_to_load)
-        r = stringr::str_match_all(file_to_load, pattern="(.*)((?<=[\\\\/]{1}).+?(?=_))") %>%
+
+          pattern = "(.*)((?<=[\\\\/]{1}).+?(?=_))"
+          filename = file_to_load
+        } else {
+          # shiny app provides a path to a temporary file and renames the file itself, so we have to work around that behavior
+          # we could alternatively use the system file loader, but that has other downsides - it's difficult to get it to remember the current folder, and it doesn't give feedback of a file selected
+          pattern = "^.+?(?=_)" # beginning up to underscore, lazy
+          filename = file_name_override
+          ignore_name_check = TRUE
+        }
+        #print(filename)
+
+        r = stringr::str_match_all(filename, pattern = pattern) %>%
           unlist(recursive = TRUE) %>%
           tail (n = 1)
 
@@ -718,17 +729,17 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         computed_file_name1 = paste0(computed_file_name1, nogo_dB, "dB_", run_properties$duration, "ms_", run_properties$lockout, "s")
         computed_file_name2 = paste0(computed_file_name2, nogo_dB, "dB_", run_properties$duration, "ms_", run_properties$lockout, "s")
         # computed_file_name = list(computed_file_name, computed_file_name2) # list should be safe from the later pastes because they shouldn't fire
-        
-        
+
+
         # Test for 1/6 or the zoom in on 1/12. If it is 1/12 then there will be odd steps
         stim_in_octave = run_properties$stim_encoding_table %>% mutate(octave_fraction = log(as.numeric(str_extract(go_kHz, pattern = "[:digit:]+"))/`Freq (kHz)`)/log(2),
                                                                        octave_step = abs(round(octave_fraction * 12)),
                                                                        even = (octave_step %% 2) == 0)
         is_6th_of_octave = all(stim_in_octave$even == TRUE)
-        
+
         if(is_6th_of_octave) computed_file_name = computed_file_name1
         else computed_file_name = computed_file_name2
-        
+
         return(computed_file_name)
       }
 
@@ -863,12 +874,12 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       if (run_properties$summary$nogo_freq == 0) nogo_freq = "BBN"
       else nogo_freq = paste0(run_properties$summary$nogo_freq, "kHz")
 
-      computed_file_name = paste0(run_properties$summary$go_freq, "kHz_", run_properties$summary$go_dB, "dB_", nogo_freq, "_", 
+      computed_file_name = paste0(run_properties$summary$go_freq, "kHz_", run_properties$summary$go_dB, "dB_", nogo_freq, "_",
                                   run_properties$summary$nogo_dB, "dB_", run_properties$lockout, "s_", run_properties$summary$go_position_start, "-", run_properties$summary$go_position_stop)
       if (analysis$type == "Oddball (Uneven Odds & Catch)") computed_file_name = paste0(computed_file_name, "_odds_NG")
       if (analysis$type == "Oddball (Uneven Odds)") computed_file_name = paste0(computed_file_name, "_odds")
       if (analysis$type == "Oddball (Catch)") computed_file_name = paste0(computed_file_name, "_catch")
-      if (analysis$type == "Oddball (Background)") computed_file_name = paste0(computed_file_name, "_", 
+      if (analysis$type == "Oddball (Background)") computed_file_name = paste0(computed_file_name, "_",
                                                                                str_extract(run_properties$background_file, pattern = "^.*(?=.mat)"),
                                                                                "_", run_properties$background_dB, "dB")
 
@@ -885,10 +896,10 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
                                 "BBN" = BBN_Filename(),
                                 "gap" = Gap_Filename(),
                                 "train" = Oddball_Filename())
-    
+
     has_different_NG = run_properties$nogo_max_touching != 1
     if (has_different_NG) computed_file_name = paste0(computed_file_name, "_NG", run_properties$nogo_max_touching)
-    
+
     if (is.null(computed_file_name)) stop("ABORT: Unknown file type. Can not create filename.")
 
     if (!delay_in_filename) Check_Delay(expected_delay)
@@ -1108,42 +1119,34 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         warnings_list <<- append(warnings_list, warn)
 
       } else {
-        groupings = case_when(analysis$type == "Gap (Standard)" ~ c("Freq", "dB"), 
+        groupings = case_when(analysis$type == "Gap (Standard)" ~ c("Freq", "dB"),
                               TRUE ~ c("Freq", "Dur"))
-        
+
         r = dprime_data %>%
           select(Freq, Dur, dB, dprime) %>%
-          group_by_at(groupings) 
-        
+          group_by_at(groupings)
+
         # To remove psycho warnings cause by a single dprime, check to see if there are multiple dprimes
         need_evaluation = r %>% summarise(dprime_check = unique(dprime) %>% as.list() %>% length,
                                           .groups = "keep") %>% filter(dprime_check > 1)
-        
+
         need_evaluation = left_join(need_evaluation, r, by = groupings) %>% select(-dprime_check) %>% nest()
-        
+
         if(nrow(need_evaluation) == 0) {
           r$TH = NA_integer_
         } else if (analysis$type == "Gap (Standard)") {
-          need_evaluation = need_evaluation %>% 
+          need_evaluation = need_evaluation %>%
             mutate(TH = map_dbl(data, Calculate_TH_gap))
         } else {
-          need_evaluation = need_evaluation %>% 
+          need_evaluation = need_evaluation %>%
             mutate(TH = map_dbl(data, Calculate_TH))
         }
-        
+
         need_evaluation = select(need_evaluation, -data)
-        
-        r = left_join(r, need_evaluation, by = groupings)
-        
-        
-        if (analysis$type == "Gap (Standard)") {
-          r = r %>% select(Freq, dB, TH)
-        } else {
-          r = r %>% select(Freq, Dur, TH)
-        }
-        
-        r = r %>% unique()
-        
+
+        r = left_join(r, need_evaluation, by = groupings) %>%
+          select(-dB, -dprime) %>%
+          unique()
       }
 
       return(r)
@@ -1241,7 +1244,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
                                                                            n_cr = CRs,
                                                                            adjusted = TRUE) %>% .$dprime)
 
-    if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Training - Oddball", 
+    if(analysis$type %in% c("Octave", "Training - Octave", "Training - Tone", "Training - BBN", "Training - Gap", "Training - Oddball",
                             "Oddball (Uneven Odds & Catch)", "Oddball (Uneven Odds)", "Oddball (Catch)", "Oddball (Background)", "Oddball (Standard)")) {
       TH_by_frequency_and_duration = NA
     } else {
@@ -1468,25 +1471,20 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Phase <<- NA
       rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Task <<- NA
       rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Detail <<- NA
-      fwrite(rat_archive, paste0(projects_folder, "rat_archive.csv"))
-      #writeLines(paste0("Old assignment cleared for ", run_properties$rat_name, " (#", rat_id, ")."))
     }
 
     Add_to_Run_Archive <- function(rat_id, row_to_add) {
       cat("Run... ")
       run_archive <<- rbind(run_archive, row_to_add)
-      save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = FALSE, compress = FALSE)
-      #writeLines(paste0("Run ", row_to_add$UUID, " of ", run_properties$rat_name, " (#", rat_id, ") added to Run Archive."))
-
     }
 
-    Add_to_Trial_Archive <- function(rat_id, row_to_add) { # NOTE row_to_add is the row to add to the RUN archive, just used here to get uuid.
-      cat("Trials... ")
-      uuid = row_to_add$UUID
-      experiment = row_to_add %>% .$assignment %>% .[[1]] %>% pluck("experiment")
-      variable_name = paste0(experiment, "_archive")
-      filename = paste0(projects_folder, variable_name, ".csv.gz")
-      fwrite(cbind(trial_data, UUID = uuid), file = filename, append = file.exists(filename)) # tack UUID onto trials and add to archive, appending if the file already exists
+    Add_to_Trial_Archive <- function(row_to_add) { # NOTE row_to_add is the row to add to the RUN archive, just used here to get uuid.
+    cat("Trials... ")
+    uuid = row_to_add$UUID
+    experiment = row_to_add %>% .$assignment %>% .[[1]] %>% pluck("experiment")
+    variable_name = paste0(experiment, "_archive")
+    filename = paste0(projects_folder, variable_name, ".csv.gz")
+      trials_to_write <<- trial_data
     }
 
     Construct_Run_Entry <- function() {
@@ -1557,11 +1555,13 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         block_size = run_properties$stim_block_size,
         complete_block_count = trial_data$complete_block_number %>% max(na.rm = TRUE),
 
-        invalid = "",    # supervisor can manually mark runs as invalid, putting reasoning here
-        comments = observations,    #   undergrad comments
-        # check = list(check), # TODO: graphs and UG sign offs will go here
+        scientist = "", # individual who checked in this data, provided later by shiny app
+        comments = observations,    # observations taken during run
+        weightProblem = "", # empty string for no problem, or a description of problem, by shiny app later
+        rxnProblem = "", # empty string for no problem, or a description of problem, by shiny app later
         warnings_list = list(warnings_list),
         omit_list = run_properties$omit_list,
+        invalid = "",    # supervisor can manually mark runs as invalid, putting reasoning here
         UUID = run_properties$UUID
       )
       return(r)
@@ -1656,7 +1656,93 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
   # pop up charts and stuff for undergrads to sign off on (where do the comments they provide on 'no' get saved? text file alongside individual exported graph image? dedicated df? master df in one long appended cell for all comments to graphs?)
 
   writeLines("") #TODO change all cats to writelines
-  return(invisible(NULL))
+
+  if(!exists("row_added")) {
+    return(tibble(warnings_list = list(warnings_list),
+                  UUID = run_properties$UUID))
+  }
+  return(row_added)
+}
+
+Generate_Weight_Graph <- function(rat_name, ratID) {
+  #ratID = Get_Rat_ID(run_properties$rat_name)
+  rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID)
+  rat_runs = rat_runs %>% mutate(date_asDate = lubridate::ymd(date))
+  # thoughts - will want to standardize y axis to e.g. 80%-105% of baseline weight so that 'low' looks the same for everyone?
+  # -- one problem with that is that if another rat's weight IS entered instead, it could be drastically above or below those bounds
+  # I'm not bothering to figure out how to customize the axis labels right now.
+  weight_graph =
+    ggplot(rat_runs, aes(x = date_asDate, y = weight)) +
+    geom_line(color = "grey", linewidth = 2) +
+    geom_point(shape = 21, color = "black", fill = "#69b3a2", size = 5) +
+    scale_x_date(date_breaks = "1 month", date_labels = "%b%n%y") +
+    ggtitle(paste0(rat_name, " Weight")) +
+    theme_ipsum_es() +
+    labs(x = NULL, y = NULL)
+  #dev.new(width = 10, height = 6, noRStudioGD = TRUE) # This actually pops out. Size is ignored unless you tell RStudio not to help with the noRstudioGD argument.
+  #print(weight_chart, vp = NULL) # vp is viewport https://ggplot2.tidyverse.org/reference/print.ggplot.html
+
+  # writeLines("")
+  # writeLines("Does this weight look OK? ")
+  # weight_ok <- if(menu(c("Yes", "No")) == 1) TRUE else FALSE
+  # problem <- NA
+  # if (!weight_ok) {
+  #   problem <- readline(prompt = "Please describe the problem: ")
+  # }
+  # initials <- readline(prompt = "Your initials: ")
+  # dev.off()
+  return(weight_graph)
+}
+
+Generate_Weight_Trials_Graph <- function(rat_name, ratID) {
+  rat_runs <<- run_archive %>% dplyr::filter(rat_ID == ratID)
+  rat_runs = rat_runs %>% mutate(date_asDate = lubridate::ymd(date))
+  run_date = head(rat_runs, 1)$date_asDate
+
+  weight_and_trials_graph =
+    rat_runs %>% unnest_wider(stats) %>% filter(date > str_remove_all(run_date - 30, "-")) %>%
+    ggplot() +
+    geom_smooth(aes(x = date_asDate, y = weight, color = "Weight"),
+                color = "#bed6ce", linewidth = 2,
+                se = FALSE, na.rm = TRUE, method = "lm", formula = y~x,
+                show.legend = TRUE) +
+    geom_point(aes(x = date_asDate, y = weight),
+               shape = 21, color = "black", fill = "#6aaa96", size = 5) +
+    geom_text(aes(x = min(date_asDate) + 1, y = max(weight) + 7), label = "Weight", color = "#6aaa96") +
+    geom_smooth(aes(x = date_asDate, y = trial_count, color = "Trials"),
+                color = "lightsteelblue", linewidth = 2, fill = "lightsteelblue",
+                se = FALSE, na.rm = TRUE, method = "lm", formula = y~x,
+                show.legend = TRUE,
+                ) +
+    geom_text(aes(x = min(date_asDate) + 1, y = mean(head(trial_count, n = 14)) + 7), label = "Trial trend", color = "steelblue") +
+    ggtitle(glue("{rat_name} Weight & Trials (30d)")) +
+    theme_ipsum_es() +
+    labs(x = NULL, y = NULL)
+
+  return(weight_and_trials_graph)
+}
+
+Generate_Extra_Graphs <- function(rat_name, ratID) {
+  source(paste0(projects_folder, "graphing unrolled.R"))
+  return(Generate_Graph(rat_name, ratID))
+}
+
+
+
+Write_To_Archives <- function(row_added) {
+  uuid = row_added$UUID
+  experiment = row_added$assignment %>% .[[1]] %>% pluck("experiment")
+  variable_name = paste0(experiment, "_archive")
+  filename = paste0(projects_folder, variable_name, ".csv.gz") # trials archive
+
+  run_archive <<- run_archive %>% rows_update(row_added, by = "UUID") # update run_archive with information from shiny
+
+  fwrite(rat_archive, paste0(projects_folder, "rat_archive.csv"), row.names = FALSE)
+  save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
+  fwrite(cbind(trials_to_write, UUID = uuid), file = filename, append = file.exists(filename)) # tack UUID onto trials and add to archive, appending if the file already exists
+  remove(trials_to_write, inherits = TRUE)
+
+  writeLines(paste0("Run ", row_added$UUID, " of ", row_added$rat_name, " (#", row_added$rat_ID, ") saved to disk."))
 }
 
 # MAIN workflow ---------------------------------------------------------
@@ -1664,6 +1750,6 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 # set up environment
 InitializeMain()
 
-# Process_File(file.choose(), name = name, weight = weight, observations = observations, exclude_trials = exclude_trials)
+#Process_File(file.choose(), name = name, weight = weight, observations = observations, exclude_trials = exclude_trials)
 
 

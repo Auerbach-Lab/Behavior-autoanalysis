@@ -8,4 +8,9 @@
 **.csv.gz
 **.xlsx
 **.mat
+<<<<<<< HEAD
 **.backup
+**.log
+=======
+**.backup
+>>>>>>> main
