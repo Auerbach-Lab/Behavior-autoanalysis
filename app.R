@@ -55,6 +55,7 @@ ui <- fluidPage(
         ),
         fluidRow(
           column(width = 6,
+            br(),br(),
             plotOutput("plotWeight", height = "500px"),
             conditionalPanel(
               condition = "output.plotWeight",
@@ -275,11 +276,16 @@ server <- function(input, output, session) {
       hideFeedback("matfile")
       showFeedbackDanger("matfile", "No file selected!")
     }
+    if(input$scientist == "") {
+      hideFeedback("scientist")
+      showFeedbackDanger("scientist", "Required.")
+    }
     validate(
       need(input$name, "Rat name is required."),
       need(input$weight > 0, "Weight must be greater than zero."),
       need(input$observations, "Observations must be provided."),
-      need(input$matfile, "No file selected!")
+      need(input$matfile, "No file selected!"),
+      need(input$scientist, "Your name is required.")
     )
     "Ready for analysis."
   })
@@ -301,6 +307,9 @@ server <- function(input, output, session) {
     }
   })
 
+  output$show <- reactive({
+    output$requirements == "Finished."
+  })
 
 
   output$requirements <- renderText({
@@ -498,6 +507,7 @@ server <- function(input, output, session) {
   })
 }
 
+sink()
 sink(paste0(projects_folder, paste0(Sys.Date() %>% format("%Y-%m-%d"), ".log")), append=TRUE, split=TRUE)
 source(paste0(projects_folder, "main.R"))
 options(shiny.host = "127.0.0.1") #setting this to an external IP address forces browser instead of rstudio window
