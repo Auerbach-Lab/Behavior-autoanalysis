@@ -19,8 +19,7 @@ InitializeMain <- function() {
   load(paste0(projects_folder, "run_archive.Rdata"), .GlobalEnv)
 }
 
-Process_File <- function(file_to_load, name, weight, observations, exclude_trials = "", old_file = FALSE, ignore_name_check = FALSE) {
-
+Process_File <- function(file_to_load, name, weight, observations, exclude_trials = "", old_file = FALSE, ignore_name_check = FALSE, use_shiny = FALSE, file_name_override = NULL) {
   Import_Matlab <- function(file_to_load) {
     Unlist_Matlab_To_Dataframe <- function(li) {
       return(t(apply(li, 1, unlist)) %>% as.data.frame())
@@ -87,11 +86,13 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           trial_collection$name[1] %>%
           # remove excess info (i.e. .mat and then file location)
           stringr::str_remove(pattern = ".mat @ .*$", string = .)
+        if (use_shiny) shiny::showNotification(glue("{r}")) #TODO replace default with shinyfeedback colored ones
         cat("Stim file:", r, sep = "\t", fill = TRUE)
         return(r)
       }
 
       Get_Rat_Name <- function() {
+        if (is.null(file_name_override)) {
         # greedy group: (.*) to strip off as much as possible
         # then the main capture group which contains
           # lookbehind for either \ (escaped once because R, and then again cause regex, to \\\\) or / character, specified length 1 because r: (?<=[\\/]{1})
@@ -114,28 +115,37 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           unlist(recursive = TRUE) %>%
           tail (n = 1)
 
-        r_compare = r %>% str_replace_all(" ", "") %>% str_to_lower()
-        if(! ignore_name_check) {
+        r_compare = r %>%
+          str_replace_all(" ", "") %>%
+          str_to_lower()
+
+        if (!ignore_name_check) {
           name_compare = name %>% str_replace_all(" ", "") %>% str_to_lower() # from undergraduate.R
         }
 
-        if (rlang::is_empty(r)) stop("ERROR: system filename improper: ", file_to_load)
+        if (rlang::is_empty(r)) stop("ERROR: system filename improper: ", filename)
         if (!ignore_name_check && r_compare != name_compare) stop(paste0("ABORT: Rat name given (", name_compare, ") does not match chosen file (", r_compare, ")."))
 
         return(r)
       }
 
       Get_Box_Number <- function() {
+        if (is.null(file_name_override)) {
+          filename = file_to_load
+        } else {
+          filename = file_name_override
+        }
+
         # greedy group: (.*) to strip off as much as possible
         # then the main capture group which contains
         # lookbehind for a _BOX#: (?<=_BOX#)
         # capture of the box number: [:digit:]+
         # lookahead for the extension: (?=.mat)
-        r = stringr::str_match_all(file_to_load, pattern="(.*)((?<=_BOX#)[:digit:]+(?=.mat))") %>%
+        r = stringr::str_match_all(filename, pattern="(.*)((?<=_BOX#)[:digit:]+(?=.mat))") %>%
           unlist(recursive = TRUE) %>%
           tail (n = 1) %>%
           as.numeric()
-        if(rlang::is_empty(r)) stop("ERROR: system filename improper: ", file_to_load)
+        if(rlang::is_empty(r)) stop("ERROR: system filename improper: ", filename)
         return(r)
       }
 
@@ -292,6 +302,9 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
         # Added to compare to written record at request of Undergrads
         writeLines(paste0("Trials: ", total_trials, "\tHit%: ", round(hit_percent, digits = 1), "\tFA%: ", round(FA_percent, digits = 1)))
+        if (use_shiny) shiny::showNotification(glue("Trials: {total_trials}"))
+        if (use_shiny) shiny::showNotification(glue("Hit%: {round(hit_percent, digits = 1)}"))
+        if (use_shiny) shiny::showNotification(glue("FA%: {round(FA_percent, digits = 1)}"))
 
         if (results_total_trials == 0 | run_properties$stim_type == "train") {
           cat("Validate_Mat_Summary: Skipped (no summary)", sep = "\t", fill = TRUE)
@@ -1354,7 +1367,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
   Get_Rat_ID = function(check_name) {
     date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
     rats_with_name <- rat_archive %>%
-      dplyr::filter(Rat_name == check_name)
+      dplyr::filter(Rat_name %>% str_to_upper() == check_name %>% str_to_upper())
     if(nrow(rats_with_name) == 0) {
       stop(paste0("ABORT: No rats with name ", check_name, " found in archive."))
     } else {
@@ -1473,7 +1486,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       rat_archive[rat_archive$Rat_ID == rat_id,]$Assigned_Detail <<- NA
     }
 
-    Add_to_Run_Archive <- function(rat_id, row_to_add) {
+    Add_to_Run_Archive <- function(row_to_add) {
       cat("Run... ")
       run_archive <<- rbind(run_archive, row_to_add)
     }
@@ -1481,7 +1494,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     Add_to_Trial_Archive <- function(row_to_add) { # NOTE row_to_add is the row to add to the RUN archive, just used here to get uuid.
     cat("Trials... ")
     uuid = row_to_add$UUID
-    experiment = row_to_add %>% .$assignment %>% .[[1]] %>% pluck("experiment")
+    experiment = row_to_add$assignment %>% .[[1]] %>% pluck("experiment")
     variable_name = paste0(experiment, "_archive")
     filename = paste0(projects_folder, variable_name, ".csv.gz")
       trials_to_write <<- trial_data
@@ -1573,39 +1586,11 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     row_to_add = Construct_Run_Entry()
     if (nrow(row_to_add) != 1) stop("ABORT: Problem building row to add to Run Archive.")
 
-    rat_id = Get_Rat_ID(run_properties$rat_name)
-    if (length(rat_id) == 0) stop("ABORT: Unknown rat ID.")
-
     cat("Archiving ")
-    Add_to_Run_Archive(rat_id, row_to_add)
-    Add_to_Trial_Archive(rat_id, row_to_add)
-    if (!old_file) {Clear_Assignment(rat_id)}
-  }
-
-  Generate_Chart <- function() {
-    ratID = Get_Rat_ID(run_properties$rat_name)
-    rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID)
-    rat_runs = rat_runs %>% mutate(date_asDate = lubridate::ymd(date))
-    # thoughts - will want to standardize y axis to e.g. 80%-105% of baseline weight so that 'low' looks the same for everyone?
-    # -- one problem with that is that if another rat's weight IS entered instead, it could be drastically above or below those bounds
-    # I'm not bothering to figure out how to customize the axis labels right now.
-    weight_chart =
-      ggplot(rat_runs, aes(x = date_asDate, y = weight)) +
-      geom_line(color = "grey", linewidth = 2) +
-      geom_point(shape=21, color="black", fill="#69b3a2", size=5) +
-      ggtitle(paste0(run_properties$rat_name, " Weight")) +
-      theme_ipsum_es()
-    dev.new(width = 10, height = 6, noRStudioGD = TRUE) # This actually pops out. Size is ignored unless you tell RStudio not to help with the noRstudioGD argument.
-    print(weight_chart, vp = NULL)
-    # writeLines("")
-    # writeLines("Does this weight look OK? ")
-    # weight_ok <- if(menu(c("Yes", "No")) == 1) TRUE else FALSE
-    # problem <- NA
-    # if (!weight_ok) {
-    #   problem <- readline(prompt = "Please describe the problem: ")
-    # }
-    # initials <- readline(prompt = "Your initials: ")
-    # dev.off()
+    Add_to_Run_Archive(row_to_add)
+    Add_to_Trial_Archive(row_to_add)
+    if (!old_file) {Clear_Assignment(row_to_add$rat_ID)}
+    return(row_to_add)
   }
 
 # PROCESS FILE workflow ---------------------------------------------------------
@@ -1620,35 +1605,39 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
   if(Check_UUID()) {
     # identify analysis type
     analysis <- Identify_Analysis_Type()
-    cat("Analysis type:", analysis$type, sep = "\t", fill = TRUE)
+    writeLines(glue("Analysis type: {analysis$type}"))
+    if (use_shiny) shiny::showNotification(glue("{analysis$type}"))
 
     # summary statistics
     analysis$stats <- Calculate_Summary_Statistics()
     writeLines("Calculated run statistics.")
+    if (use_shiny) shiny::showNotification(glue("Calculated run statistics."))
 
     # calculate canonical filename
     analysis$prepend_name <- FALSE
     analysis$computed_file_name <- Build_Filename()
     Check_Assigned_Filename()
-    cat("Filename checks complete.", sep = "\t", fill = TRUE)
+    writeLines("Filename checks complete.")
+    if (use_shiny) shiny::showNotification(glue("Filename checks complete."))
 
     # handle weight
     Check_Weight()
-    cat("Weight checks complete.", sep = "\t", fill = TRUE)
+    writeLines("Weight checks complete.")
+    if (use_shiny) shiny::showNotification(glue("Weight checks complete."))
 
     # check run performance against user-settings cutoffs
     Check_Performance_Cutoffs()
     # check run performance against past performance for this rat in this experimental phase
     # Check_Performance_Consistency
-    cat("Performance checks complete.", sep = "\t", fill = TRUE)
+    writeLines("Performance checks complete.")
+    if (use_shiny) shiny::showNotification(glue("Performance checks complete."))
 
     # commit to folding in - display warnings and get user input to override them (and submit to master dataframe), or give option to commit to invalid/storage-only dataframe
     # curate data prior to folding in, adding disqualifier flags etc (but omitted trials are always totally gone)
     # Report_Warnings_and_Confirm()
-    Add_to_Archives()
+    row_added = Add_to_Archives()
     writeLines("")
-    writeLines(paste0("Run ", run_properties$UUID, " of ", run_properties$rat_name, " (#", Get_Rat_ID(run_properties$rat_name), ") successfully added to archives (in environment and on disk)."))
-
+    writeLines(paste0("Run ", row_added$UUID, " of ", row_added$rat_name, " (#", row_added$rat_ID, ") added to archives (in environment ONLY)."))
     #Generate_Chart()
   }
 
@@ -1750,6 +1739,7 @@ Write_To_Archives <- function(row_added) {
 # set up environment
 InitializeMain()
 
-#Process_File(file.choose(), name = name, weight = weight, observations = observations, exclude_trials = exclude_trials)
+#r = Process_File(file.choose(), name, weight, observations, exclude_trials)
+#WriteToArchive(r)
 
 
