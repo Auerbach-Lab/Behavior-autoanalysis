@@ -1685,28 +1685,59 @@ Generate_Weight_Graph <- function(rat_name, ratID) {
 
 Generate_Weight_Trials_Graph <- function(rat_name, ratID) {
   rat_runs <<- run_archive %>% dplyr::filter(rat_ID == ratID)
-  rat_runs = rat_runs %>% mutate(date_asDate = lubridate::ymd(date))
+  # by mapping we don't need to unnest stats which is slow
+  rat_runs = rat_runs %>% mutate(date_asDate = lubridate::ymd(date),
+                                 trial_count = map_dbl(stats, ~.$trial_count)) %>%
+    arrange(desc(date_asDate))
   run_date = head(rat_runs, 1)$date_asDate
+  
+  # min trials
+  min_trials = pluck(user_settings, "minimum_trials", 
+                     arrange(rat_runs, desc(date)) %>% head(n = 1) %>% .$analysis_type)
+  
+  # max weight
+  max_weight_runs = max(rat_runs$weight, na.rm = TRUE)
+  max_weight_freefeed = dplyr::filter(rat_archive, Rat_ID == ratID)$Max_Weight
+  max_weight = max(max_weight_runs, max_weight_freefeed)
+  # annotate weight warnings
+  rat_runs = rat_runs %>%
+    mutate(weight_change = (weight - max_weight)/max_weight,
+           weight_annotation = if_else(abs(weight_change) > 0.15, paste0(round((weight_change)*100, digits = 0), "%"), NULL))
+  
+  has_annotations = nrow(filter(rat_runs, !is.na(weight_annotation))) >= 1
+
+  # trial label
+  trials_model = lm(trial_count ~ date_asDate, data = rat_runs)
+  trials_label_x = predict(trials_model)[[1]]
 
   weight_and_trials_graph =
-    rat_runs %>% unnest_wider(stats) %>% filter(date > str_remove_all(run_date - 30, "-")) %>%
-    ggplot() +
-    geom_smooth(aes(x = date_asDate, y = weight, color = "Weight"),
-                color = "#bed6ce", linewidth = 2,
-                se = FALSE, na.rm = TRUE, method = "lm", formula = y~x,
-                show.legend = TRUE) +
-    geom_point(aes(x = date_asDate, y = weight),
-               shape = 21, color = "black", fill = "#6aaa96", size = 5) +
-    geom_text(aes(x = min(date_asDate) + 1, y = max(weight) + 7), label = "Weight", color = "#6aaa96") +
-    geom_smooth(aes(x = date_asDate, y = trial_count, color = "Trials"),
-                color = "lightsteelblue", linewidth = 2, fill = "lightsteelblue",
-                se = FALSE, na.rm = TRUE, method = "lm", formula = y~x,
-                show.legend = TRUE,
-                ) +
-    geom_text(aes(x = min(date_asDate) + 1, y = mean(head(trial_count, n = 14)) + 7), label = "Trial trend", color = "steelblue") +
-    ggtitle(glue("{rat_name} Weight & Trials (30d)")) +
-    theme_ipsum_es() +
-    labs(x = NULL, y = NULL)
+    rat_runs %>% filter(date > str_remove_all(run_date - 21, "-")) %>%
+    ggplot(aes(x = date_asDate, y = weight)) +
+    # min trials line
+    geom_hline(yintercept = min_trials, linetype = "longdash") +
+    geom_text(aes(x = min(date_asDate), y = min_trials - 5), label = "Minimum trials") +
+    # trial trend line (Note we don't show all the trial point because they have great variation)
+    geom_smooth(aes(x = date_asDate, y = trial_count),
+                color = "lightsteelblue", fill = "lightsteelblue", linewidth = 2,
+                se = FALSE, na.rm = TRUE, method = "lm", formula = y~x) +
+    geom_text(aes(x = min(date_asDate), y = trials_label_x + 6), label = "Trial trend", color = "lightsteelblue") +
+    # weight trend line
+    geom_smooth(color = "grey", linewidth = 2,
+                se = FALSE, na.rm = TRUE, method = "lm", formula = y~x) +
+    # weight points
+    geom_point(shape = 21, color = "black", fill = "#69b3a2", size = 5) +
+    geom_text(aes(x = min(date_asDate), y = max_weight), nudge_x = -0.5, label = "Weight", color = "#69b3a2") +
+    # # 3 most recent trial counts used to see if pulling up or down the trend
+    geom_point(data = tail(arrange(rat_runs, date_asDate), n = 3), aes(y = trial_count), color = "black", show.legend = FALSE) +
+    # annotations to weight points only if weight is 15%+ off max weight (Note we want this on top of other layers)
+    {if(has_annotations) geom_text(aes(y = max_weight_runs + 6, label = weight_annotation), color = "darkred", size = 3)} +
+    # lower the bottom of the y scale as it can be anchored to minimum trials and the label is bellow the line
+    scale_y_continuous(expand = c(0.1, 0)) +
+    scale_x_date(date_breaks = "4 day", date_minor_breaks = "2 day",
+                 date_labels = "%b %e") +
+    labs(title = glue("{unique(rat_runs$rat_name)} Weight & Trials (21d)"),
+         x = "Date", y = "Weight & Trial Count") +
+    theme_ipsum_es()
 
   return(weight_and_trials_graph)
 }
