@@ -1595,6 +1595,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
 # PROCESS FILE workflow ---------------------------------------------------------
   warnings_list <- list()
+  rat_archive <<- fread(paste0(projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
 
   # load run's .mat file
   imported_data <- Import_Matlab(file_to_load)
