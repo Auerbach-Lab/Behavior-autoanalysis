@@ -701,14 +701,17 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
         delay = run_properties$delay %>% stringr::str_replace(" ", "-")
         lockout = `if`(length(run_properties$lockout) > 0, run_properties$lockout, 0)
+        
+        rat_ID = filter(rat_archive, Rat_name == run_properties$rat_name & is.na(end_date))$Rat_ID
 
-        computed_file_name = paste0(go_kHz, go_dB)
+        computed_file_name = paste0(go_kHz, go_dB) %>% print
         if (length(catch_number) == 0) {
           computed_file_name = paste0(computed_file_name, delay, "s_0catch")
           delay_in_filename <<- TRUE
         }
         else if (catch_number > 0) {
-          if(rat_archive[rat_archive$Rat_name == run_properties$rat_name,]$Assigned_Detail == "Oddball" | rat_archive[rat_archive$Rat_name == run_properties$rat_name,]$Assigned_Phase == "Octave" ) {
+          if(rat_archive[rat_archive$Rat_ID == rat_ID,]$Assigned_Detail == "Oddball" | 
+             rat_archive[rat_archive$Rat_ID == rat_ID,]$Assigned_Phase == "Octave" ) {
             computed_file_name = paste0(computed_file_name, run_properties$duration, "ms_", lockout, "s")
             delay_in_filename <<- FALSE
             analysis$minimum_trials <<- user_settings$minimum_trials$`Tone (Single)`
