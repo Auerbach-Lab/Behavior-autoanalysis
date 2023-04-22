@@ -394,7 +394,7 @@ Generate_Graph <- function(rat_name, ratID) {
       unnest(what_to_graph) %>%
       ggplot(aes(x = `Inten (dB)`, y = Rxn))
 
-    if (current_analysis_type == "Training - Octave") rxn_graph = Range_Grapher(rxn_graph)
+    if (current_analysis_type == "Training - Oddball") rxn_graph = Range_Grapher(rxn_graph)
     # you can remove non-relevant data by filtering rxn_graph$data but this
     # seems unnecessary and bad for day 1 of new stim
     else rxn_graph = Line_Grapher(rxn_graph)
@@ -406,6 +406,8 @@ Generate_Graph <- function(rat_name, ratID) {
     # Need to add hit_detailed to do this
 
   }
+  
+  # print(rxn_graph)
 
   return(tibble_row(dprime_graph = dprime_graph, rxn_graph = rxn_graph))
 }
