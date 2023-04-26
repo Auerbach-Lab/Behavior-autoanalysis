@@ -701,7 +701,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
         delay = run_properties$delay %>% stringr::str_replace(" ", "-")
         lockout = `if`(length(run_properties$lockout) > 0, run_properties$lockout, 0)
-        
+
         rat_ID = filter(rat_archive, Rat_name == run_properties$rat_name & is.na(end_date))$Rat_ID
 
         computed_file_name = paste0(go_kHz, go_dB) %>% print
@@ -710,7 +710,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           delay_in_filename <<- TRUE
         }
         else if (catch_number > 0) {
-          if(rat_archive[rat_archive$Rat_ID == rat_ID,]$Assigned_Detail == "Oddball" | 
+          if(rat_archive[rat_archive$Rat_ID == rat_ID,]$Assigned_Detail == "Oddball" |
              rat_archive[rat_archive$Rat_ID == rat_ID,]$Assigned_Phase == "Octave" ) {
             computed_file_name = paste0(computed_file_name, run_properties$duration, "ms_", lockout, "s")
             delay_in_filename <<- FALSE
@@ -1694,11 +1694,11 @@ Generate_Weight_Trials_Graph <- function(rat_name, ratID) {
                                  trial_count = map_dbl(stats, ~.$trial_count)) %>%
     arrange(desc(date_asDate))
   run_date = head(rat_runs, 1)$date_asDate
-  
+
   # min trials
-  min_trials = pluck(user_settings, "minimum_trials", 
+  min_trials = pluck(user_settings, "minimum_trials",
                      arrange(rat_runs, desc(date)) %>% head(n = 1) %>% .$analysis_type)
-  
+
   # max weight
   max_weight_runs = max(rat_runs$weight, na.rm = TRUE)
   max_weight_freefeed = dplyr::filter(rat_archive, Rat_ID == ratID)$Max_Weight
@@ -1706,8 +1706,8 @@ Generate_Weight_Trials_Graph <- function(rat_name, ratID) {
   # annotate weight warnings
   rat_runs = rat_runs %>%
     mutate(weight_change = (weight - max_weight)/max_weight,
-           weight_annotation = if_else(abs(weight_change) > 0.15, paste0(round((weight_change)*100, digits = 0), "%"), NULL))
-  
+           weight_annotation = if_else(abs(weight_change) > 0.15, paste0(round((weight_change)*100, digits = 0), "%"), ""))
+
   has_annotations = nrow(filter(rat_runs, !is.na(weight_annotation))) >= 1
 
   # trial label
