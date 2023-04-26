@@ -247,7 +247,7 @@ Workbook_Writer <- function() {
         if (!pre_HL) HL_date = dplyr::filter(rat_archive, Rat_ID == ratID)$HL_date
 
         # BBN Rxn/TH PreHL Alone
-        if (phase_current == "BBN" & task_current %in% c("Rxn", "TH") & pre_HL & detail_current == "Alone") {
+        if (phase_current == "BBN" & ! task_current %in% c("Training", "Reset") & pre_HL & detail_current == "Alone") {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Alone") %>%
