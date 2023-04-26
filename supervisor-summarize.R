@@ -994,7 +994,7 @@ Workbook_Writer <- function() {
     filter(is.na(end_date)) %>%
     filter(Assigned_Filename == "" | Assigned_Filename == "ABR") %>%
     filter(Old_Assigned_Experiment  != "GD") %>%
-    # filter(Rat_name %in% c("GP6")) %>%
+    # filter(Rat_name %in% c("LP6", "LP5", "GP2", "GP5")) %>%
     # filter(! Rat_ID %in% rats_not_entered_today$Rat_ID) %>%
     # filter(str_detect(Rat_name, "TP")) %>%
     .$Rat_ID %>%
@@ -1027,7 +1027,4 @@ if(nrow(rats_not_entered_today) == 0) { writeLines("All rats have data for today
 Workbook_Writer()
 rm(list = c("experiment_config_df", "run_today", "wb"))
 # Validate and back-up archives
-source(paste0(projects_folder, "admin tools\\check UUIDs and backup trials archives.R"))
-
-
-
+source(paste0(projects_folder, "admin tools\\check and backup.R"))
