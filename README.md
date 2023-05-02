@@ -1,7 +1,7 @@
 # PiedPiper 1.0.1
 
 ## Installation
-Download the repository and, as necessary, update installed R packages from the dependency list below.
+Download the repository and, as necessary, update installed R packages from the dependency list below. Run the `font setup.R` admin tool line by line.
 
 ### Dependencies
 	tidyverse >= 2.0.0
@@ -41,7 +41,7 @@ The basic architecture is Model-View-Controller.
 The `*_archive.Rdata` files contain the model, i.e. the storage of data. These include the `rat_archive` (CSV not Rdata), the `run_archive`, and the per-experiment trial archives (e.g. `Fmr1-LE_archive`).
 
 #### View
-The view is provided by `supervisor-summarize.R`. This script outputs a well-formatted .xlsx (Excel) file that allows the experimental supervisor to view summary data and statistics for the last several days for each rat, along with any warnings found when processing each day's files.
+The primary view is provided by `supervisor-summarize.R`. This script outputs a well-formatted .xlsx (Excel) file that allows the experimental supervisor to view summary data and statistics for the last several days for each rat, along with any warnings found when processing each day's files.
 
 #### Controller
 The primary controller is `main.R`, used through its frontend interface `app.R`. This file imports `.mat` files, which are the output from each run of the  matlab control program. The data is converted into usable formats and the file is extensively checked for errors, especially mismatches between the expected or assigned parameters of that experimental run to the actual parameters used by the computer during the run. Data from the run's `.mat` file and input from `app.R` (such as the animal's current weight) is saved into the appropriate archives.
@@ -51,6 +51,7 @@ The `supervisor-assign.R` file, combined with the summary .xlsx file, also acts 
 #### Other files
 - `settings.R` - contains settings used by the main and supervisor scripts, such as the TH Cutoff, the desired minimum number of completed trials, or the amount of weight change required to trigger a warning message.
 - `experiment_details.csv` - This file lists the active experiments, the phases that correspond to each experiment, and the tasks and details that correspond to each phase. Combined, this nomenclature specifies most of the parameters used to create the configuration files that are loaded into the matlab control program that specify the behavior of the experimental boxes. Future work is intended to use these parameters to generate the matlab configuration files directly; in 0.1-ALPHA these values are used for post-run validation instead.
+- `graphing unrolled.R` - contains graph generation used by the shiny app.
 
 #### Admin Tools
 Several small scripts are available for those comfortable with R. Note that these have *not* been made user friendly or robust. **Use at your own risk.**
