@@ -1,37 +1,23 @@
-# PiedPiper 1.0 (23.04)
+# PiedPiper 1.0.1
 
 ## Installation
 Download the repository and, as necessary, update installed R packages from the dependency list below.
 
 ### Dependencies
-	data.table_1.14.6
-	dplyr_1.0.10
-	forcats_0.5.2
-	ggplot2_3.4.0
-	openxlsx_4.2.5.1
-	psycho_0.6.1
-	purrr_1.0.0
-	R.matlab_3.7.0
-	readr_2.1.3
-	rlang_1.0.6
-	stringr_1.5.0
-	tibble_3.1.8
-	tidyr_1.2.1
-	tidyverse_1.3.2
-	xml2_1.3.3 
-	zip_2.2.2
+	tidyverse >= 2.0.0
+	data.table >= 1.14.6
+	ggplot2 >= 3.4.0
+	glue >= 1.6.2
+	openxlsx >= 4.2.5.1
+	psycho >= 0.6.1
+	R.matlab >= 3.7.0
+	zip >= 2.2.2
 	
-The versions of many of these packages matter, particularly openxlsx and the tidyverse-related packages.
+The versions of many of these packages matter, particularly openxlsx and the tidyverse packages.
 Be sure to update to at least the listed versions of the dependencies above.
 
-### First-time run
-- Use the included bootstrapped `experiment details.csv` and `rat_archive.csv` by copying them into the main folder. 
-- Comment out the load of `run_archive.Rdata` in the `InitializeMain()` function of `main.R`.
-
-For all later runs, **uncomment the load** so that it is executed, otherwise all prior data will be **lost**. 
-	
 ## Usage
-Throughout each day, persons responsible for running the experimental boxes (probably undergraduates) will run `app.R`, filling out the form for an individual rat's run and using the file picker (the Browse... button) to select the corresponding `.mat` file, then press Analyze. The user will be asked to examine two graphs (and possibly more, if there are any concerns raised by the initial two) to verify that the rat's weight and trial count trends are acceptable, that the data looks accurate and consistent with this rat's prior performance, etc. Once there is high confidence that the data is good and belongs to the named rat, the user will choose 'Save Run' at which point the results will be added to the arcives on disk.
+Throughout each day, persons responsible for running the experimental boxes (probably undergraduates) will run `app.R`, filling out the form for an individual rat's run and using the file picker (the Browse... button) to select the corresponding `.mat` file, then press Analyze. The user will be asked to examine two graphs (and possibly more, if there are any concerns raised by the initial two) to verify that the rat's weight and trial count trends are acceptable, that the data looks accurate and consistent with this rat's prior performance, etc. Once there is high confidence that the data is good and belongs to the named rat, the user will choose 'Save Run' at which point the results will be added to the archives on disk.
 
 At the end of the day, the person responsible for making the assingments to be used the next day will run `supervisor-summarize.R`. It will create and open a summary .xlsx (Excel) file that displays the data and statistics for each rat that are used in choosing assignments. The supervisor will use the drop-down menus and the filename entry field to specify the configuration files that each rat should next be run on. The supervisor can also leave a note on any rat that will remain until it is cleared, intended for e.g. planning ahead.
 
@@ -45,7 +31,7 @@ If new phase types are added, `main.R` and `supervisor-summarize.R` must be upda
 The new rat should be added to the `rat_archive.csv` file, either by opening it with a spreadsheet program or through R.
 
 ### Hearing Loss, Rat Retirement/Death, etc
-The `rat_archive.csv` file should be updated with the corresponding information. **Do not delete** rows (rats) from the archive, simply update their `end_date` column. 
+The `rat_archive.csv` file should be updated with the corresponding information. **Never delete** rows (rats) from the archive, simply update their `end_date` column. 
 	
 ## Design
 Initial whiteboard - https://miro.com/app/board/uXjVO2HtI6U=/
