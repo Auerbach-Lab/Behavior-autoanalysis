@@ -19,7 +19,7 @@ InitializeMain <- function() {
   load(paste0(projects_folder, "run_archive.Rdata"), .GlobalEnv)
 }
 
-Process_File <- function(file_to_load, name, weight, observations, exclude_trials = "", old_file = FALSE, ignore_name_check = FALSE, use_shiny = FALSE, file_name_override = NULL) {
+Process_File <- function(file_to_load, name, weight, observations, exclude_trials = "", old_file = FALSE, ignore_name_check = FALSE, use_shiny = FALSE, file_name_override = NULL, scientist = "", weightProblem = "", rxnProblem = "") {
   Import_Matlab <- function(file_to_load) {
     Unlist_Matlab_To_Dataframe <- function(li) {
       return(t(apply(li, 1, unlist)) %>% as.data.frame())
@@ -1524,6 +1524,10 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           task = old_data$Task,
           detail = old_data$Detail
         )
+        scientist = old_data$scientist
+        weightProblem = old_data$weightProblem
+        rxnProblem = old_data$rxnProblem
+
         if(old_data$Invalid == "TRUE") invalid = "TRUE"
 
         if(rlang::is_empty(assignment$experiment) || rlang::is_empty(assignment$phase)) {
@@ -1571,10 +1575,12 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         block_size = run_properties$stim_block_size,
         complete_block_count = trial_data$complete_block_number %>% max(na.rm = TRUE),
 
-        scientist = "", # individual who checked in this data, provided later by shiny app
+        # to be provided by shiny app (inheriting the defaults of "" for now), or was provided directly to a manual call of Process_File()
+        scientist = scientist,
         comments = observations,    # observations taken during run
-        weightProblem = "", # empty string for no problem, or a description of problem, by shiny app later
-        rxnProblem = "", # empty string for no problem, or a description of problem, by shiny app later
+        weightProblem = weightProblem,
+        rxnProblem = rxnProblem,
+
         warnings_list = list(warnings_list),
         omit_list = run_properties$omit_list,
         invalid = "",    # supervisor can manually mark runs as invalid, putting reasoning here
