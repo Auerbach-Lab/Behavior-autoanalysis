@@ -129,6 +129,22 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         return(r)
       }
 
+      Get_Rat_ID = function(check_name, creation_time) {
+        date = creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
+        rats_with_name <- rat_archive %>%
+          dplyr::filter(Rat_name %>% str_to_upper() == check_name %>% str_to_upper())
+        if(nrow(rats_with_name) == 0) {
+          stop(paste0("ABORT: No rats with name ", check_name, " found in archive."))
+        } else {
+          rat_ID = rats_with_name %>%
+            dplyr::filter(start_date <= date) %>%
+            dplyr::filter(date <= end_date | is.na(end_date)) %>% .$Rat_ID
+          if(length(rat_ID) > 1) stop(paste0("ABORT: Overlapping rats on date ", date, " with name ", check_name, ". Cannot determine Rat ID."))
+          if(length(rat_ID) == 0) stop("ABORT: No rats with name ", check_name, " were active on ", date, ".")
+          return(rat_ID)
+        }
+      }
+
       Get_Box_Number <- function() {
         if (is.null(file_name_override)) {
           filename = file_to_load
@@ -201,8 +217,14 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         stim_type = stim_type %>% as.character()
       }
 
+      rat_name = Get_Rat_Name()
+
+      #hoist the datestamp out of the loaded .mat file
+      creation_time = current_mat_file$log[[2]][2] %>% unlist
+
       r = list(
-        rat_name = Get_Rat_Name(),
+        rat_name = rat_name,
+        rat_ID = Get_Rat_ID(rat_name, creation_time),
         box = Get_Box_Number(),
 
         stim_filename = Get_Stim_Filename(),
@@ -238,8 +260,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
         stim_encoding_table = stim_encoding_table,
 
-        #hoist the datestamp out of the loaded .mat file
-        creation_time = current_mat_file$log[[2]][2] %>% unlist
+        creation_time = creation_time
       )
 
       filename_TR = stringr::str_extract(r$stim_filename,"_TR[:digit:]+ms") %>% str_extract("[:digit:]+") %>% as.numeric()
@@ -702,16 +723,14 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         delay = run_properties$delay %>% stringr::str_replace(" ", "-")
         lockout = `if`(length(run_properties$lockout) > 0, run_properties$lockout, 0)
 
-        rat_ID = filter(rat_archive, Rat_name == run_properties$rat_name & is.na(end_date))$Rat_ID
-
         computed_file_name = paste0(go_kHz, go_dB)
         if (length(catch_number) == 0) {
           computed_file_name = paste0(computed_file_name, delay, "s_0catch")
           delay_in_filename <<- TRUE
         }
         else if (catch_number > 0) {
-          if(rat_archive[rat_archive$Rat_ID == rat_ID,]$Assigned_Detail == "Oddball" |
-             rat_archive[rat_archive$Rat_ID == rat_ID,]$Assigned_Phase == "Octave" ) {
+          if(rat_archive[rat_archive$Rat_ID == run_properties$rat_ID,]$Assigned_Detail == "Oddball" |
+             rat_archive[rat_archive$Rat_ID == run_properties$rat_ID,]$Assigned_Phase == "Octave" ) {
             computed_file_name = paste0(computed_file_name, run_properties$duration, "ms_", lockout, "s")
             delay_in_filename <<- FALSE
             analysis$minimum_trials <<- user_settings$minimum_trials$`Tone (Single)`
@@ -958,9 +977,8 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         warnings_list <<- append(warnings_list, warn)
       }
     } else {
-      id = Get_Rat_ID(run_properties$rat_name)
-      if(length(id) == 0) stop("ABORT: Unknown rat ID.")
-      rat_data = rat_archive[rat_archive$Rat_ID == id,]
+      if(length(id) == run_properties$rat_ID) stop("ABORT: Unknown rat ID.")
+      rat_data = rat_archive[rat_archive$Rat_ID == run_properties$rat_ID,]
       analysis$assigned_file_name <<- rat_data$Assigned_Filename
       if(rlang::is_na(analysis$assigned_file_name)) {
         warn = paste0("No assigned file name found in rat_archive for ", run_properties$rat_name, " on ", date, ".")
@@ -1367,26 +1385,10 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     }
   }
 
-  Get_Rat_ID = function(check_name) {
-    date = run_properties$creation_time %>% stringr::str_sub(1,8) %>% as.numeric()
-    rats_with_name <- rat_archive %>%
-      dplyr::filter(Rat_name %>% str_to_upper() == check_name %>% str_to_upper())
-    if(nrow(rats_with_name) == 0) {
-      stop(paste0("ABORT: No rats with name ", check_name, " found in archive."))
-    } else {
-      rat_ID = rats_with_name %>%
-        dplyr::filter(start_date <= date) %>%
-        dplyr::filter(date <= end_date | is.na(end_date)) %>% .$Rat_ID
-      if(length(rat_ID) > 1) stop(paste0("ABORT: Overlapping rats on date ", date, " with name ", check_name, ". Cannot determine Rat ID."))
-      if(length(rat_ID) == 0) stop("ABORT: No rats with name ", check_name, " were active on ", date, ".")
-      return(rat_ID)
-    }
-  }
-
   Check_Weight <- function() {
     rat_weights = NULL
     if(!rlang::is_empty(run_archive)) {
-      id = Get_Rat_ID(run_properties$rat_name)
+      id = run_properties$rat_ID
       if(length(id) == 0) stop("ABORT: Unknown rat ID.")
       rat_weights =
         run_archive %>%
@@ -1411,7 +1413,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     }
 
     if(rlang::is_empty(rat_weights)) {
-      warn = paste0("No weight data in run archive for ", run_properties$rat_name, "(", Get_Rat_ID(run_properties$rat_name), "). Is this rat new?")
+      warn = paste0("No weight data in run archive for ", run_properties$rat_name, "(", run_properties$rat_ID, "). Is this rat new?")
       warning(paste0(warn, "\n"))
       warnings_list <<- append(warnings_list, warn)
       analysis$weight_change <<- 0
@@ -1421,7 +1423,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       old_weight = last_run$weight
 
       if(rlang::is_empty(old_weight)) {
-        warn = paste0("No weights for ", run_properties$rat_name, "(", Get_Rat_ID(run_properties$rat_name), ") prior to ", date_asDate, ".")
+        warn = paste0("No weights for ", run_properties$rat_name, "(", run_properties$rat_ID, ") prior to ", date_asDate, ".")
         warning(paste0(warn, "\n"))
         warnings_list <<- append(warnings_list, warn)
         analysis$weight_change <<- 0
@@ -1538,7 +1540,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         #use the comments from the undergrad file's variable
         observations = observations   # redundant, just for clarity
 
-        rat_id = Get_Rat_ID(run_properties$rat_name)
+        rat_id = run_properties$rat_ID
         if(length(rat_id) == 0) stop("ABORT: Unknown rat ID.")
         rat_data = rat_archive[rat_archive$Rat_ID == rat_id,]
 
@@ -1562,7 +1564,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         time = time,
         box = run_properties$box,    # TODO: calculated box from MAT file not external FOO.mat filename
         rat_name = run_properties$rat_name,
-        rat_ID = Get_Rat_ID(run_properties$rat_name),
+        rat_ID = run_properties$rat_ID,
         weight = analysis$weight,
 
         file_name = analysis$computed_file_name,
@@ -1664,7 +1666,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 }
 
 Generate_Weight_Graph <- function(rat_name, ratID) {
-  #ratID = Get_Rat_ID(run_properties$rat_name)
+  #ratID = run_properties$rat_ID
   rat_runs = run_archive %>% dplyr::filter(rat_ID == ratID)
   rat_runs = rat_runs %>% mutate(date_asDate = lubridate::ymd(date))
   # thoughts - will want to standardize y axis to e.g. 80%-105% of baseline weight so that 'low' looks the same for everyone?

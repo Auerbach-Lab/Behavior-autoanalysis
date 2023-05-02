@@ -5,6 +5,10 @@ Generate_Graph <- function(rat_name, ratID) {
   # This code does not currently differentiate pre vs. post hearing loss/surgery/etc
   # You can handle this but it requires access to rat_archive, which I believe we have.
 
+  # TODO:
+  # It would be best if this code looked up the rat name for itself
+  # It'd only need ratID that way, and could never be out of sync
+
   # Functions ---------------------------------------------------------------
 
   Range_Grapher <- function(plot) {
@@ -406,7 +410,7 @@ Generate_Graph <- function(rat_name, ratID) {
     # Need to add hit_detailed to do this
 
   }
-  
+
   # print(rxn_graph)
 
   return(tibble_row(dprime_graph = dprime_graph, rxn_graph = rxn_graph))
