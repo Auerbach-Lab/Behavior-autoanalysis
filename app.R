@@ -125,6 +125,17 @@ ui <- fluidPage(
       ),
     ),
   ),
+
+  # file input reset
+  tags$script('
+    Shiny.addCustomMessageHandler("resetFileInputHandler", function(x) {
+        var id = "#" + x + "_progress";      # name of progress bar is file1_progress
+        var idBar = id + " .bar";
+        $(id).css("visibility", "hidden");   # change visibility
+        $(idBar).css("width", "0%");         # reset bar to 0%
+    });
+  '),
+
   # button animation
   tags$head(tags$style(type="text/css", '
             .loading {
@@ -229,7 +240,7 @@ server <- function(input, output, session) {
 
   observeEvent(ignoreInit = TRUE, c(input$name, input$matfile), {
     req(input$name)
-    req(input$matfile)
+    req(v$pickedFile)
     if(tools::file_ext(input$matfile$datapath) != "mat") {
       hideFeedback("matfile")
       showFeedbackDanger("matfile", "The file must be .mat format.")
@@ -254,10 +265,11 @@ server <- function(input, output, session) {
     else {
       hideFeedback("matfile")
     }
+    v$pickedFile = TRUE
   })
 
   # Submit validation
-  v <- reactiveValues(pushedAnalyze = FALSE, readyAnalyze = FALSE, row = NULL, weightPlotted = FALSE, pushedSave = FALSE, readySave = FALSE)
+  v <- reactiveValues(pushedAnalyze = FALSE, readyAnalyze = FALSE, row = NULL, weightPlotted = FALSE, pushedSave = FALSE, readySave = FALSE, pickedFile = FALSE)
 
   requirements <- reactive({
     if(input$name == "") {
@@ -272,7 +284,7 @@ server <- function(input, output, session) {
       hideFeedback("observations")
       showFeedbackDanger("observations", "Required.")
     }
-    if(is.null(input$matfile)) {
+    if(is.null(input$matfile) || !v$pickedFile) {
       hideFeedback("matfile")
       showFeedbackDanger("matfile", "No file selected!")
     }
@@ -313,7 +325,7 @@ server <- function(input, output, session) {
 
 
   output$requirements <- renderText({
-    req(input$btnAnalyze)
+    req(v$pushedAnalyze)
     #requirements()
     if(isolate(v$readyAnalyze)) {
       v$readyAnalyze = FALSE
@@ -355,7 +367,7 @@ server <- function(input, output, session) {
 
   output$warnings <- renderTable(striped = TRUE, hover = TRUE, sanitize.text.function = identity,
   {
-    req(input$btnAnalyze)
+    req(v$pushedAnalyze)
     req(v$row)
     warns = v$row %>% .$warnings_list %>% unlist() %>% data.frame(Warnings = .)
     if(nrow(warns) == 0) {
@@ -368,7 +380,7 @@ server <- function(input, output, session) {
   })
 
   output$plotWeight <- renderPlot({
-    req(input$btnAnalyze)
+    req(v$pushedAnalyze)
     req(v$row) #TODO at the moment I'm constructing a fake vrow to feed to warnings for when the file is already loaded, but this thinks it has a real one and dies. Check existence of columns or something and skip evaluation if they're absent.
     req(no_fatal_error())
     rat_name = v$row %>% .$rat_name
@@ -377,7 +389,7 @@ server <- function(input, output, session) {
   }, height = 500)
 
   extra_graphs  <- reactive({
-    req(input$btnAnalyze)
+    req(v$pushedAnalyze)
     req(v$row) #TODO at the moment I'm constructing a fake vrow to feed to warnings for when the file is already loaded, but this thinks it has a real one and dies. Check existence of columns or something and skip evaluation if they're absent.
     req(no_fatal_error())
     rat_name = v$row %>% .$rat_name
@@ -447,6 +459,13 @@ server <- function(input, output, session) {
     v$weightPlotted = FALSE
     v$pushedSave = FALSE
     v$readySave = FALSE
+    v$pickedFile = FALSE
+    # updateTextInput(session,
+    #                 inputId = "inText",
+    #                 label = paste("New", c_label),
+    #                 value = paste("New text", c_num)
+    # )
+    session$sendCustomMessage(type = "resetFileInputHandler", "file1")
     updateRadioGroupButtons(inputId = "weightCheck", selected = character(0))
     updateRadioGroupButtons(inputId = "rxnCheck", selected = character(0))
     shinyjs::enable("btnAnalyze")
