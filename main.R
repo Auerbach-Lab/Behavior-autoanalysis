@@ -704,7 +704,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
         rat_ID = filter(rat_archive, Rat_name == run_properties$rat_name & is.na(end_date))$Rat_ID
 
-        computed_file_name = paste0(go_kHz, go_dB) %>% print
+        computed_file_name = paste0(go_kHz, go_dB)
         if (length(catch_number) == 0) {
           computed_file_name = paste0(computed_file_name, delay, "s_0catch")
           delay_in_filename <<- TRUE
