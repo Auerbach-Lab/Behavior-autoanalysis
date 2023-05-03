@@ -59,23 +59,23 @@ Load_old_file <- function(df) {
     files_checked = discard(files_checked, is_null)
   }
   
-  Load_Entry <- function(file) {
-    Process_File(file_to_load = file, old_file = TRUE, ignore_name_check = TRUE, exclude_trials = omit, 
-                 scientist = scientist, weightProblem = weightProblem, rxnProblem = rxnProblem)
-    
-    save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
-    fwrite(cbind(trials_to_write, UUID = uuid), file = filename, append = file.exists(filename)) # tack UUID onto trials and add to archive, appending if the file already exists
-    remove(trials_to_write, inherits = TRUE)
-    
-    writeLines(paste0("Run ", row_added$UUID, " of ", row_added$rat_name, " (#", row_added$rat_ID, ") saved to disk."))
-    
-  }
+  # Load_Entry <- function(file) {
+  #   Process_File(file_to_load = file, old_file = TRUE, ignore_name_check = TRUE, exclude_trials = omit, 
+  #                scientist = scientist, weightProblem = weightProblem, rxnProblem = rxnProblem)
+  #   
+  #   save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
+  #   fwrite(cbind(trials_to_write, UUID = uuid), file = filename, append = file.exists(filename)) # tack UUID onto trials and add to archive, appending if the file already exists
+  #   remove(trials_to_write, inherits = TRUE)
+  #   
+  #   writeLines(paste0("Run ", row_added$UUID, " of ", row_added$rat_name, " (#", row_added$rat_ID, ") saved to disk."))
+  #   
+  # }
   
   if(length(files_checked) > 0) {
     cat(" attempting to load...\n")
     source(paste0(projects_folder, "main.R"))
     lapply(files_checked, Process_File, old_file = TRUE, ignore_name_check = TRUE, exclude_trials = omit, 
-           scientist = scientist)
+           scientist = scientist, weightProblem = weightProblem, rxnProblem = rxnProblem)
   } else cat(glue("no data found. Can NOT autoload run for
                           {UUID}"))
 }
