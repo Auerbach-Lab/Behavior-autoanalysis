@@ -1,8 +1,8 @@
 InitializeMain()
 
 # Find an entry -----------------------------------------------------------
-row_to_modify = run_archive %>% rowid_to_column() %>% filter(date == "20230209" & rat_name == "Purple4")
-row_to_modify %>% select(date, rat_name, rat_ID)
+row_to_modify = run_archive %>% rowid_to_column() %>% filter(date == "20230428" & rat_name == "BP3")
+row_to_modify %>% select(date, rat_name, rat_ID, weight, scientist, rxnProblem, weightProblem)
 line_to_modify = row_to_modify$rowid
 
 
