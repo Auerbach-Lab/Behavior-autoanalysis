@@ -16,8 +16,11 @@ Find_Issues_in_Archives <- function(group) {
   UUIDs_in_trials = trials_archive$UUID %>% unique()
   # Get list of entered runs
   InitializeMain()
-  UUIDs_in_runs = run_archive %>% unnest_wider(assignment) %>% filter(experiment == group) %>% .$UUID %>% unique()
-  trial_counts = run_archive %>% unnest_wider(assignment) %>% filter(experiment == group) %>% transmute(trials = map_dbl(stats, ~.$trial_count), UUID = UUID)
+  UUIDs_in_runs = run_archive %>% unnest_wider(assignment) %>% 
+    filter(experiment == group) %>% .$UUID %>% unique()
+  trial_counts = run_archive %>% unnest_wider(assignment) %>% 
+    filter(experiment == group) %>% 
+    transmute(trials = map_dbl(stats, ~.$trial_count), UUID = UUID)
   trials_total = sum(trial_counts$trials)
   
   if(nrow(trials_archive) != trials_total) {
@@ -27,7 +30,8 @@ Find_Issues_in_Archives <- function(group) {
       left_join(trial_counts, by = "UUID") %>%
       mutate(Issue = rows != trials)
     
-    Bad_UUIDs = filter(trial_count_comparison, Issue == TRUE) %>% left_join(run_archive %>% select(date, rat_name, rat_ID, file_name, UUID), by = "UUID")
+    Bad_UUIDs = filter(trial_count_comparison, Issue == TRUE) %>% 
+      left_join(run_archive %>% select(date, rat_name, rat_ID, file_name, UUID), by = "UUID")
     
     if(nrow(trial_count_comparison) == 0) {
       writeLines(glue("ISSUE IN {group}_archive.csv.gz
@@ -131,7 +135,8 @@ Find_Issues_in_Archives <- function(group) {
           
           # Backup lose-able data
             # Get data to save
-            key_data = df %>% select(all_of(c("date", "rat_ID", "rat_name", "weight", "omit_list", "assignment", "comments", "scientist", "weightProblem", "rxnProblem", "UUID"))) %>% 
+            key_data = df %>% 
+              select(all_of(c("date", "rat_ID", "rat_name", "weight", "omit_list", "assignment", "comments", "scientist", "weightProblem", "rxnProblem", "UUID"))) %>% 
               unnest_wider(assignment) %>% 
               mutate(date_removed = Sys.Date() %>% as.character())
             # append to running CSV
