@@ -2,15 +2,14 @@ library(shiny)
 library(shinyFeedback)
 library(shinythemes)
 library(shinyWidgets)
+library(shinycustomloader)
+library(shinyjs)
+library(rlang)
 library(dplyr, warn.conflicts = FALSE)
-library(thematic)
 library(stringr)
 library(glue)
 library(ggplot2)
 library(hrbrthemes)
-library(shinycustomloader)
-library(shinyjs)
-library(rlang)
 
 ui <- fluidPage(
   useShinyFeedback(),
@@ -44,11 +43,11 @@ ui <- fluidPage(
             actionButton("btnAnalyze", span("Analyze", id = "UpdateAnalyze", class = ""), class = "btn btn-primary", style = "margin-top: 25px;", width = "150px"),
           ),
           column(width = 5,
-            #withLoader(tableOutput("warnings"), type = "html", loader = "dnaspin", proxy.height = "100px"),
+             withLoader(tableOutput("warnings"), type = "html", loader = "dnaspin", proxy.height = "100px"),
           ),
         ),
         textOutput("requirements"),
-        withLoader(tableOutput("warnings"), type = "html", loader = "dnaspin", proxy.height = "100px"),
+
         conditionalPanel(
           condition = "output.fatal_error == 'TRUE'",
           actionButton("btnReset", label = "Reset Form", class = "btn btn-danger", width = "250px"),
@@ -410,10 +409,12 @@ server <- function(input, output, session) {
   requirements_for_save <- reactive({
     req(input$weightCheck)
     req(input$rxnCheck)
+    r = "Ready for save."
     if(input$weightCheck != "OK") {
       if(is.null(input$weightProblem) || input$weightProblem == "") {
         hideFeedback("weightProblem")
         showFeedbackDanger("weightProblem", "Required.")
+        r = "Missing required values."
       } else {
         hideFeedback("weightProblem")
       }
@@ -422,6 +423,7 @@ server <- function(input, output, session) {
       if(is.null(input$rxnProblem) || input$rxnProblem == "") {
         hideFeedback("rxnProblem")
         showFeedbackDanger("rxnProblem", "Required.")
+        r = "Missing required values."
       } else {
         hideFeedback("rxnProblem")
       }
@@ -429,13 +431,14 @@ server <- function(input, output, session) {
     if(is.null(input$scientist) || input$scientist == "") {
       hideFeedback("scientist")
       showFeedbackDanger("scientist", "Required.")
+      r = "Missing required values."
     }
     validate(
       need(input$weightCheck, "Must OK or Reject weight graph."),
       need(input$rxnCheck, "Must OK or Reject rxn graph."),
       need(input$scientist, "Must enter your name."),
     )
-    "Ready for save."
+    r
   })
 
   observeEvent(ignoreInit = TRUE, input$weightProblem, {
@@ -493,7 +496,8 @@ server <- function(input, output, session) {
     resetForm()
   })
 
-  output$requirements_for_save <- renderText({
+  #output$requirements_for_save <- renderText({
+  observeEvent(v$readySave, {
     req(v$pushedSave)
     if(isolate(v$readySave)) {
       r = v$row
