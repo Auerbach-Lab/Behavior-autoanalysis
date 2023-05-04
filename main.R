@@ -5,7 +5,7 @@ InitializeMain <- function() {
     library(R.matlab); library(data.table);
 
     # data manipulation
-    library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr); library(lubridate); library(glue);
+    library(tidyverse); library(glue);
 
     # analysis & visualization
     library(psycho); library(ggplot2); library(hrbrthemes); library(shiny);
@@ -1650,7 +1650,8 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     row_added = Add_to_Archives()
     writeLines("")
     writeLines(paste0("Run ", row_added$UUID, " of ", row_added$rat_name, " (#", row_added$rat_ID, ") added to archives (in environment ONLY)."))
-    #Generate_Chart()
+
+    if (!use_shiny) Write_To_Archives(row_added)
   }
 
   # do analyses
