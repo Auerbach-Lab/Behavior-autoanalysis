@@ -47,7 +47,10 @@ ui <- fluidPage(
           ),
         ),
         textOutput("requirements"),
-
+        conditionalPanel(
+          condition = "output.plotWeight",
+          h4(textOutput("displaycomment")),
+        ),
         conditionalPanel(
           condition = "output.fatal_error == 'TRUE'",
           actionButton("btnReset", label = "Reset Form", class = "btn btn-danger", width = "250px"),
@@ -184,9 +187,11 @@ server <- function(input, output, session) {
   # Name validation
   rats = rat_archive$Rat_name %>% str_to_upper()
   name_clean <- reactive({
+    req(input$name, cancelOutput = TRUE)
     input$name %>% str_trim %>% str_replace_all(" ", "") %>% str_to_upper()
   })
   known_rat <- reactive ({
+    req(name_clean(), cancelOutput = TRUE)
     name_clean() %in% rats
   })
   name_good <- reactive({
@@ -194,6 +199,7 @@ server <- function(input, output, session) {
     name_clean()
   })
   id_good <- reactive({
+    req(name_good(), cancelOutput = TRUE)
     rat_archive %>% dplyr::filter(str_to_upper(Rat_name) == name_good()) %>% .$Rat_ID
   })
   observeEvent(input$name, {
@@ -340,9 +346,14 @@ server <- function(input, output, session) {
     }
   })
 
-   output$text2 <- renderText({
-     id_good()
-   })
+  output$displaycomment <- renderText({
+    req(id_good)
+    if(id_good() > 0) {
+      rat_archive %>% dplyr::filter(Rat_ID %in% id_good()) %>% .$Display_Comment
+    } else {
+      id_good()
+    }
+  })
 
   # output$text3 <- renderText({
   #   req(input$btnAnalyze)
