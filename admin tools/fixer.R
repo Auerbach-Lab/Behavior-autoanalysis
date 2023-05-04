@@ -2,18 +2,18 @@ fixer <- function(tableRow, newValue) {
   InitializeMain()
   
   df = run_archive[tableRow,] %>% 
-    select(date, rat_name, rat_ID, assignment) %>% unnest_wider(assignment) %>% select(-any_of(comment))
+    select(date, rat_name, rat_ID, assignment) %>% unnest_wider(assignment) %>% select(-comment)
   
   # set value to change
   run_archive[tableRow,]$assignment[[1]]$task = newValue
   
   df = bind_rows(df, run_archive[tableRow,] %>% 
-    select(date, rat_name, rat_ID, assignment) %>% unnest_wider(assignment) %>% select(-any_of(comment)))
+    select(date, rat_name, rat_ID, assignment) %>% unnest_wider(assignment) %>% select(-comment))
   
   print(df)
   
   switch(menu(c("Yes", "No"), 
-              title="Save modified the entry?", 
+              title="Save modified entry?", 
               graphics = TRUE),
          # 1 (Yes): Write file
          {
@@ -34,9 +34,8 @@ fixer <- function(tableRow, newValue) {
 # filter to rowid
 run_archive %>% rowid_to_column %>% filter(rat_name %in% c("RP3")) %>% 
   unnest_wider(assignment) %>%
-  unnest_wider(stats) %>% arrange(desc(date)) %>%
-  mutate(hit_percent = hit_percent * 100, FA_percent = FA_percent * 100, 
-         BG = str_extract(file_name, pattern = "(?<=BG_PKN_).*(?=dB)")) %>% 
+  arrange(desc(date)) %>%
+  mutate(BG = str_extract(file_name, pattern = "(?<=BG_PKN_).*(?=dB)")) %>% 
   filter(BG == 30) %>% 
   .$rowid
 

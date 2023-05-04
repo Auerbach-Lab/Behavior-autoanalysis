@@ -753,8 +753,10 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         nogo_kHz2 = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% dplyr::arrange(Stim_ID) %>% tail(n = 2) %>% head(n = 1) %>% .$`Freq (kHz)` %>% round(digits = 1), "kHz_")
         go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`)
         nogo_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% dplyr::arrange(Stim_ID) %>% tail(n = 1) %>% .$`Inten (dB)`)
+        
         has_dB_range = go_dB != nogo_dB
-
+        has_BG = run_properties$background_type != "None"
+        
         computed_file_name1 = paste0(go_kHz, nogo_kHz)
         computed_file_name2 = paste0(go_kHz, nogo_kHz2)
         if (has_dB_range) {
@@ -774,6 +776,11 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
         if(is_6th_of_octave) computed_file_name = computed_file_name1
         else computed_file_name = computed_file_name2
+        
+        if (has_BG) {
+          BG = paste0(stringr::str_remove(pattern = ".mat", string = run_properties$background_file), "_", run_properties$background_dB, "dB")
+          computed_file_name = paste0(computed_file_name, "_", BG)
+        }
 
         return(computed_file_name)
       }
