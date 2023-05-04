@@ -1,6 +1,6 @@
 InitializeMain()
 
-rat_to_graph = c("LP1")
+rat_to_graph = c("BP6")
 date_to_graph = "today"
 # can be reaction or dprime
 what_to_graph = "dprime"
@@ -13,7 +13,7 @@ Grapher <- function(rat_to_graph) {
     filter(rat_name %in% rat_to_graph) %>%
     unnest_wider(assignment) %>%
     unnest_wider(stats) %>%
-    unnest(what_to_graph) %>%
+    unnest(all_of(what_to_graph)) %>%
     rename_at(vars(contains("Freq")), ~ str_extract(., pattern = "Freq")) %>%
     rename_at(vars(contains("dB")), ~ str_extract(., pattern = "dB")) %>%
     rename(value = if_else(what_to_graph == "reaction", "Rxn", what_to_graph))
