@@ -1,4 +1,4 @@
-# PiedPiper 1.0.1
+# PiedPiper 1.0.3
 
 ## Installation
 Download the repository and, as necessary, update installed R packages from the dependency list below. Run the `font setup.R` admin tool line by line.
