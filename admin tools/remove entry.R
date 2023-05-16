@@ -1,4 +1,4 @@
-bad_rats = c("Red6")
+bad_rats = c("GP3")
 bad_date = "today"
 # Restore assignment from the 'old' setting
 restore = TRUE
@@ -14,9 +14,11 @@ clean_archives <- function(entry, date, restore = TRUE, backup_data = TRUE) {
 # Backup lose-able data
   if(backup_data) {
     # Get data to save
-    key_data = df %>% select(all_of(c("date", "rat_ID", "rat_name", "weight", "omit_list", "comments", "assignment", "UUID"))) %>% unnest_wider(assignment) %>% 
+    key_data = df %>% 
+      select(all_of(c("date", "rat_ID", "rat_name", "weight", "omit_list", "assignment", "comments", "scientist", "weightProblem", "rxnProblem", "UUID"))) %>% 
+      unnest_wider(assignment) %>% 
       mutate(date_removed = Sys.Date() %>% as.character(),
-             omit_list = as.numeric(omit_list))
+             omit_list = omit_list)
     # append to running CSV
     fwrite(key_data, file = paste0(projects_folder, "deleted_entries.csv"), append = file.exists(paste0(projects_folder, "deleted_entries.csv")))
     writeLines("\tData backed up")
