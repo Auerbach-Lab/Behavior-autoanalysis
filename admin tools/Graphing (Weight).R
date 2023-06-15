@@ -1,7 +1,7 @@
 InitializeMain()
 
 # Clear extant plots
-if(!is_null(dev.list()["RStudioGD"])) dev.off(dev.list()["RStudioGD"]) 
+if(!is_null(dev.list()["RStudioGD"])) dev.off(dev.list()["RStudioGD"])
 
 Weight_Grapher <- function(rat_to_graph) {
   rat_runs = run_archive %>% dplyr::filter(rat_ID == rat_to_graph)
@@ -50,7 +50,8 @@ Weight_Grapher <- function(rat_to_graph) {
       scale_x_date(date_breaks = "4 day", date_minor_breaks = "2 day",
                    date_labels = "%m-%d") +
       labs(title = glue("{unique(rat_runs$rat_name)} three week Weight vs. Trail count"),
-           x = "Date", y = "Weight & Trial Count") +
+           x = "Date", y = "Weight & Trial Count",
+           caption = glue("Max weight = {max_weight}, Free Feed weight = {max_weight_freefeed}")) +
       theme_ipsum_es()
     ))
 }
@@ -61,8 +62,8 @@ rat_archive %>%
   #select rats that have NOT been run today
   # filter(Assigned_Filename != "") %>%
   # filter(Assigned_Experiment  == "Tsc2-LE") %>%
-  # filter(Rat_name %in% c("RP5", "RP6")) %>%
-  filter(str_detect(Box, "5.")) %>%
+  # filter(Rat_name %in% c("TP5", "BP1", "BP5")) %>%
+  filter(str_detect(Box, "6.")) %>%
   arrange(desc(Box)) %>%
   .$Rat_ID %>%
   lapply(Weight_Grapher)
