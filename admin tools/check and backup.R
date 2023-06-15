@@ -37,9 +37,48 @@ Find_Issues_in_Archives <- function(group) {
       writeLines(glue("ISSUE IN {group}_archive.csv.gz
                           NOT backed up"))
     } else {
-      writeLines(glue_data(Bad_UUIDs))
+      # Function ---------------------------------------------------------------_
+      clean_archives <- function(entry, date, restore = TRUE, backup_data = TRUE) {
+        df = run_archive %>% filter(UUID == entry)
+        writeLines(paste0("\t\tCleaning ", df$rat_name, "'s entry on ", df$date, " ..."))
+        
+        # Backup lose-able data
+        # Get data to save
+        key_data = df %>% 
+          select(all_of(c("date", "rat_ID", "rat_name", "weight", "omit_list", "assignment", "comments", "scientist", "weightProblem", "rxnProblem", "UUID"))) %>% 
+          unnest_wider(assignment) %>% 
+          mutate(date_removed = Sys.Date() %>% as.character())
+        # append to running CSV
+        fwrite(key_data, file = paste0(projects_folder, "deleted_entries.csv"), append = file.exists(paste0(projects_folder, "deleted_entries.csv")))
+        writeLines("\tData backed up")
+        
+        # Wipe from trials archive:
+        experiment = df$assignment %>% .[[1]] %>% pluck("experiment")
+        variable_name = paste0(experiment, "_archive")
+        filename = paste0(projects_folder, variable_name, ".csv.gz")
+        # load archive
+        trial_archive = fread(filename)
+        # clean archive
+        temp = filter(trial_archive, UUID != df$UUID)
+        # save cleaned archive
+        fwrite(temp, file = filename)
+        writeLines(paste0("\tTrials removed from ", variable_name))
+        
+        # Wipe UUID from run archive
+        run_archive = filter(run_archive, UUID != df$UUID)
+        save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = FALSE, compress = FALSE)
+        writeLines("\tRun archive cleaned")
+        
+        writeLines("Done.")
+        InitializeMain()
+        source(paste0(projects_folder, "/admin tools/import_deleted_entries.R"))
+      }
       
-      # Finding missing runs ----------------------------------------------------
+      # Bad runs ---------------------------------------------------------------
+      print(Bad_UUIDs)
+      # clean and Reload
+      
+      # Finding missing runs ---------------------------------------------------
       # Find what is missing
       UUIDs_missing = keep(UUIDs_in_runs, ~ ! . %in% UUIDs_in_trials)
       UUIDs_without_runs = keep(UUIDs_in_trials, ~ ! . %in% UUIDs_in_runs)
@@ -118,52 +157,15 @@ Find_Issues_in_Archives <- function(group) {
 
       # Find and load orphan runs -----------------------------------------------
       
-      if(length(UUIDs_missing) > 0) {
+      if(length(UUIDs_missing) > 0 | nrow(Bad_UUIDs) > 0) {
         writeLines(glue("          Missing trials for runs in {group}"))
         # Write out list to load
-        bad_runs = run_archive %>% filter(UUID %in% UUIDs_missing) %>% arrange(date)
+        bad_runs = run_archive %>% filter(UUID %in% UUIDs_missing | UUID %in% Bad_UUIDs$UUID) %>% arrange(date)
         
         ## TODO: in-progress
         # 1) need to backup data but not restore assignment through remove entry.R AND save the key_data for autoloading
         # This will need an apply with 1 for rows and will require that the remove entry be in a 'safetied' state
         # 2) reload data from key_data using main with the assignment from the key_data
-        
-        # Function ---------------------------------------------------------------_
-        clean_archives <- function(entry, date, restore = TRUE, backup_data = TRUE) {
-          df = run_archive %>% filter(UUID == entry)
-          writeLines(paste0("\t\tCleaning ", df$rat_name, "'s entry on ", df$date, " ..."))
-          
-          # Backup lose-able data
-            # Get data to save
-            key_data = df %>% 
-              select(all_of(c("date", "rat_ID", "rat_name", "weight", "omit_list", "assignment", "comments", "scientist", "weightProblem", "rxnProblem", "UUID"))) %>% 
-              unnest_wider(assignment) %>% 
-              mutate(date_removed = Sys.Date() %>% as.character())
-            # append to running CSV
-            fwrite(key_data, file = paste0(projects_folder, "deleted_entries.csv"), append = file.exists(paste0(projects_folder, "deleted_entries.csv")))
-            writeLines("\tData backed up")
-          
-          # Wipe from trials archive:
-          experiment = df$assignment %>% .[[1]] %>% pluck("experiment")
-          variable_name = paste0(experiment, "_archive")
-          filename = paste0(projects_folder, variable_name, ".csv.gz")
-          # load archive
-          trial_archive = fread(filename)
-          # clean archive
-          temp = filter(trial_archive, UUID != df$UUID)
-          # save cleaned archive
-          fwrite(temp, file = filename)
-          writeLines(paste0("\tTrials removed from ", variable_name))
-          
-          # Wipe UUID from run archive
-          run_archive = filter(run_archive, UUID != df$UUID)
-          save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = FALSE, compress = FALSE)
-          writeLines("\tRun archive cleaned")
-          
-          writeLines("Done.")
-          InitializeMain()
-          source(paste0(projects_folder, "/admin tools/import_deleted_entries.R"))
-        }
         
         # Check prior to cleaning bad entries -------------------------------------
         switch(menu(c("Yes", "No"), 
