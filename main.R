@@ -915,11 +915,21 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       expected_delay <<- user_settings$delay_oddball
       if (run_properties$summary$nogo_freq == 0) nogo_freq = "BBN"
       else nogo_freq = paste0(run_properties$summary$nogo_freq, "kHz")
+      
+      # Determine if even odds
+      has_uneven_trial_odds = length(unique(run_properties$summary$odds.odds)) > 1
+      if (has_uneven_trial_odds){
+        # build probability table
+        odds = tibble(position = run_properties$summary$odds.potition,
+                      repeats = run_properties$summary$odds.odds)
+        # select
+        most_common_position = filter(odds, repeats == max(repeats))$position
+      }
 
       computed_file_name = paste0(run_properties$summary$go_freq, "kHz_", run_properties$summary$go_dB, "dB_", nogo_freq, "_",
                                   run_properties$summary$nogo_dB, "dB_", run_properties$lockout, "s_", run_properties$summary$go_position_start, "-", run_properties$summary$go_position_stop)
-      if (analysis$type == "Oddball (Uneven Odds & Catch)") computed_file_name = paste0(computed_file_name, "_odds_NG")
-      if (analysis$type == "Oddball (Uneven Odds)") computed_file_name = paste0(computed_file_name, "_odds")
+      if (analysis$type == "Oddball (Uneven Odds & Catch)") computed_file_name = paste0(computed_file_name, "_odds", most_common_position, "_NG")
+      if (analysis$type == "Oddball (Uneven Odds)") computed_file_name = paste0(computed_file_name, "_odds", most_common_position)
       if (analysis$type == "Oddball (Catch)") computed_file_name = paste0(computed_file_name, "_catch")
       if (analysis$type == "Oddball (Background)") computed_file_name = paste0(computed_file_name, "_",
                                                                                str_extract(run_properties$background_file, pattern = "^.*(?=.mat)"),
