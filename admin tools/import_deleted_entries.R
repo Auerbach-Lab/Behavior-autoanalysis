@@ -111,9 +111,10 @@ missing_entries = filter(deleted_entries_check, is.na(UUIDnew)) %>% select(-comm
 old_excel_archive = 
   bind_rows(old_excel_archive %>%   
               # add missing columns
-              mutate(scientist = NA_character_, weightProblem = NA_character_, rxnProblem = NA_character_),
+              mutate(omit_list = NA, scientist = NA_character_, weightProblem = NA_character_, rxnProblem = NA_character_),
             missing_entries %>%
-              select(date, assigned_file_name, weight, comments, experiment, phase, task, detail, rat_name) %>%
+              select(date, assigned_file_name, weight, comments, experiment, phase, task, detail, rat_name,
+                     scientist, weightProblem, rxnProblem, omit_list) %>%
               # fix date to a date object
               mutate(Date = lubridate::ymd(date), Invalid = "") %>% select(-date) %>%
               rename(Filename = assigned_file_name,

@@ -16,7 +16,7 @@ InitializeMain()
 run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>% 
   unnest_wider(stats) %>% unnest_wider(assignment) %>%
   mutate(hit_percent = hit_percent * 100, FA_percent = FA_percent * 100) %>%
-  select(date, rat_name, weight, trial_count, hit_percent, FA_percent, file_name, experiment, phase, task, detail) %>%
+  select(date, rat_name, weight, trial_count, hit_percent, FA_percent, file_name, experiment, phase, task, detail, scientist, weightProblem, rxnProblem) %>%
   print()
 
 
