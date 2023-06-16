@@ -49,7 +49,7 @@ ui <- fluidPage(
         textOutput("requirements"),
         conditionalPanel(
           condition = "output.plotWeight",
-          h4(textOutput("displaycomment")),
+          h3(textOutput("displaycomment")),
         ),
         conditionalPanel(
           condition = "output.fatal_error == 'TRUE'",
@@ -200,7 +200,7 @@ server <- function(input, output, session) {
   })
   id_good <- reactive({
     req(name_good(), cancelOutput = TRUE)
-    rat_archive %>% dplyr::filter(str_to_upper(Rat_name) == name_good()) %>% .$Rat_ID
+    rat_archive %>% dplyr::filter(str_to_upper(Rat_name) == name_good() & is.na(end_date)) %>% .$Rat_ID
   })
   observeEvent(input$name, {
     alnum = name_clean() %>% str_detect("^[:alnum:]*$")
