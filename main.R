@@ -920,7 +920,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       has_uneven_trial_odds = length(unique(run_properties$summary$odds.odds)) > 1
       if (has_uneven_trial_odds){
         # build probability table
-        odds = tibble(position = run_properties$summary$odds.potition,
+        odds = tibble(position = run_properties$summary$odds.position,
                       repeats = run_properties$summary$odds.odds)
         # select
         most_common_position = filter(odds, repeats == max(repeats))$position
