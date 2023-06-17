@@ -1,4 +1,4 @@
-# data loading external file formats
+            # data loading external file formats
 library(R.matlab); library(openxlsx); library(xml2); library(zip);
 
 # data manipulation
@@ -440,32 +440,46 @@ Workbook_Writer <- function() {
         }
 
         # Oddball
-        # df_basecase = length of most recent streak with task==basecase
         if (experiment_current == "Oddball") {
-          df_basecase = rat_runs %>%
+          count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
-            dplyr::filter(phase == phase_current & task == "Base case") %>% # note that this is agnostic of the most recent detail and will return any recent base case streak
-            mutate(groupid = data.table::rleid(task, detail) ) %>%
-            filter(groupid == suppressWarnings(max(groupid))) %>%
-            summarise(task = unique(task), detail = unique(detail),
+            dplyr::filter(phase == phase_current & task == task_current & invalid != TRUE) %>%
+            mutate(frequency = str_extract(file_name, pattern = "^[:digit:]+")) %>%
+            group_by(task, detail, frequency) %>%
+            summarise(task = unique(task), frequency = unique(frequency), detail = unique(detail),
                       date = tail(date, 1), n = n(),
                       condition = NA,
-                      .groups = "drop")
-
-          # df_task = count of today's task
-          if (task_current != "Base case") {
-            df_task = rat_runs %>%
-              tidyr::unnest_wider(assignment) %>%
-              dplyr::filter(phase == phase_current & task == task_current) %>%
-              summarise(task = unique(task), detail = unique(detail),
-                        date = tail(date, 1), n = n(),
-                        condition = NA,
-                        .groups = "drop")
-
-            # This ensures that the Base case is always at the top
-            count_df = rbind(df_basecase, df_task)
-          } else count_df = df_basecase
+                      .groups = "drop") %>%
+            arrange(task, frequency) %>%
+            mutate(task = paste(task, frequency)) %>%
+            select(-frequency)
         }
+          
+        #   # OLD
+        #   df_basecase = rat_runs %>%
+        #     tidyr::unnest_wider(assignment) %>%
+        #     dplyr::filter(phase == phase_current & task == "Base case") %>% # note that this is agnostic of the most recent detail and will return any recent base case streak
+        #     mutate(groupid = data.table::rleid(task, detail) ) %>%
+        #     filter(groupid == suppressWarnings(max(groupid))) %>%
+        #     summarise(task = unique(task), detail = unique(detail),
+        #               date = tail(date, 1), n = n(),
+        #               condition = NA,
+        #               .groups = "drop")
+        # 
+        #   # df_task = count of today's task
+        #   if (task_current != "Base case") {
+        #     df_task = rat_runs %>%
+        #       tidyr::unnest_wider(assignment) %>%
+        #       dplyr::filter(phase == phase_current & task == task_current) %>%
+        #       summarise(task = unique(task), detail = unique(detail),
+        #                 date = tail(date, 1), n = n(),
+        #                 condition = NA,
+        #                 .groups = "drop")
+        # 
+        #     # This ensures that the Base case is always at the top
+        #     count_df = rbind(df_basecase, df_task)
+        #   } else count_df = df_basecase
+        # }
 
         #format date correctly
         date = count_df$date
@@ -995,7 +1009,7 @@ Workbook_Writer <- function() {
     filter(is.na(end_date)) %>%
     filter(Assigned_Filename == "" | Assigned_Filename == "ABR") %>%
     filter(Old_Assigned_Experiment  != "GD") %>%
-    # filter(Rat_name %in% c("LP6", "LP5", "GP2", "GP5")) %>%
+    # filter(Rat_name %in% c("GP6")) %>%
     # filter(! Rat_ID %in% rats_not_entered_today$Rat_ID) %>%
     # filter(str_detect(Rat_name, "TP")) %>%
     .$Rat_ID %>%
