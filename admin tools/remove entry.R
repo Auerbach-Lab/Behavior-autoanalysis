@@ -7,7 +7,7 @@ backup_data = TRUE
 
 
 # Function ---------------------------------------------------------------_
-clean_archives <- function(entry, date, restore = TRUE, backup_data = TRUE) {
+clean_archives <- function(entry, date) {
   df = run_archive %>% filter(UUID == entry)
   writeLines(paste0("Cleaning ", df$rat_name, "'s entry on ", df$date, " ..."))
   
