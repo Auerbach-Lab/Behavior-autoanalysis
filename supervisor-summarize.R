@@ -507,6 +507,8 @@ Workbook_Writer <- function() {
                                        str_detect(paste(warnings_list), pattern = "wrong file") ~ glue("{file_name} *"),
                                        TRUE ~ file_name)) %>%
           tidyr::unnest_wider(assignment) %>%
+          # omit Oddball rows with <1 complete block - here to save time as its one less row to unnest
+          dplyr::filter(! (stim_type == "train" & complete_block_count < 2)) %>%
           tidyr::unnest_wider(stats) %>%
           tidyr::unnest_wider(summary) %>%
           dplyr::select(all_of(columns)) %>%
