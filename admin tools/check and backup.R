@@ -38,7 +38,7 @@ Find_Issues_in_Archives <- function(group) {
                           NOT backed up"))
     } else {
       # Function ---------------------------------------------------------------_
-      clean_archives <- function(entry, date, restore = TRUE, backup_data = TRUE) {
+      clean_archives <- function(entry, date) {
         df = run_archive %>% filter(UUID == entry)
         writeLines(paste0("\t\tCleaning ", df$rat_name, "'s entry on ", df$date, " ..."))
         
@@ -47,7 +47,8 @@ Find_Issues_in_Archives <- function(group) {
         key_data = df %>% 
           select(all_of(c("date", "rat_ID", "rat_name", "weight", "omit_list", "assignment", "comments", "scientist", "weightProblem", "rxnProblem", "UUID"))) %>% 
           unnest_wider(assignment) %>% 
-          mutate(date_removed = Sys.Date() %>% as.character())
+          mutate(date_removed = Sys.Date() %>% as.character(),
+                 omit_list = omit_list)
         # append to running CSV
         fwrite(key_data, file = paste0(projects_folder, "deleted_entries.csv"), append = file.exists(paste0(projects_folder, "deleted_entries.csv")))
         writeLines("\tData backed up")
