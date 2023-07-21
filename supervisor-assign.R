@@ -26,7 +26,7 @@ Workbook_Reader <- function() {
   if (any(is.na(assignments_mandatory_data))) stop("ERROR: Mandatory values are NA. (Are there non-green cells in the supervisor spreadsheet?)")
   assignments_df$Persistent_Comment = assignments_df$Persistent_Comment %>%
     stringr::str_replace(pattern = "comment field", replacement = NA_character_) # match the (partial) placeholder text for the comment field, replace with NA
-
+  
   rat_archive <<- tryCatch(
     {
       r = dplyr::rows_update(rat_archive, assignments_df, by = "Rat_ID", unmatched = "error")
@@ -45,7 +45,7 @@ Workbook_Reader <- function() {
   )
   
   # warn about unassigned rats
-  unassigned_rats = rat_archive %>% filter(is.na(end_date)) %>% filter(Assigned_Filename == "")
+  unassigned_rats = rat_archive %>% filter(is.na(end_date) & start_date < str_remove_all(Sys.Date(), "-")) %>% filter(Assigned_Filename == "")
   if (nrow(unassigned_rats) > 0) {
     warn = warn(paste0(nrow(unassigned_rats), " rats are missing assignments. (", str_flatten_comma(unassigned_rats$Rat_name), ")"))
   }
@@ -61,22 +61,22 @@ Assignments_Writer <- function() {
     select(Rat_name, Box, Assigned_Filename, Changed, Assigned_Experiment) %>%
     rename(Experiment = Assigned_Experiment)
   writeDataTable(wb, 1, x = data_table, startRow = 1, colNames = TRUE, rowNames = FALSE, bandedRows = TRUE, tableStyle = "TableStyleMedium2", na.string = "")
-
+  
   # formatting - widths
   options("openxlsx.minWidth" = 6)
   setColWidths(wb, 1, cols = 1:5, widths = "auto")
-
+  
   # formatting - alignment
   center_style <- createStyle(halign = "center")
   addStyle(wb, 1, center_style, rows = 1:50, cols = c(2,4), gridExpand = TRUE, stack = TRUE)
-
+  
   # formatting - make printable
   pageSetup(wb, 1, top = 0.5, bottom = 0.5, header = 0, footer = 0, fitToHeight = TRUE)
-
+  
   # working directory preservation
   old_wd = getwd()
   setwd(projects_folder)
-
+  
   tryCatch(
     saveWorkbook(wb, "assignments.xlsx", overwrite = TRUE),
     warning = function(warning) if (str_detect(as.character(warning), "Permission denied")) {
@@ -86,7 +86,7 @@ Assignments_Writer <- function() {
     }
   )
   openXL(file = "assignments.xlsx")
-
+  
   # cleanup
   options("openxlsx.minWidth" = 3) # return to default
   setwd(old_wd)
