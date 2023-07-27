@@ -781,7 +781,7 @@ Workbook_Writer <- function() {
           r = full_join(FA_table, Rxn_table, by = c("date", "time", "position" = "Inten (dB)"))
           
           r = r %>%
-            group_by(date) %>%
+            group_by(date, time) %>%
             do(filter(., position %in% c(min(position), median(position), max(position))) %>%
                  mutate(position = c("early", "mid", "late"))) %>%
             select(-FA, -trials) %>%
