@@ -10,9 +10,13 @@ Weight_Grapher <- function(rat_to_graph) {
   max_weight = max(max_weight_runs, max_weight_freefeed)
   rat_runs = rat_runs %>% filter(date > str_remove_all(Sys.Date()-21, "-")) %>%
     mutate(date_asDate = lubridate::ymd(date),
-           trial_count = map_dbl(stats, ~.$trial_count),
-           weight_change = (weight - max_weight)/max_weight,
-           weight_annotation = if_else(abs(weight_change) > 0.15, paste0(round((weight_change)*100, digits = 0), "%"), NULL))
+           trial_count = map_dbl(stats, ~.$trial_count)) %>%
+    summarise(date_asDate = unique(date_asDate), 
+              analysis_type = unique(analysis_type), rat_name = unique(rat_name),
+              trial_count = sum(trial_count), weight = unique(weight),
+              .by = c(date)) %>%
+    mutate(weight_change = (weight - max_weight)/max_weight,
+           weight_annotation = if_else(abs(weight_change) > 0.15, paste0(round((weight_change)*100, digits = 0), "%"), ""))
   
   min_trials = pluck(user_settings, "minimum_trials", 
                      arrange(rat_runs, desc(date)) %>% head(n = 1) %>% .$analysis_type)
@@ -58,11 +62,11 @@ Weight_Grapher <- function(rat_to_graph) {
 
 cat("Graphing...")
 rat_archive %>%
-  filter(is.na(end_date)) %>%
+  filter(is.na(end_date) & start_date < str_remove_all(Sys.Date(), "-")) %>%
   #select rats that have NOT been run today
   # filter(Assigned_Filename != "") %>%
   # filter(Assigned_Experiment  == "Tsc2-LE") %>%
-  # filter(Rat_name %in% c("TP5", "BP1", "BP5")) %>%
+  # filter(Rat_name %in% c("BP1")) %>%
   filter(str_detect(Box, "6.")) %>%
   arrange(desc(Box)) %>%
   .$Rat_ID %>%
