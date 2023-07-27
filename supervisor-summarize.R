@@ -497,7 +497,9 @@ Workbook_Writer <- function() {
       
       Build_Table <- function() {
         # Common Columns ----------------------------------------------------------
-        columns = c("task", "detail", "date", "time", "file_name", "weight", "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial", "threshold", "reaction", "FA_detailed", "warnings_list", "comments", "analysis_type")
+        columns = c("task", "detail", "date", "time", "file_name", "weight", 
+                    "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial", 
+                    "threshold", "reaction", "FA_detailed", "warnings_list", "comments", "analysis_type")
         
         r = rat_runs %>%
           dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
@@ -537,7 +539,7 @@ Workbook_Writer <- function() {
             select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`) %>% #TODO check that Frequency is actually go tone positional data
             distinct()
         } else if(phase_current == "Gap Detection") {
-          if(detail_current == "None") {
+          if(detail_current == "None"| analysis_type == "Training - Gap") {
             r = r %>%
               unnest(reaction) %>%
               group_by(date) %>%
@@ -1005,8 +1007,6 @@ Workbook_Writer <- function() {
   style = Define_Styles()
   Setup_Workbook()
   
-  # Add_Rat_To_Workbook(209)
-  #OR
   rat_archive %>%
     filter(is.na(end_date)) %>%
     filter(Assigned_Filename == "" | Assigned_Filename == "ABR") %>%
