@@ -251,7 +251,7 @@ Workbook_Writer <- function() {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Alone") %>%
-            group_by(task) %>%
+            group_by(task, detail) %>%
             summarise(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
                       condition = "baseline",
@@ -264,7 +264,7 @@ Workbook_Writer <- function() {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Mixed") %>%
-            group_by(task) %>%
+            group_by(task, detail) %>%
             summarise(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
                       condition = "baseline",
@@ -277,7 +277,7 @@ Workbook_Writer <- function() {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "BBN" & detail == detail_current) %>%
-            group_by(task) %>%
+            group_by(task, detail) %>%
             summarise(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
                       condition = "baseline",
@@ -290,7 +290,7 @@ Workbook_Writer <- function() {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "Gap Detection") %>%
-            group_by(task) %>%
+            group_by(task, detail) %>%
             summarise(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
                       condition = "baseline",
@@ -303,7 +303,7 @@ Workbook_Writer <- function() {
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "Gap Detection") %>%
             filter(! task %in% c("Training", "Reset")) %>%
-            group_by(task) %>%
+            group_by(task, detail) %>%
             summarise(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
                       condition = "baseline",
@@ -330,7 +330,7 @@ Workbook_Writer <- function() {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "Tones") %>% # keeping all tasks
-            group_by(task) %>%
+            group_by(task, detail) %>%
             summarise(task = unique(task), detail = NA,
                       date = tail(date, 1), n = n(),
                       condition = "baseline",
@@ -356,7 +356,7 @@ Workbook_Writer <- function() {
             dplyr::filter(phase == "BBN") %>%
             dplyr::filter((task == "TH" & condition == "baseline" & detail == detail_current & duration == duration_current)
                           | (condition == "post-HL" & detail == detail_current)) %>%
-            group_by(task, condition) %>%
+            group_by(task, detail, condition) %>%
             summarise(task = paste("BBN", unique(task)), detail = unique(detail),
                       date = tail(date, 1), n = n(),
                       condition = unique(condition),
@@ -366,7 +366,7 @@ Workbook_Writer <- function() {
           Tones_counts = df %>%
             dplyr::filter(phase == "Tones") %>%
             dplyr::filter(task %in% c("Rxn", "TH")) %>%
-            group_by(task, condition) %>%
+            group_by(task, detail, condition) %>%
             summarise(task = paste("Tones", unique(task)), detail = unique(detail),
                       date = tail(date, 1), n = n(),
                       condition = unique(condition),
@@ -383,7 +383,7 @@ Workbook_Writer <- function() {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "BBN" & date <= HL_date) %>%
-            group_by(task) %>%
+            group_by(task, detail) %>%
             summarise(task = unique(task), detail = NA,
                       date = tail(date, 1), n = n(),
                       condition = "post-HL",
@@ -396,7 +396,7 @@ Workbook_Writer <- function() {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "Tones") %>% # keeping all tasks
-            group_by(task) %>%
+            group_by(task, detail) %>%
             summarise(task = unique(task), detail = NA,
                       date = tail(date, 1), n = n(),
                       condition = "post-HL",
@@ -432,7 +432,7 @@ Workbook_Writer <- function() {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(detail == "Oddball") %>% # keeping all tasks
-            group_by(task) %>%
+            group_by(task, detail) %>%
             summarise(task = unique(task), detail = detail_current,
                       date = tail(date, 1), n = n(),
                       condition = "baseline",
@@ -1041,3 +1041,4 @@ Workbook_Writer()
 rm(list = c("experiment_config_df", "run_today", "wb"))
 # Validate and back-up archives
 source(paste0(projects_folder, "admin tools\\check and backup.R"))
+

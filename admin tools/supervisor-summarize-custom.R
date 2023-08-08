@@ -1,4 +1,4 @@
-            # data loading external file formats
+# data loading external file formats
 library(R.matlab); library(openxlsx); library(xml2); library(zip);
 
 # data manipulation
@@ -6,12 +6,12 @@ library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stri
 
 InitializeWriter <- function() {
   options(warn=1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
-
+  
   source(paste0(projects_folder, "settings.R"))  # user variables
-
+  
   experiment_config_df <<- read.csv(paste0(projects_folder, "experiment_details.csv"), na.strings = "N/A")
   experiment_config_df <<- Filter(function(x)!all(is.na(x)), experiment_config_df) # remove NA columns
-
+  
   rat_archive <<- fread(paste0(projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
   load(paste0(projects_folder, "run_archive.Rdata"), .GlobalEnv)
 }
@@ -36,17 +36,17 @@ Workbook_Writer <- function() {
       percent = createStyle(numFmt = "0%")
     )
   }
-
+  
   Setup_Workbook <- function() {
     wb <<- createWorkbook()
     rowCurrent <<- 1 #persistent, index of the next unwritten rowCurrent
-
+    
     options("openxlsx.borderColour" = "#4F80BD")
     options("openxlsx.borderStyle" = "thin")
     modifyBaseFont(wb, fontSize = 10, fontName = "Calibri")
-
+    
     addWorksheet(wb, sheetName = "Summary", tabColour = "limegreen")
-
+    
     setColWidths(wb, 1, cols = "A", widths = 20)
     setColWidths(wb, 1, cols = "B", widths = 9)
     setColWidths(wb, 1, cols = "C", widths = 10)
@@ -55,14 +55,14 @@ Workbook_Writer <- function() {
     setColWidths(wb, 1, cols = 18:27, widths = 5, hidden = FALSE)
     setColWidths(wb, 1, cols = "AB", widths = 5, hidden = FALSE)
     setColWidths(wb, 1, cols = "AC", widths = 53.71)
-
+    
     # add experimental configurations table from external file
     max_search_rows <<- nrow(experiment_config_df)
     writeData(wb, 1, experiment_config_df, startRow = user_settings$config_row, startCol = user_settings$config_col, colNames = FALSE, rowNames = FALSE)
-
+    
     return(wb)
   }
-
+  
   Add_Rat_To_Workbook <- function(ratID) {
     Write_Header <- function() {
       Calculate_Next_Run_Text <- function () {
@@ -79,17 +79,17 @@ Workbook_Writer <- function() {
         nextrun_text = paste0(nextrun_text, " - ", nextrun %>% format("%m/%d/%Y"))
         return(nextrun_text)
       }
-
+      
       Write_Dynamic_Lists <- function() {
         Build_List <- function(i) {
           #build the excel formula that will display the items from the output range that correspond to the query cell for the input range
           dynamic_list_formula = paste0("=IFERROR(INDEX(", output_range, ",SMALL(IF(", query_cell, "=", input_range, ",ROW(", input_range, ")-ROW(", range_start, ")+1),ROW(", i, ":", i, "))),\"\")")
           writeFormula(wb, 1, dynamic_list_formula, startRow = user_settings$config_row+i+rowCurrent-1, startCol = user_settings$dynamic_col + col_offset, array = TRUE)
         }
-
+        
         r = user_settings$config_row
         c = user_settings$config_col
-
+        
         # phases list lives at c+1 (experiment) and +2 (phase), querying off experiment in F
         range_start = getCellRefs(data.frame(r, c + 2))
         range_end = getCellRefs(data.frame(r + max_search_rows, c + 2))
@@ -100,7 +100,7 @@ Workbook_Writer <- function() {
         query_cell = getCellRefs(data.frame(rowCurrent, 6))
         col_offset = 0
         sapply(c(1:user_settings$dynamic_list_length), Build_List)
-
+        
         #task list lives at c+3 (phase) and +4 (task), querying from phase in I
         range_start = getCellRefs(data.frame(r, c + 4))
         range_end = getCellRefs(data.frame(r + max_search_rows, c + 4))
@@ -111,7 +111,7 @@ Workbook_Writer <- function() {
         query_cell = getCellRefs(data.frame(rowCurrent, 9))
         col_offset = col_offset + 1
         sapply(c(1:user_settings$dynamic_list_length), Build_List)
-
+        
         #detail list lives at c+5 (phase again) and +6 (detail), querying from phase again in I
         range_start = getCellRefs(data.frame(r, c + 6))
         range_end = getCellRefs(data.frame(r + max_search_rows, c + 6))
@@ -122,13 +122,13 @@ Workbook_Writer <- function() {
         query_cell = getCellRefs(data.frame(rowCurrent, 9))
         col_offset = col_offset + 1
         sapply(c(1:user_settings$dynamic_list_length), Build_List)
-
+        
       }
-
+      
       # Header Workflow ---------------------------------------------------------
-
+      
       Write_Dynamic_Lists()
-
+      
       #Rat Name & ID
       rat_name = run_today$rat_name
       #rat_name = stringr::str_to_upper(string = rat_name)
@@ -139,17 +139,17 @@ Workbook_Writer <- function() {
       )
       addStyle(wb, 1, style[["rat_name"]], rows = rowCurrent, cols = 1) # Name
       addStyle(wb, 1, style[["rat_name"]], rows = rowCurrent, cols = 30) # ID
-
-
+      
+      
       #Date
       addStyle(wb, 1, style[["date"]], rows = rowCurrent, cols = 2:3)
       mergeCells(wb, 1, cols = 2:3, rows = rowCurrent)
       nextrun_text = Calculate_Next_Run_Text()
-
+      
       #Tomorrow's Filename
       conditionalFormatting(wb, 1, type = "contains", rule = "[", style = style[["mandatory_input_reject"]], rows = rowCurrent, cols = 4)
       conditionalFormatting(wb, 1, type = "notcontains", rule = "[", style = style[["mandatory_input_accept"]], rows = rowCurrent, cols = 4)
-
+      
       #Experiment
       range_start = getCellRefs(data.frame(user_settings$config_row, user_settings$config_col))
       range_end = getCellRefs(data.frame(user_settings$config_row + user_settings$dynamic_list_length, user_settings$config_col))
@@ -160,7 +160,7 @@ Workbook_Writer <- function() {
       conditionalFormatting(wb, 1, rule = rule_string, style = style[["mandatory_input_accept"]], rows = rowCurrent, cols = 6)
       rule_string = paste0("COUNTIF(", range_string, ",F", rowCurrent, ")<=0")
       conditionalFormatting(wb, 1, rule = rule_string, style = style[["mandatory_input_reject"]], rows = rowCurrent, cols = 6)
-
+      
       #Experimental Phase
       range_start = getCellRefs(data.frame(rowCurrent + 1, user_settings$dynamic_col))
       range_end = getCellRefs(data.frame(rowCurrent + 1 + user_settings$dynamic_list_length, user_settings$dynamic_col))
@@ -171,7 +171,7 @@ Workbook_Writer <- function() {
       rule_string = paste0("COUNTIF(", range_string, ",I", rowCurrent, ")<=0")
       conditionalFormatting(wb, 1, rule = rule_string, style = style[["mandatory_input_reject"]], rows = rowCurrent, cols = 9)
       mergeCells(wb, 1, cols = 9:10, rows = rowCurrent)
-
+      
       #Task
       range_start = getCellRefs(data.frame(rowCurrent + 1, user_settings$dynamic_col + 1))
       range_end = getCellRefs(data.frame(rowCurrent + 1 + user_settings$dynamic_list_length, user_settings$dynamic_col + 1))
@@ -182,7 +182,7 @@ Workbook_Writer <- function() {
       rule_string = paste0("COUNTIF(", range_string, ",L", rowCurrent, ")<=0")
       conditionalFormatting(wb, 1, rule = rule_string, style = style[["mandatory_input_reject"]], rows = rowCurrent, cols = 12)
       mergeCells(wb, 1, cols = 12:13, rows = rowCurrent)
-
+      
       #Detail
       range_start = getCellRefs(data.frame(rowCurrent + 1, user_settings$dynamic_col + 2))
       range_end = getCellRefs(data.frame(rowCurrent + 1 + user_settings$dynamic_list_length, user_settings$dynamic_col + 2))
@@ -193,24 +193,24 @@ Workbook_Writer <- function() {
       rule_string = paste0("COUNTIF(", range_string, ",O", rowCurrent, ")<=0")
       conditionalFormatting(wb, 1, rule = rule_string, style = style[["mandatory_input_reject"]], rows = rowCurrent, cols = 15)
       mergeCells(wb, 1, cols = 15:16, rows = rowCurrent)
-
+      
       #Persistent Comment Field
       addStyle(wb, 1, rows = rowCurrent, cols = 18:27, style = style[["optional_input"]])
       mergeCells(wb, 1, cols = 18:27, rows = rowCurrent) # rat persistent comment merge
-
+      
       #Warnings
       conditionalFormatting(wb, 1, type = "expression", rule = "==\"Warnings: none\"", style = style[["mandatory_input_accept"]], rows = rowCurrent, cols = 29)
       conditionalFormatting(wb, 1, type = "expression", rule = "!=\"Warnings: none\"", style = style[["warning"]], rows = rowCurrent, cols = 29)
       addStyle(wb, 1, rows = rowCurrent, cols = 29, style = style[["halign_center"]], stack = TRUE) # center the warning text
-
+      
       #Entire Main rowCurrent
       addStyle(wb, 1, rows = rowCurrent, cols = 1:30, style = style[["rat_header"]], stack = TRUE) # vertically center & wrap the main rowCurrent
       #Set_Height_Main_Row()
-
+      
       #Retrieve persistent comment if there is one
       comment = rat_archive %>% filter(Rat_ID == ratID) %>% .$Persistent_Comment
       if (is.na(comment)) comment = "[Persistent comment field e.g. week-ahead informal plan for this rat]"
-
+      
       rat_header_df = data.frame(
         rat_name, #A
         nextrun_text, #B
@@ -238,59 +238,59 @@ Workbook_Writer <- function() {
       )
       writeData(wb, 1, x = rat_header_df, startRow = rowCurrent, colNames = FALSE, rowNames = FALSE)
     }
-
+    
     Write_Table <- function() {
       Build_Counts <- function() {
         # if experiment_current != Oddball
         # get current date and compare to rat_archive 'HL induced' column's date to determine post-HL or not
         pre_HL = is.na(dplyr::filter(rat_archive, Rat_ID == ratID)$HL_date) #(boolean)
         if (!pre_HL) HL_date = dplyr::filter(rat_archive, Rat_ID == ratID)$HL_date
-
+        
         # BBN Rxn/TH PreHL Alone
         if (phase_current == "BBN" & ! task_current %in% c("Training", "Reset") & pre_HL & detail_current == "Alone") {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Alone") %>%
-            group_by(task) %>%
+            group_by(task, detail) %>%
             summarise(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
                       condition = "baseline",
                       .groups = "drop")
         }
-
+        
         # BBN Rxn/TH PreHL Mixed
         #TODO Untested as not in current dataset
         if (phase_current == "BBN" & task_current %in% c("Rxn", "TH") & pre_HL & detail_current == "Mixed") {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Mixed") %>%
-            group_by(task) %>%
+            group_by(task, detail) %>%
             summarise(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
                       condition = "baseline",
                       .groups = "drop")
         }
-
+        
         # BBN Training/Reset PreHL
         #TODO Untested as not in current dataset
         if (phase_current == "BBN" & task_current %in% c("Training", "Reset") & pre_HL) {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "BBN" & detail == detail_current) %>%
-            group_by(task) %>%
+            group_by(task, detail) %>%
             summarise(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
                       condition = "baseline",
                       .groups = "drop")
         }
-
-
+        
+        
         # Gap Detection Training/Reset PreHL
         if (phase_current == "Gap Detection" & task_current %in% c("Training", "Reset") & pre_HL) {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "Gap Detection") %>%
-            group_by(task) %>%
+            group_by(task, detail) %>%
             summarise(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
                       condition = "baseline",
@@ -303,14 +303,14 @@ Workbook_Writer <- function() {
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "Gap Detection") %>%
             filter(! task %in% c("Training", "Reset")) %>%
-            group_by(task) %>%
+            group_by(task, detail) %>%
             summarise(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
                       condition = "baseline",
                       .groups = "drop")
         }
-
-
+        
+        
         # Tones Rxn/TH PreHL
         if (phase_current == "Tones" & task_current %in% c("Rxn", "TH") & pre_HL) {
           count_df = rat_runs %>%
@@ -323,20 +323,20 @@ Workbook_Writer <- function() {
                       .groups = "drop") %>%
             dplyr::arrange(dplyr::desc(detail), task)
         }
-
+        
         # Tones Training/Reset PreHL
         #TODO Untested as not in current dataset
         if (phase_current == "Tones" & task_current %in% c("Training", "Reset") & pre_HL) {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "Tones") %>% # keeping all tasks
-            group_by(task) %>%
+            group_by(task, detail) %>%
             summarise(task = unique(task), detail = NA,
                       date = tail(date, 1), n = n(),
                       condition = "baseline",
                       .groups = "drop")
         }
-
+        
         # BBN/Tones Rxn/TH PostHL
         if (phase_current %in% c("BBN", "Tones") & task_current %in% c("Rxn", "TH") & !pre_HL) {
           df = rat_runs %>%
@@ -347,62 +347,62 @@ Workbook_Writer <- function() {
               .$summary %>% modify_depth(1, "duration") %>% as.character %>% str_extract("[:digit:]+"),
               "Mixed"
             ))
-
+          
           # get the duration that was used in today's run
           duration_current = df %>% arrange(desc(date)) %>% head(1) %>% .$duration
-
+          
           # count number of pre-HL TH runs, and number of post-HL runs by detail
           BBN_counts = df %>%
             dplyr::filter(phase == "BBN") %>%
             dplyr::filter((task == "TH" & condition == "baseline" & detail == detail_current & duration == duration_current)
                           | (condition == "post-HL" & detail == detail_current)) %>%
-            group_by(task, condition) %>%
+            group_by(task, detail, condition) %>%
             summarise(task = paste("BBN", unique(task)), detail = unique(detail),
                       date = tail(date, 1), n = n(),
                       condition = unique(condition),
                       .groups = "drop") %>%
             dplyr::arrange(condition, task)
-
+          
           Tones_counts = df %>%
             dplyr::filter(phase == "Tones") %>%
             dplyr::filter(task %in% c("Rxn", "TH")) %>%
-            group_by(task, condition) %>%
+            group_by(task, detail, condition) %>%
             summarise(task = paste("Tones", unique(task)), detail = unique(detail),
                       date = tail(date, 1), n = n(),
                       condition = unique(condition),
                       .groups = "drop") %>%
             dplyr::arrange(condition, task)
-
+          
           count_df = rbind(BBN_counts, Tones_counts) %>%
             relocate(condition, .after = n)
         }
-
+        
         # BBN Training/Reset PostHL
         #TODO Partially tested as not in current dataset
         if (phase_current == "BBN" & task_current %in% c("Training", "Reset") & !pre_HL) {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "BBN" & date <= HL_date) %>%
-            group_by(task) %>%
+            group_by(task, detail) %>%
             summarise(task = unique(task), detail = NA,
                       date = tail(date, 1), n = n(),
                       condition = "post-HL",
                       .groups = "drop")
         }
-
+        
         # Tones Training/Reset PostHL
         #TODO Partially tested as not in current dataset
         if (phase_current == "Tones" & task_current %in% c("Training", "Reset") & !pre_HL) {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "Tones") %>% # keeping all tasks
-            group_by(task) %>%
+            group_by(task, detail) %>%
             summarise(task = unique(task), detail = NA,
                       date = tail(date, 1), n = n(),
                       condition = "post-HL",
                       .groups = "drop")
         }
-
+        
         # Octave
         if (phase_current == "Octave") {
           if (pre_HL) {
@@ -425,20 +425,20 @@ Workbook_Writer <- function() {
                         .groups = "drop")
           }
         }
-
-
+        
+        
         # Oddball Training/Reset PreHL
         if (phase_current == "Tones" & task_current %in% c("Training", "Reset") & pre_HL & detail_current == "Oddball") {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(detail == "Oddball") %>% # keeping all tasks
-            group_by(task) %>%
+            group_by(task, detail) %>%
             summarise(task = unique(task), detail = detail_current,
                       date = tail(date, 1), n = n(),
                       condition = "baseline",
                       .groups = "drop")
         }
-
+        
         # Oddball
         if (experiment_current == "Oddball") {
           count_df = rat_runs %>%
@@ -454,7 +454,7 @@ Workbook_Writer <- function() {
             mutate(task = paste(task, frequency)) %>%
             select(-frequency)
         }
-          
+        
         #   # OLD
         #   df_basecase = rat_runs %>%
         #     tidyr::unnest_wider(assignment) %>%
@@ -480,25 +480,27 @@ Workbook_Writer <- function() {
         #     count_df = rbind(df_basecase, df_task)
         #   } else count_df = df_basecase
         # }
-
+        
         #format date correctly
         date = count_df$date
         date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))
         count_df$date = date
-
+        
         count_df = count_df %>% add_column(blank = NA, .after = "n") # col 5 should be blank
         count_df[, (length(count_df) + 1):29] = NA # add columns to reach 29
-
+        
         return(count_df)
       }
-
-
-
-
+      
+      
+      
+      
       Build_Table <- function() {
         # Common Columns ----------------------------------------------------------
-        columns = c("task", "detail", "date", "time", "file_name", "weight", "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial", "threshold", "reaction", "FA_detailed", "warnings_list", "comments", "analysis_type")
-
+        columns = c("task", "detail", "date", "time", "file_name", "weight", 
+                    "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial", 
+                    "threshold", "reaction", "FA_detailed", "warnings_list", "comments", "analysis_type")
+        
         r = rat_runs %>%
           dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
           dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
@@ -507,24 +509,24 @@ Workbook_Writer <- function() {
                                        str_detect(paste(warnings_list), pattern = "wrong file") ~ glue("{file_name} *"),
                                        TRUE ~ file_name)) %>%
           tidyr::unnest_wider(assignment) %>%
-          # omit Oddball rows with <1 complete block
+          # omit Oddball rows with <1 complete block - here to save time as its one less row to unnest
           dplyr::filter(! (stim_type == "train" & complete_block_count < 2)) %>%
           tidyr::unnest_wider(stats) %>%
           tidyr::unnest_wider(summary) %>%
           dplyr::select(all_of(columns)) %>%
           arrange(desc(date), .by_group = F)
- 
+        
         weight_max = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
-
+        
         #min_duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
         min_duration = r %>% unnest(reaction) %>% dplyr::filter(task == task_current & detail == detail_current) %>% .$`Dur (ms)` %>% unique() %>% min()
         
         # Needed for gap detection
         current_frequency = r %>% arrange(desc(date)) %>% head(1) %>% pluck("reaction", 1, "Inten (dB)")
-
+        
         # Needed to deal with the initial training
         analysis_type = r %>% arrange(desc(date)) %>% head(1) %>% .$analysis_type
-
+        
         # Task-specific RXN column ------------------------------------------------
         if (experiment_current == "" | is.na(experiment_current)) {
           # I don't currently know which will match but neither should be true
@@ -537,21 +539,21 @@ Workbook_Writer <- function() {
             select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`) %>% #TODO check that Frequency is actually go tone positional data
             distinct()
         } else if(phase_current == "Gap Detection") {
-          if(detail_current == "None") {
+          if(detail_current == "None"| analysis_type == "Training - Gap") {
             r = r %>%
               unnest(reaction) %>%
               group_by(date) %>%
               mutate(Rxn = mean(Rxn))
           } else {
-          r = r %>%
-            unnest(reaction) %>%
-            dplyr::filter(`Dur (ms)` == 10) %>% # not equal TH
-            group_by(date) %>%
-            mutate(Rxn = mean(Rxn))
-        }
-
+            r = r %>%
+              unnest(reaction) %>%
+              dplyr::filter(`Dur (ms)` == 10) %>% # not equal TH
+              group_by(date) %>%
+              mutate(Rxn = mean(Rxn))
+          }
+          
           r = r %>% select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
-
+          
         } else {
           if (phase_current == "Octave" | detail_current == "Oddball") {
             r = r %>% unnest(reaction) %>%
@@ -561,18 +563,18 @@ Workbook_Writer <- function() {
             df_TH_BBN = NULL
             df_TH_tones = NULL
             df_Rxn = NULL
-
+            
             df_TH_BBN = r %>% unnest(reaction) %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` == 0)  %>%
               group_by(date, time) %>%
               slice(which.min(`Inten (dB)`))
-
+            
             intensity = r %>% unnest(reaction) %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
               group_by(date, time) %>%
               count(`Inten (dB)`) %>% arrange(desc(`Inten (dB)`)) %>% slice(which.max(n)) %>%
               rename(desired_dB = `Inten (dB)`) %>% select(-n)
-
+            
             df_TH_tones = r %>% unnest(reaction) %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
               right_join(intensity, by = c("date", "time")) %>%
@@ -580,14 +582,14 @@ Workbook_Writer <- function() {
               group_by(date) %>%
               mutate(Rxn = mean(Rxn)) %>%
               select(-desired_dB)
-
+            
             # if we have a 60db entry for a date, great
             df_Temp = r %>%
               unnest(reaction) %>%
               dplyr::filter(task != "TH" & `Dur (ms)` == min_duration & `Inten (dB)` == 60) %>% # not equal TH
               group_by(date, time) %>%
               mutate(Rxn = mean(Rxn))
-
+            
             # for all dates, take their 55 and 65 entries (stepsize 5 will have potentially all of 55, 60, 65, stepsize 10 will have either 60 or both 55 and 65)
             # take the average Rxn from the 55 and 65 and only keep dates that aren't already in df_Temp
             df_Rxn = r %>%
@@ -598,23 +600,23 @@ Workbook_Writer <- function() {
               distinct() %>%
               filter(! date %in% df_Temp$date) %>%
               rbind(df_Temp)
-
+            
             r = rbind(df_TH_BBN, df_TH_tones, df_Rxn)
-
+            
             if (analysis_type %in% c("Training - Gap", "Training - BBN")) {
               r = r %>% rename(Dur = `Dur (ms)`, Freq = `Freq (kHz)`) %>% select(-`Inten (dB)`)
             } else {
               r = r %>% select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
             }
-
+            
             r = distinct(r)
           }
         }
-
+        
         r = r %>% select(-analysis_type) %>% relocate(Rxn, .before = mean_attempts_per_trial) %>%
           mutate(Spacer1 = NA)
-
-      # Phase-specific Columns --------------------------------------------------------
+        
+        # Phase-specific Columns --------------------------------------------------------
         if (analysis_type %in% c("Training - Gap")) {
           # Training has no TH
           r = r %>% 
@@ -645,7 +647,7 @@ Workbook_Writer <- function() {
             relocate(Spacer1, .after = mean_attempts_per_trial) %>%
             select(-FA_detailed)
         } else if (phase_current == "Tones" & detail_current != "Oddball") {
-
+          
           r = r %>% unnest(threshold) %>%
             filter(Freq != 0 & Dur == min_duration) %>%
             group_by(task, detail, Freq) %>%
@@ -654,11 +656,11 @@ Workbook_Writer <- function() {
             gather(variable, value, (TH:THrange)) %>%
             unite(temp, variable, Freq) %>%
             pivot_wider(names_from = temp, values_from = value)
-
+          
           r = r %>%
             select(-Dur, -FA_detailed) %>%
             relocate(warnings_list, comments, .after = last_col())
-
+          
           # Adding missing columns without overwriting extant THs and THranges
           df = tibble(TH_4 = NA, TH_8 = NA, TH_16 = NA, TH_32 = NA,
                       THrange_4 = NA, THrange_8 = NA, THrange_16 = NA, THrange_32 = NA)
@@ -667,7 +669,7 @@ Workbook_Writer <- function() {
             mutate(Spacer2 = NA) %>%
             relocate(Spacer2, .after = TH_32) %>%
             mutate_at(vars(starts_with("TH_")), as.numeric)
-
+          
           x = rat_runs %>%
             dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
             dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
@@ -678,40 +680,40 @@ Workbook_Writer <- function() {
             mutate(Spacer3 = NA,
                    Stimrange = paste0(unique(dB_min), "-", unique(dB_max))) %>%
             select(task, detail, date, time, Spacer3, `Freq (kHz)`, Stimrange)
-
+          
           r = left_join(r, x, by = c("task", "detail", "date", "time")) %>%
             unique() %>%
             pivot_wider(names_from = `Freq (kHz)`, values_from = Stimrange)
-
+          
           # Adding missing columns without overwriting extant THs and THranges
           df = tibble(`4` = NA, `8` = NA, `16` = NA, `32` = NA)
           r = add_column(r, !!!df[setdiff(names(df), names(r))]) %>%
             relocate(`4`, `8`, `16`, `32`, .after = Spacer3)
-
-
+          
+          
         } else if (phase_current == "Tones" & detail_current == "Oddball") {
           r = r %>% filter(detail == "Oddball") %>%
             select(-threshold) %>%
             select(-FA_detailed)
-
+          
           x = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             filter(detail == detail_current) %>%
             tidyr::unnest_wider(stats) %>%
             unnest(dprime) %>%
             select(task, detail, date, time, dprime)
-
-
+          
+          
           r = left_join(r, x, by = c("task", "detail", "date", "time"))
-
+          
         } else if (phase_current == "Octave") {
           r = r %>% select(-threshold)
-
-
+          
+          
           #TODO NOT MVP convert to 1/12 of octaves based on summary kHz range
           df_discrimination = r %>% filter(! task %in% c("Training", "Holding")) %>%
             unnest(FA_detailed)
-
+          
           if(nrow(df_discrimination) > 0){          
             # get a cononical no_go value
             # no_go = r %>% 
@@ -743,10 +745,10 @@ Workbook_Writer <- function() {
             # reorder columns
             df_discrimination = select(df_discrimination, task:Spacer1, "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")
           }
-
-
+          
+          
           df_training = r %>% filter(task %in% c("Training", "Holding")) %>% select(-FA_detailed)
-
+          
           x = rat_runs %>%
             dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
             dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
@@ -754,13 +756,13 @@ Workbook_Writer <- function() {
             tidyr::unnest_wider(stats) %>%
             unnest(dprime) %>%
             select(task, detail, date, time, dprime)
-
+          
           df_training = left_join(df_training, x, by = c("task", "detail", "date", "time"))
-
+          
           r = rbind(df_discrimination, df_training) %>%
             relocate(dprime, .after = Spacer1) %>%
             mutate(Spacer2 = NA) %>% relocate(Spacer2, .after = dprime)
-
+          
         } else if (experiment_current == "Oddball") {
           # handled as 2 separate tables to deal with edge case of missing all of a specific type of trial
           FA_table = r %>%
@@ -805,9 +807,9 @@ Workbook_Writer <- function() {
           dplyr::relocate(date, file_name, .before = weight) %>%
           ungroup() %>%
           mutate_all(~ifelse(is.nan(.), NA, .))
-
+        
         order = r %>% arrange(desc(date)) %>% group_by(task) %>% do(head(., 1)) %>% arrange(desc(date)) %>% .$task
-
+        
         r = r %>% 
           # sort by date and time descending
           arrange(desc(date), desc(time)) %>% group_by(task) %>%
@@ -818,25 +820,25 @@ Workbook_Writer <- function() {
           arrange(match(task, order)) %>%
           dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
           mutate(date = as.character(date))
-
+        
         columns = names(r)
-
+        
         r = bind_rows(averages, r) %>%
           select(all_of(columns)) %>%
           mutate(weight = (weight - weight_max)/weight_max)
-
+        
         if(length(r) < 29) r[, (length(r) + 1):29] = NA # add columns to reach 29
-
+        
         r = r %>% relocate(warnings_list, comments, .after = last_col())
-
+        
         return(as.data.frame(r))  #shed the grouping that prevents rbinding later on
       }
-
+      
       Build_Table_Key <- function() {
         r = c("", "", "    ", "        ", "     ", "      ", "     ", "    ", "___", "_____")
         r = rbind(r, c("", "", "Date", "Filename", "Wt d%", "Trials", "Hit %", "FA %", "Rxn", "Atmpt")) %>% as.data.frame()
         r = cbind(r, NA) #spacer
-
+        
         if (phase_current == "BBN" | phase_current == "Gap Detection") {
           r = cbind(r, c("", "TH"))
           r = cbind(r, c("", "{TH}"))
@@ -879,49 +881,49 @@ Workbook_Writer <- function() {
         else {
           stop("ERROR: unrecognized phase: ", phase_current)
         }
-
+        
         r[, (length(r) + 1):27] = NA # add columns to reach 27
         r = cbind(r, c("", "Warn"))
         r = cbind(r, c("", "Observations"))
         return(r)
       }
-
-
+      
+      
       # Write Table Workflow ----------------------------------------------------
       row_table_start = rowCurrent + 1 #save for later
       addStyle(wb, 1, style[["table_header"]], rows = row_table_start, cols = 1:29, gridExpand = TRUE)
       df_table = Build_Table()
       df_key = Build_Table_Key()
       df_counts = Build_Counts()
-
+      
       # need blank rows inserted into df_table to give space for df_key
       df_blank <- data.frame(matrix(ncol = 29 , nrow = nrow(df_key) + nrow(df_counts)))
-
+      
       # the obnoxious blank strings are because every column in a table has to have a unique header,
       # and because we want those headers to be blank for all but column A
       names = c("Task (Filter)", "Detail (Filter)", "  ", "   ", "    ", "     ", "      ", "       ", "        ", "         ", "          ", "           ", "            ", "             ", "              ", "               ", "                ", "                 ", "                  ", "                   ", "                    ", "                     ", "                      ", "                       ", "                        ", "                         ", "                          ", "                           ", "                            ")
       colnames(df_table) = names
       colnames(df_blank) = names
       df_table = rbind(df_blank, df_table)
-
+      
       row_counts = row_table_start + 1
       row_key_start = row_table_start + nrow(df_counts) + 1
       row_key_end = row_table_start + nrow(df_counts) + nrow(df_key)
       row_table_end = row_table_start + nrow(df_table)
-
+      
       writeDataTable(wb, 1, x = df_table, startRow = row_table_start, colNames = TRUE, rowNames = FALSE, bandedRows = FALSE, tableStyle = "TableStyleMedium18", na.string = "")
       writeData(wb, 1, x = df_counts, startRow = row_counts, colNames = FALSE, rowNames = FALSE)
       writeData(wb, 1, x = df_key, startRow = row_key_start, colNames = FALSE, rowNames = FALSE)
-
+      
       # style the averages rows
       averages_last_row = row_table_start + max(which(df_table[,3] == "Overall"))
       addStyle(wb, 1, style[["averages"]], rows = row_key_end:averages_last_row, cols = 1:29, gridExpand = TRUE, stack = TRUE)
-
+      
       # style the 'today' rowCurrent
       today_offset = min(which(df_table[,3] != "Overall"))
       row_today = row_table_start + today_offset
       addStyle(wb, 1, style[["today"]], rows = row_today, cols = 1:29)
-
+      
       # style the '%' columns
       tk = t(tail(df_key))
       row.names(tk) <- 1:nrow(tk)
@@ -929,58 +931,58 @@ Workbook_Writer <- function() {
       pc2 = tk %>% as.data.frame() %>% filter(str_detect(.[,2], "%")) %>% rownames() %>% as.numeric
       percentage_columns = c(pc1, pc2)
       addStyle(wb, 1, style[["percent"]], rows = row_key_end:row_table_end, cols = percentage_columns, gridExpand = TRUE, stack = TRUE)
-
+      
       # copy today's warnings
       warns = df_table[today_offset, 28] %>% unlist() %>% stringr::str_c(collapse = "\n")
       if (warns == "") warns = "Warnings: none"
       writeData(wb, 1, x = warns, startRow = rowCurrent, startCol = 29)
-
+      
       # style the key
       addStyle(wb, 1, style[["key"]], rows = row_key_start:row_key_end, cols = 1:29, gridExpand = TRUE)
       addStyle(wb, 1, style[["key_center"]], rows = row_key_start:row_key_end, cols = 5:28, gridExpand = TRUE) # don't center observations
-
+      
       # detect and merge common header cells -- nope, merges can't be done inside a table object, so just style it
       matching_cells = (df_key[1,12] == df_key[1,13] && df_key[1,13] == df_key[1,14])
       if (!is.na(matching_cells) && matching_cells) { # Rxn Time
         deleteData(wb, 1, rows = row_key_start, cols = 13:14, gridExpand = TRUE) # delete all but first
         addStyle(wb, 1, style[["key_merged"]], rows = row_key_start, cols = 12:14)
       }
-
+      
       matching_cells = (df_key[1,12] == df_key[1,15])
       if (!is.na(matching_cells) && matching_cells) { # TH; rxn above will also fire but we just overwrite what it does
         deleteData(wb, 1, rows = row_key_start, cols = 15)
         addStyle(wb, 1, style[["key_merged"]], rows = row_key_start, cols = 12:15)
       }
-
+      
       matching_cells = (df_key[1,17] == df_key[1,18] && df_key[1,17] == df_key[1,19] && df_key[1,17] == df_key[1,20])
       if (!is.na(matching_cells) && matching_cells) { # TH Range
         deleteData(wb, 1, rows = row_key_start, cols = 18:20, gridExpand = TRUE)
         addStyle(wb, 1, style[["key_merged"]], rows = row_key_start, cols = 17:20)
       }
-
+      
       matching_cells = (df_key[1,22] == df_key[1,23] && df_key[1,22] == df_key[1,24] && df_key[1,22] == df_key[1,25])
       if (!is.na(matching_cells) && matching_cells) {  # Stim range
         deleteData(wb, 1, rows = row_key_start, cols = 23:25, gridExpand = TRUE)
         addStyle(wb, 1, style[["key_merged"]], rows = row_key_start, cols = 22:25)
       }
-
+      
       matching_cells = (df_key[1,16] == df_key[1,17] && df_key[1,17] == df_key[1,18])
       if (!is.na(matching_cells) && matching_cells) {  # FA %
         deleteData(wb, 1, rows = row_key_start, cols = 17:18, gridExpand = TRUE)
         addStyle(wb, 1, style[["key_merged"]], rows = row_key_start, cols = 16:18)
       }
-
+      
       matching_cells = (df_key[1,14] == df_key[1,25]) # No Go False Alarm % (by octave steps)
       if (!is.na(matching_cells) && matching_cells) {
         deleteData(wb, 1, rows = row_key_start, cols = 15:25, gridExpand = TRUE)
         addStyle(wb, 1, style[["key_merged"]], rows = row_key_start, cols = 14:25)
       }
-
+      
       # advance rowCurrent for next table
       rowCurrent <<- row_table_end + 2
     }
-
-
+    
+    
     # Add Rat To Workbook Workflow --------------------------------------------
     rat_runs <<- run_archive %>% dplyr::filter(rat_ID == ratID) %>% dplyr::arrange(date)
     if (nrow(rat_runs) == 0) {
@@ -1005,7 +1007,7 @@ Workbook_Writer <- function() {
   style = Define_Styles()
   Setup_Workbook()
   
-  file_name = "supervisor.xlsx"
+  file_name = "supervisor-custom.xlsx"
 
   # Add_Rat_To_Workbook(209)
   #OR
