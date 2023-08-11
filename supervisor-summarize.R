@@ -564,18 +564,20 @@ Workbook_Writer <- function() {
             df_TH_tones = NULL
             df_Rxn = NULL
 
-            df_TH_BBN = r %>% unnest(reaction) %>%
+            r = r %>% unnest(reaction)
+
+            df_TH_BBN = r %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` == 0)  %>%
               group_by(date, time) %>%
               slice(which.min(`Inten (dB)`))
 
-            intensity = r %>% unnest(reaction) %>%
+            intensity = r %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
               group_by(date, time) %>%
               count(`Inten (dB)`) %>% arrange(desc(`Inten (dB)`)) %>% slice(which.max(n)) %>%
               rename(desired_dB = `Inten (dB)`) %>% select(-n)
 
-            df_TH_tones = r %>% unnest(reaction) %>%
+            df_TH_tones = r %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
               right_join(intensity, by = c("date", "time")) %>%
               filter(`Inten (dB)` == desired_dB) %>%
@@ -585,7 +587,6 @@ Workbook_Writer <- function() {
 
             # if we have a 60db entry for a date, great
             df_Temp = r %>%
-              unnest(reaction) %>%
               dplyr::filter(task != "TH" & `Dur (ms)` == min_duration & `Inten (dB)` == 60) %>% # not equal TH
               group_by(date, time) %>%
               mutate(Rxn = mean(Rxn))
@@ -593,7 +594,6 @@ Workbook_Writer <- function() {
             # for all dates, take their 55 and 65 entries (stepsize 5 will have potentially all of 55, 60, 65, stepsize 10 will have either 60 or both 55 and 65)
             # take the average Rxn from the 55 and 65 and only keep dates that aren't already in df_Temp
             df_Rxn = r %>%
-              unnest(reaction) %>%
               dplyr::filter(task != "TH" & `Dur (ms)` == min_duration & `Inten (dB)` %in% c(55,65)) %>% # not equal TH
               group_by(date) %>%
               summarise(Rxn = mean(Rxn), `Inten (dB)` = mean(`Inten (dB)`), across(), .groups = "drop") %>%
@@ -1046,5 +1046,5 @@ if(nrow(rats_not_entered_today) == 0) { writeLines("All rats have data for today
 Workbook_Writer()
 rm(list = c("experiment_config_df", "run_today", "wb", "custom_rats"))
 # Validate and back-up archives
-source(paste0(projects_folder, "admin tools\\check and backup.R"))
+# source(paste0(projects_folder, "admin tools\\check and backup.R"))
 
