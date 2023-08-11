@@ -93,13 +93,12 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
       Get_Rat_Name <- function() {
         if (is.null(file_name_override)) {
-        # greedy group: (.*) to strip off as much as possible
-        # then the main capture group which contains
+          # greedy group: (.*) to strip off as much as possible
+          # then the main capture group which contains
           # lookbehind for either \ (escaped once because R, and then again cause regex, to \\\\) or / character, specified length 1 because r: (?<=[\\/]{1})
           # important! \\\\ is specific to R, for testing this pattern in e.g. RegExr you have to use \\ but remember to change it back to \\\\ for r!
           # capture of the rat name, lazy to avoid underscores: .+?
           # lookahead for a _: (?=_)
-
           pattern = "(.*)((?<=[\\\\/]{1}).+?(?=_))"
           filename = file_to_load
         } else {
