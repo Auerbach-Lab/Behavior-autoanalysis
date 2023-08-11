@@ -558,7 +558,11 @@ Workbook_Writer <- function() {
           if (phase_current == "Octave" | detail_current == "Oddball") { # Oddball detail implies phase=Tones
             r = r %>% unnest(reaction) %>%
               select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
-          } else { # Experiment is none of Blank, Oddball, Gapdetection. Phase is not Octave. If phase is Tones, detail is not Oddball.
+          } else {
+            # Experiment is none of Blank, Oddball, Gapdetection.
+            # Phase is not Octave (therefore Phase is either Tones or BBN).
+            # If phase is Tones, detail is not Oddball.
+
             # TH and Rxn refer to Task not the column
             df_TH_BBN = NULL
             df_TH_tones = NULL
