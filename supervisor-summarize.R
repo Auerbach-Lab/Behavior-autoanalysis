@@ -538,7 +538,7 @@ Workbook_Writer <- function() {
             mutate(Rxn = mean(Rxn)) %>%
             select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`) %>% #TODO check that Frequency is actually go tone positional data
             distinct()
-        } else if(phase_current == "Gap Detection") {
+        } else if(phase_current == "Gap Detection") { #Experiment is Not blank, Not Oddball
           if(detail_current == "None"| analysis_type == "Training - Gap") {
             r = r %>%
               unnest(reaction) %>%
@@ -554,17 +554,19 @@ Workbook_Writer <- function() {
 
           r = r %>% select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
 
-        } else {
-          if (phase_current == "Octave" | detail_current == "Oddball") {
+        } else { # Experiment is none of Blank, Oddball, Gapdetection.
+          if (phase_current == "Octave" | detail_current == "Oddball") { # Oddball detail implies phase=Tones
             r = r %>% unnest(reaction) %>%
               select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
-          } else {
-            # TH and Rxn refer to the task detail not the column
+          } else { # Experiment is none of Blank, Oddball, Gapdetection. Phase is not Octave. If phase is Tones, detail is not Oddball.
+            # TH and Rxn refer to Task not the column
             df_TH_BBN = NULL
             df_TH_tones = NULL
             df_Rxn = NULL
 
             r = r %>% unnest(reaction)
+
+            # TODO: Issue #74 problem is BELOW, in these five df which are always filtered to min_duration
 
             df_TH_BBN = r %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` == 0)  %>%
@@ -600,6 +602,10 @@ Workbook_Writer <- function() {
               distinct() %>%
               filter(! date %in% df_Temp$date) %>%
               rbind(df_Temp)
+
+            # TODO: Issue #74 problem is ABOVE, in these five df which are always filtered to min_duration
+
+
 
             r = rbind(df_TH_BBN, df_TH_tones, df_Rxn)
 
