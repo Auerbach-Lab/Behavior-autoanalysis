@@ -240,6 +240,12 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
         # settings from run_properties$stim_encoding_table
         lockout = unique(stim_encoding_table$`Time Out (s)`)[unique(stim_encoding_table$`Time Out (s)`) > 0],
+        nogo_lockout =
+          stim_encoding_table %>%
+          filter(Type==0) %>% #nogo trials are type 0
+          .$`Time Out (s)` %>%
+          max(.),
+
         delay = Get_Delay_Range(),
         duration = unique(stim_encoding_table["Dur (ms)"]), # List of length of go sound - can be up to 3 values (50, 100, & 300) in our current file system
 
@@ -624,7 +630,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       # DO NOT CHANGE THE TEXTUAL DESCRIPTIONS OR YOU WILL BREAK COMPARISONS LATER
       if (has_catch_trials & has_uneven_trial_odds) r = "Oddball (Uneven Odds & Catch)"
       else if (has_uneven_trial_odds) r = "Oddball (Uneven Odds)"
-      else if (has_catch_trials) r = "Oddball (Catch)"
+      else if (has_catch_trials) r = "Oddball (Catch)" # Note: includes _probe and _catch both!
       else if (has_BG) r = "Oddball (Background)"
       else if (!has_catch_trials & !has_uneven_trial_odds) r = "Oddball (Standard)"
       else stop("ABORT: Unknown Oddball file type.")
@@ -752,10 +758,10 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         nogo_kHz2 = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% dplyr::arrange(Stim_ID) %>% tail(n = 2) %>% head(n = 1) %>% .$`Freq (kHz)` %>% round(digits = 1), "kHz_")
         go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`)
         nogo_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% dplyr::arrange(Stim_ID) %>% tail(n = 1) %>% .$`Inten (dB)`)
-        
+
         has_dB_range = go_dB != nogo_dB
         has_BG = run_properties$background_type != "None"
-        
+
         computed_file_name1 = paste0(go_kHz, nogo_kHz)
         computed_file_name2 = paste0(go_kHz, nogo_kHz2)
         if (has_dB_range) {
@@ -775,7 +781,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
         if(is_6th_of_octave) computed_file_name = computed_file_name1
         else computed_file_name = computed_file_name2
-        
+
         if (has_BG) {
           BG = paste0(stringr::str_remove(pattern = ".mat", string = run_properties$background_file), "_", run_properties$background_dB, "dB")
           computed_file_name = paste0(computed_file_name, "_", BG)
@@ -914,7 +920,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       expected_delay <<- user_settings$delay_oddball
       if (run_properties$summary$nogo_freq == 0) nogo_freq = "BBN"
       else nogo_freq = paste0(run_properties$summary$nogo_freq, "kHz")
-      
+
       # Determine if even odds
       has_uneven_trial_odds = length(unique(run_properties$summary$odds.odds)) > 1
       if (has_uneven_trial_odds){
@@ -929,7 +935,10 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
                                   run_properties$summary$nogo_dB, "dB_", run_properties$lockout, "s_", run_properties$summary$go_position_start, "-", run_properties$summary$go_position_stop)
       if (analysis$type == "Oddball (Uneven Odds & Catch)") computed_file_name = paste0(computed_file_name, "_odds", most_common_position, "_NG")
       if (analysis$type == "Oddball (Uneven Odds)") computed_file_name = paste0(computed_file_name, "_odds", most_common_position)
-      if (analysis$type == "Oddball (Catch)") computed_file_name = paste0(computed_file_name, "_catch")
+      if (analysis$type == "Oddball (Catch)") {
+        if(run_properties$nogo_lockout > 0)  computed_file_name = paste0(computed_file_name, "_catch")
+        if(run_properties$nogo_lockout == 0) computed_file_name = paste0(computed_file_name, "_probe")
+      }
       if (analysis$type == "Oddball (Background)") computed_file_name = paste0(computed_file_name, "_",
                                                                                str_extract(run_properties$background_file, pattern = "^.*(?=.mat)"),
                                                                                "_", run_properties$background_dB, "dB")
@@ -1587,7 +1596,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         assignment = list(assignment),
         summary = list(run_properties$summary),
 
-        stim_type = run_properties$stim_type,
+        stim_type = run_properties$stim_type, # TODO: Issue #77 - we should probably be saving all the stim source, not just stim_type
         analysis_type = analysis$type,
         stats = list(analysis$stats),
         block_size = run_properties$stim_block_size,
@@ -1799,7 +1808,6 @@ Write_To_Archives <- function(row_added) {
 # set up environment
 InitializeMain()
 
-#r = Process_File(file.choose(), name, weight, observations, exclude_trials)
-#WriteToArchive(r)
-
+# for shiny, initialization is the only thing that needs doing. For manual use, uncomment the following line:
+# r = Process_File(file.choose(), name, weight, observations, exclude_trials, ignore_name_check = TRUE)
 
