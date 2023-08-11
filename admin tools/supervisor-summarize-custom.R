@@ -8,3 +8,5 @@ custom_rats = rat_archive %>%
   .$Rat_ID
 
 source("supervisor-summarize.R")
+
+rm(custom_rats)
