@@ -1596,7 +1596,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         assignment = list(assignment),
         summary = list(run_properties$summary),
 
-        stim_type = run_properties$stim_type, # TODO: Issue #77 - we should probably be saving all the stim source, not just stim_type
+        stim_type = run_properties$stim_type, # TODO: Issue #77 - we should probably be saving all the stim source (I believe this means the stim_encoding_table computed early on), not just stim_type
         analysis_type = analysis$type,
         stats = list(analysis$stats),
         block_size = run_properties$stim_block_size,
