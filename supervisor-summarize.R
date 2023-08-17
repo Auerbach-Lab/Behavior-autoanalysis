@@ -518,8 +518,13 @@ Workbook_Writer <- function() {
 
         weight_max = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
 
-        #min_duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
-        min_duration = r %>% unnest(reaction) %>% dplyr::filter(task == task_current & detail == detail_current) %>% .$`Dur (ms)` %>% unique() %>% min()
+        # today's duration
+        # if it's a single duration, we want the below dfs limited to runs that INCLUDE (not necc. perfectmatch) today's duration
+        # if it's a multiple duration, we want the below dfs limited to runs that INCLUDE (not necc. perfectmatch) the minimum duration used today
+        # suppress warnings to not complain on oddball, which have no duration
+        min_duration = pluck(run_today, "summary", 1, "duration") %>% unlist() %>% suppressWarnings(min(.))
+          #min_duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
+          #min_duration = r %>% unnest(reaction) %>% dplyr::filter(task == task_current & detail == detail_current) %>% .$`Dur (ms)` %>% unique() %>% min()
 
         # Needed for gap detection
         current_frequency = r %>% arrange(desc(date)) %>% head(1) %>% pluck("reaction", 1, "Inten (dB)")
@@ -559,7 +564,7 @@ Workbook_Writer <- function() {
             r = r %>% unnest(reaction) %>%
               select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
           } else {
-            # Experiment is none of Blank, Oddball, Gapdetection.
+            # Experiment is none of Blank, Oddball, Gapdetection (therefore experiment is TTS, Fmr1-LE, or Tsc2-LE)
             # Phase is not Octave (therefore Phase is either Tones or BBN).
             # If phase is Tones, detail is not Oddball.
 
@@ -570,19 +575,20 @@ Workbook_Writer <- function() {
 
             r = r %>% unnest(reaction)
 
-            # TODO: Issue #74 problem is BELOW, in these five df which are always filtered to min_duration
-
+            # build entries of runs where we were doing BBN thresholding
+            # specifically, filter by type and then duration matching today's.
+            # Matching, perfect match, because we have ~20 rows per run that enumerate the various combinations from list elements including dur
             df_TH_BBN = r %>%
-              dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` == 0)  %>%
+              dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` == 0) %>%
               group_by(date, time) %>%
               slice(which.min(`Inten (dB)`))
 
+            # build entries of runs where we were doing Tones thresholding, which will be filtered to desired dB
             intensity = r %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
               group_by(date, time) %>%
               count(`Inten (dB)`) %>% arrange(desc(`Inten (dB)`)) %>% slice(which.max(n)) %>%
               rename(desired_dB = `Inten (dB)`) %>% select(-n)
-
             df_TH_tones = r %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
               right_join(intensity, by = c("date", "time")) %>%
@@ -591,12 +597,12 @@ Workbook_Writer <- function() {
               mutate(Rxn = mean(Rxn)) %>%
               select(-desired_dB)
 
+            # now non-thresholding days (task!=TH)
             # if we have a 60db entry for a date, great
             df_Temp = r %>%
               dplyr::filter(task != "TH" & `Dur (ms)` == min_duration & `Inten (dB)` == 60) %>% # not equal TH
               group_by(date, time) %>%
               mutate(Rxn = mean(Rxn))
-
             # for all dates, take their 55 and 65 entries (stepsize 5 will have potentially all of 55, 60, 65, stepsize 10 will have either 60 or both 55 and 65)
             # take the average Rxn from the 55 and 65 and only keep dates that aren't already in df_Temp
             df_Rxn = r %>%
@@ -606,10 +612,6 @@ Workbook_Writer <- function() {
               distinct() %>%
               filter(! date %in% df_Temp$date) %>%
               rbind(df_Temp)
-
-            # TODO: Issue #74 problem is ABOVE, in these five df which are always filtered to min_duration
-
-
 
             r = rbind(df_TH_BBN, df_TH_tones, df_Rxn)
 
