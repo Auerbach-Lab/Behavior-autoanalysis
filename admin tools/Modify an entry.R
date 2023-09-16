@@ -1,8 +1,9 @@
 InitializeMain()
 
 # Find an entry -----------------------------------------------------------
-row_to_modify = run_archive %>% rowid_to_column() %>% filter(date == "20230713" & rat_name == "Purple4")
-row_to_modify %>% select(date, rat_name, rat_ID, weight, scientist, rxnProblem, weightProblem)
+row_to_modify = run_archive %>% rowid_to_column() %>% filter(date == "20230915" & rat_name == "GP2")
+row_to_modify %>% select(date, rat_name, rat_ID, weight, scientist, rxnProblem, weightProblem, file_name, comments)
+# row_to_modify %>% unnest_wider(stats) %>% select(rowid, date, rat_name, rat_ID, weight, trial_count, scientist, rxnProblem, weightProblem, file_name, comments)
 line_to_modify = row_to_modify$rowid
 
 
