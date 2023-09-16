@@ -48,7 +48,7 @@ Weight_Grapher <- function(rat_to_graph) {
       geom_text(data = filter(rat_runs, !is.na(weight_annotation)),
                 aes(y = annotation_x + 6, label = weight_annotation), color="darkred", size = 3) +
         # 3 most recent trial counts used to see if pulling up or down the trend
-      geom_point(data = tail(arrange(rat_runs, date_asDate), n = 3), aes(y = trial_count), color = "blue", show.legend = FALSE) +
+      geom_point(data = tail(arrange(rat_runs, date_asDate), n = 5), aes(y = trial_count), color = "blue", show.legend = FALSE) +
         # lower the bottom of the y scale as it can be anchored to minimum trials and the label is bellow the line
       scale_y_continuous(expand = c(0.1, 0)) +
       scale_x_date(date_breaks = "4 day", date_minor_breaks = "2 day",
@@ -63,11 +63,11 @@ Weight_Grapher <- function(rat_to_graph) {
 cat("Graphing...")
 rat_archive %>%
   filter(is.na(end_date) & start_date < str_remove_all(Sys.Date(), "-")) %>%
-  #select rats that have NOT been run today
+  # select rats that have NOT been run today
   # filter(Assigned_Filename != "") %>%
   # filter(Assigned_Experiment  == "Tsc2-LE") %>%
-  # filter(Rat_name %in% c("BP1")) %>%
-  filter(str_detect(Box, "6.")) %>%
+  # filter(Rat_name %in% c("Purple1", "Purple2")) %>%
+  filter(str_detect(Box, "[1-2].")) %>%
   arrange(desc(Box)) %>%
   .$Rat_ID %>%
   lapply(Weight_Grapher)
