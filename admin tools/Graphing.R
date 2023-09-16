@@ -4,7 +4,7 @@ rat_to_graph = c("Green21", "Green22", "Green23", "Green24", "Green25", "Green 2
 # "today" or a specific date in YYYYMMDD format
 date_to_graph = "today"
 # can be reaction or dprime
-what_to_graph = "reaction"
+what_to_graph = "dprime"
 
 
 date_to_graph = if_else(date_to_graph == "today", str_remove_all(Sys.Date(), "-"), date_to_graph)
@@ -22,7 +22,7 @@ Grapher <- function(rat_to_graph) {
   Today = data %>% filter(date == date_to_graph) 
   
   Freq_filter = unique(Today$Freq)
-  Dur_filter = min(Today$`Dur (ms)`)
+  
   today_analysis_type = unique(Today$analysis_type)
   
   data = filter(data, ! task %in% c("Training", "Reset"))
@@ -32,8 +32,14 @@ Grapher <- function(rat_to_graph) {
       filter(analysis_type == today_analysis_type)
   } else if((str_detect(today_analysis_type, "BBN"))) {
     data = data %>% 
-      filter(analysis_type == today_analysis_type) %>%
-      filter(`Dur (ms)` == Dur_filter) 
+      filter(analysis_type == today_analysis_type)
+    
+    if (what_to_graph == "dprime") {
+      Dur_filter = min(Today$Dur)
+      data = filter(data, Dur == Dur_filter)}
+    else if (what_to_graph == "reaction") {
+      Dur_filter = min(Today$`Dur (ms)`)
+      data = filter(data, `Dur (ms)` == Dur_filter)}
   } else {
     data = data %>% 
       filter(analysis_type == today_analysis_type) %>%
