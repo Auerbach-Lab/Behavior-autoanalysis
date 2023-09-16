@@ -518,8 +518,13 @@ Workbook_Writer <- function() {
 
         weight_max = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
 
-        #min_duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
-        min_duration = r %>% unnest(reaction) %>% dplyr::filter(task == task_current & detail == detail_current) %>% .$`Dur (ms)` %>% unique() %>% min()
+        # today's duration
+        # if it's a single duration, we want the below dfs limited to runs that INCLUDE (not necc. perfectmatch) today's duration
+        # if it's a multiple duration, we want the below dfs limited to runs that INCLUDE (not necc. perfectmatch) the minimum duration used today
+        # suppress warnings to not complain on oddball, which have no duration
+        min_duration = pluck(run_today, "summary", 1, "duration") %>% unlist() %>% suppressWarnings(min(.))
+          #min_duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
+          #min_duration = r %>% unnest(reaction) %>% dplyr::filter(task == task_current & detail == detail_current) %>% .$`Dur (ms)` %>% unique() %>% min()
 
         # Needed for gap detection
         current_frequency = r %>% arrange(desc(date)) %>% head(1) %>% pluck("reaction", 1, "Inten (dB)")
@@ -538,7 +543,7 @@ Workbook_Writer <- function() {
             mutate(Rxn = mean(Rxn)) %>%
             select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`) %>% #TODO check that Frequency is actually go tone positional data
             distinct()
-        } else if(phase_current == "Gap Detection") {
+        } else if(phase_current == "Gap Detection") { #Experiment is Not blank, Not Oddball
           if(detail_current == "None"| analysis_type == "Training - Gap") {
             r = r %>%
               unnest(reaction) %>%
@@ -554,28 +559,37 @@ Workbook_Writer <- function() {
 
           r = r %>% select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
 
-        } else {
-          if (phase_current == "Octave" | detail_current == "Oddball") {
+        } else { # Experiment is none of Blank, Oddball, Gapdetection.
+          if (phase_current == "Octave" | detail_current == "Oddball") { # Oddball detail implies phase=Tones
             r = r %>% unnest(reaction) %>%
               select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
           } else {
-            # TH and Rxn refer to the task detail not the column
+            # Experiment is none of Blank, Oddball, Gapdetection (therefore experiment is TTS, Fmr1-LE, or Tsc2-LE)
+            # Phase is not Octave (therefore Phase is either Tones or BBN).
+            # If phase is Tones, detail is not Oddball.
+
+            # TH and Rxn refer to Task not the column
             df_TH_BBN = NULL
             df_TH_tones = NULL
             df_Rxn = NULL
 
-            df_TH_BBN = r %>% unnest(reaction) %>%
-              dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` == 0)  %>%
+            r = r %>% unnest(reaction)
+
+            # build entries of runs where we were doing BBN thresholding
+            # specifically, filter by type and then duration matching today's.
+            # Matching, perfect match, because we have ~20 rows per run that enumerate the various combinations from list elements including dur
+            df_TH_BBN = r %>%
+              dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` == 0) %>%
               group_by(date, time) %>%
               slice(which.min(`Inten (dB)`))
 
-            intensity = r %>% unnest(reaction) %>%
+            # build entries of runs where we were doing Tones thresholding, which will be filtered to desired dB
+            intensity = r %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
               group_by(date, time) %>%
               count(`Inten (dB)`) %>% arrange(desc(`Inten (dB)`)) %>% slice(which.max(n)) %>%
               rename(desired_dB = `Inten (dB)`) %>% select(-n)
-
-            df_TH_tones = r %>% unnest(reaction) %>%
+            df_TH_tones = r %>%
               dplyr::filter(task == "TH" & `Dur (ms)` == min_duration & `Freq (kHz)` != 0) %>% #select(-threshold, -file_name, - weight, -mean_attempts_per_trial) %>% View
               right_join(intensity, by = c("date", "time")) %>%
               filter(`Inten (dB)` == desired_dB) %>%
@@ -583,17 +597,15 @@ Workbook_Writer <- function() {
               mutate(Rxn = mean(Rxn)) %>%
               select(-desired_dB)
 
+            # now non-thresholding days (task!=TH)
             # if we have a 60db entry for a date, great
             df_Temp = r %>%
-              unnest(reaction) %>%
               dplyr::filter(task != "TH" & `Dur (ms)` == min_duration & `Inten (dB)` == 60) %>% # not equal TH
               group_by(date, time) %>%
               mutate(Rxn = mean(Rxn))
-
             # for all dates, take their 55 and 65 entries (stepsize 5 will have potentially all of 55, 60, 65, stepsize 10 will have either 60 or both 55 and 65)
             # take the average Rxn from the 55 and 65 and only keep dates that aren't already in df_Temp
             df_Rxn = r %>%
-              unnest(reaction) %>%
               dplyr::filter(task != "TH" & `Dur (ms)` == min_duration & `Inten (dB)` %in% c(55,65)) %>% # not equal TH
               group_by(date) %>%
               summarise(Rxn = mean(Rxn), `Inten (dB)` = mean(`Inten (dB)`), across(), .groups = "drop") %>%
@@ -1046,5 +1058,5 @@ if(nrow(rats_not_entered_today) == 0) { writeLines("All rats have data for today
 Workbook_Writer()
 rm(list = c("experiment_config_df", "run_today", "wb", "custom_rats"))
 # Validate and back-up archives
-source(paste0(projects_folder, "admin tools\\check and backup.R"))
+# source(paste0(projects_folder, "admin tools\\check and backup.R"))
 
