@@ -17,14 +17,15 @@ run_archive %>% filter(rat_name %in% c("TP3")) %>%
 InitializeMain()
 run_archive %>% filter(rat_name %in% c("TP2")) %>% 
   arrange(desc(date)) %>%
-  select(date, rat_name, weight)
+  select(date, rat_name, weight) %>%
+  print(n = 14)
 
 
 # Catch Trial dates -------------------------------------------------------
 run_archive %>% 
   select(rat_name, rat_ID, date, file_name, assignment, invalid) %>%
   unnest_wider(assignment) %>%
-  filter(experiment %in% c("Oddball") & task == "Catch trials" & invalid != TRUE & rat_ID >101) %>% 
+  filter(experiment %in% c("Oddball") & task %in% c("Catch trials", "Probe trials") & invalid != TRUE & rat_ID > 101) %>% 
   arrange(desc(date)) %>%
   select(-comment, -detail, -assigned_file_name, -invalid) %>%
   left_join(select(rat_archive, c(Rat_ID, Genotype)), by = c("rat_ID" = "Rat_ID")) %>%
@@ -46,9 +47,16 @@ InitializeMain()
 run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>% 
   arrange(desc(time)) %>%
   unnest_wider(stats) %>% unnest_wider(assignment) %>%
-  mutate(hit_percent = hit_percent * 100, FA_percent = FA_percent * 100) %>%
-  select(date, rat_name, weight, trial_count, hit_percent, FA_percent, file_name, experiment, phase, task, detail, scientist, weightProblem, rxnProblem) %>%
-  View()
+  mutate(hit_percent = round(hit_percent * 100, digits = 1), FA_percent = round(FA_percent * 100, digits = 1)) %>%
+  left_join(rat_archive %>% 
+              filter(is.na(end_date) & start_date < str_remove_all(Sys.Date(), "-")) %>% 
+              select(Rat_name, Box), 
+            by = join_by(rat_name == Rat_name)) %>%
+  select(date, Box, rat_name, weight, weightProblem, rxnProblem, 
+         trial_count, hit_percent, FA_percent, 
+         file_name, experiment, phase, task, detail, scientist) %>%
+  arrange(Box) %>%
+  View
 
 
 # Not loaded today --------------------------------------------------------
@@ -56,6 +64,23 @@ InitializeMain()
 rat_archive %>% filter(is.na(end_date) & start_date < str_remove_all(Sys.Date(), "-")) %>%
   filter(! Rat_name %in% c(run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>% .$rat_name %>% as.list)) %>%
   .$Rat_name
+
+
+# Yesterday's Runs and notes ----------------------------------------------
+InitializeMain()
+yesterday = run_archive %>% filter(date == str_remove_all(Sys.Date() - 1, "-")) %>% 
+  arrange(desc(time)) %>%
+  unnest_wider(stats) %>% unnest_wider(assignment) %>%
+  mutate(hit_percent = round(hit_percent * 100, digits = 1), FA_percent = round(FA_percent * 100, digits = 1)) %>%
+  left_join(rat_archive %>% 
+              filter(is.na(end_date) & start_date < str_remove_all(Sys.Date(), "-")) %>% 
+              select(Rat_name, Box), 
+            by = join_by(rat_name == Rat_name)) %>%
+  select(date, Box, rat_name, weight, weightProblem, rxnProblem, 
+         trial_count, hit_percent, FA_percent, 
+         file_name, experiment, phase, task, detail, scientist) %>%
+  arrange(Box)
+View(yesterday)
 
 
 # Bad Files Yesterday -----------------------------------------------------
@@ -71,7 +96,7 @@ InitializeMain()
 run_archive %>% dplyr::filter(rat_name == "LP3") %>% dplyr::arrange(date) %>%
   tidyr::unnest_wider(assignment) %>%
   dplyr::filter(experiment == "Oddball" & invalid != TRUE) %>%
-  filter(! task %in% c("Training",  "Reset")) %>%
+  filter(! task %in% c("Training")) %>%
   # Get go frequency by extracting 1st (^) number ([:digit:]+) from file_name
   mutate(frequency = str_extract(file_name, pattern = "^[:digit:]+") %>% as.numeric()) %>%
   group_by(task, detail, frequency) %>%
