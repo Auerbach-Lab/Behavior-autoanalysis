@@ -49,7 +49,7 @@ run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>%
   unnest_wider(stats) %>% unnest_wider(assignment) %>%
   mutate(hit_percent = round(hit_percent * 100, digits = 1), FA_percent = round(FA_percent * 100, digits = 1)) %>%
   left_join(rat_archive %>% 
-              filter(is.na(end_date) & start_date < str_remove_all(Sys.Date(), "-")) %>% 
+              filter(is.na(end_date) & start_date <= str_remove_all(Sys.Date(), "-")) %>% 
               select(Rat_name, Box), 
             by = join_by(rat_name == Rat_name)) %>%
   select(date, Box, rat_name, weight, weightProblem, rxnProblem, 
@@ -61,7 +61,7 @@ run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>%
 
 # Not loaded today --------------------------------------------------------
 InitializeMain()
-rat_archive %>% filter(is.na(end_date) & start_date < str_remove_all(Sys.Date(), "-")) %>%
+rat_archive %>% filter(is.na(end_date) & start_date <= str_remove_all(Sys.Date(), "-")) %>%
   filter(! Rat_name %in% c(run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>% .$rat_name %>% as.list)) %>%
   .$Rat_name
 
@@ -73,7 +73,7 @@ yesterday = run_archive %>% filter(date == str_remove_all(Sys.Date() - 1, "-")) 
   unnest_wider(stats) %>% unnest_wider(assignment) %>%
   mutate(hit_percent = round(hit_percent * 100, digits = 1), FA_percent = round(FA_percent * 100, digits = 1)) %>%
   left_join(rat_archive %>% 
-              filter(is.na(end_date) & start_date < str_remove_all(Sys.Date(), "-")) %>% 
+              filter(is.na(end_date) & start_date <= str_remove_all(Sys.Date(), "-")) %>% 
               select(Rat_name, Box), 
             by = join_by(rat_name == Rat_name)) %>%
   select(date, Box, rat_name, weight, weightProblem, rxnProblem, 

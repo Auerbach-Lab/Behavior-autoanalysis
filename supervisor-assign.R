@@ -45,7 +45,7 @@ Workbook_Reader <- function() {
   )
   
   # warn about unassigned rats
-  unassigned_rats = rat_archive %>% filter(is.na(end_date) & start_date < str_remove_all(Sys.Date(), "-")) %>% filter(Assigned_Filename == "")
+  unassigned_rats = rat_archive %>% filter(is.na(end_date) & start_date <= str_remove_all(Sys.Date(), "-")) %>% filter(Assigned_Filename == "")
   if (nrow(unassigned_rats) > 0) {
     warn = warn(paste0(nrow(unassigned_rats), " rats are missing assignments. (", str_flatten_comma(unassigned_rats$Rat_name), ")"))
   }

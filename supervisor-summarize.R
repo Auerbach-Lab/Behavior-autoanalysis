@@ -1045,7 +1045,7 @@ Workbook_Writer <- function() {
 InitializeWriter()
 
 # Find runs not entered today
-rats_not_entered_today = rat_archive %>% filter(is.na(end_date) & start_date < str_remove_all(Sys.Date(), "-")) %>%
+rats_not_entered_today = rat_archive %>% filter(is.na(end_date) & start_date <= str_remove_all(Sys.Date(), "-")) %>%
   filter(! Rat_name %in% c(run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>% .$rat_name %>% as.list)) %>%
   arrange(Box)
 
