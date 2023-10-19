@@ -30,7 +30,7 @@ Find_Issues_in_Archives <- function(group) {
 
     trial_count_comparison = trials_archive %>% group_by(UUID) %>% summarise(rows = length(UUID)) %>%
       left_join(trial_counts, by = "UUID") %>%
-      mutate(Issue = rows != trials)
+      mutate(Issue = rows != trials) # rows is the 'found trials' while trials is the 'expected trials', they should match
 
     Bad_UUIDs = filter(trial_count_comparison, Issue == TRUE) %>%
       left_join(run_archive %>% select(date, rat_name, rat_ID, file_name, UUID), by = "UUID")
@@ -144,7 +144,9 @@ Find_Issues_in_Archives <- function(group) {
         # Check prior to cleaning bad entries -------------------------------------
         switch(menu(c("Yes", "No"),
                     title=paste0("Proceed with cleaning bad runs from run_archive?\n
-                                 Note: Data WILL be saved and attempted to reload"),
+                                 Cleaning removes all rows of the affected runs, then automatically re-imports the original .mat files.\n
+                                 Observations, weight, and other hand-entered data will be preserved and reused.
+                                 Choose YES if it is possible that some .mat files were imported more than once today."),
                     graphics = FALSE),
                # 1 (Yes): Write file
                lapply(bad_runs %>% .$UUID, clean_wrapper),
