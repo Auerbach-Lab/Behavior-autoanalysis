@@ -44,7 +44,7 @@ print(select(Bad_entries, all_of(c("date", "rat_name"))))
 
 switch(menu(c("Yes", "No"),
             title=paste0("Do you want to DELETE the runs from run_archive?\n Note: ",
-                         "Data ", if_else(backup_data, "WILL", "will NOT"), " be saved and ",
+                         "Data WILL be saved and ",
                          "previous assignment ", if_else(restore, "WILL", "will NOT"), " be restored"),
             graphics = FALSE),
        # 1 (Yes): Write file
