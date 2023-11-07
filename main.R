@@ -220,7 +220,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
       #hoist the datestamp out of the loaded .mat file
       #note this is hard coded and changes in the matlab file alter it.
-      creation_time = current_mat_file$log[[5]][2] %>% unlist
+      creation_time = pluck(current_mat_file, "log") %>% .["save.time",,] %>% pluck(1, 2) %>% .[1,1]
 
       r = list(
         rat_name = rat_name,
