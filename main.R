@@ -150,7 +150,19 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         } else {
           filename = file_name_override
         }
-
+        
+        # check for precess of BOX.ID setting to allow backwards compatability
+        in_file = purrr::pluck(current_mat_file, "log") %>% dimnames %>% .[[1]] %>%  is.element("BOX.ID") %>% any()
+        
+        if(in_file) {
+        # Get BOX from run file settings
+        box_id = purrr::pluck(current_mat_file, "log") %>% .["BOX.ID",,] %>% flatten_chr() %>%
+          #remove BOX label
+          str_remove(pattern = "BOX#[0]+") %>%
+          # covert to a numeric
+          as.numeric()
+        } else {
+        # Get BOX from file name
         # greedy group: (.*) to strip off as much as possible
         # then the main capture group which contains
         # lookbehind for a _BOX#: (?<=_BOX#)
@@ -160,6 +172,8 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           unlist(recursive = TRUE) %>%
           tail (n = 1) %>%
           as.numeric()
+        }
+        
         if(rlang::is_empty(r)) stop("ERROR: system filename improper: ", filename)
         return(r)
       }
