@@ -1046,6 +1046,26 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     return(r)
   }
 
+  Check_Assigned_Box <- function() {
+    r = TRUE
+    id = run_properties$rat_ID
+    if(length(id) == 0) stop("ABORT: Unknown rat ID.")
+    assigned_box =
+      rat_archive %>%
+      dplyr::filter(rat_ID == id) %>%
+      dplyr::select(Box)
+
+    if (assigned_box != run_properties$box)
+      warn = paste0("ACTION REQUIRED: Was rat run in the wrong box?\n",
+                    "ERROR: Box for run -- ", run_properties$box, " -- does not match\n",
+                    "Rat's Assigned box -- ", assigned_box, "")
+      warning(paste0(warn, "\n"))
+      warnings_list <<- append(warnings_list, warn)
+      r = FALSE
+    }
+    return(r)
+  }
+
   Check_UUID <- function() {
     Build_UUID <- function() {
 
