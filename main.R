@@ -1052,7 +1052,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     if(length(id) == 0) stop("ABORT: Unknown rat ID.")
     assigned_box =
       rat_archive %>%
-      dplyr::filter(rat_ID == id) %>%
+      dplyr::filter(Rat_ID == id) %>%
       dplyr::select(Box) %>%
       str_remove(pattern = "\d+\.")
 
