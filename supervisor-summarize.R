@@ -615,7 +615,7 @@ Workbook_Writer <- function() {
 
             r = rbind(df_TH_BBN, df_TH_tones, df_Rxn)
 
-            if (analysis_type %in% c("Training - Gap", "Training - BBN")) {
+            if (analysis_type %in% c("Training - Gap", "Training - BBN", "Training - Tone")) {
               r = r %>% rename(Dur = `Dur (ms)`, Freq = `Freq (kHz)`) %>% select(-`Inten (dB)`)
             } else {
               r = r %>% select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
@@ -645,7 +645,7 @@ Workbook_Writer <- function() {
             relocate(Spacer1, .after = mean_attempts_per_trial) %>%
             select(-FA_detailed) %>%
             unique
-        } else if (analysis_type %in% c("Training - BBN")) {
+        } else if (analysis_type %in% c("Training - BBN", "Training - Tone")) {
           # Training has no TH
           r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>% select(-Freq, -Dur) %>%
             group_by(task, detail) %>%
