@@ -1605,7 +1605,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       r = tibble(
         date = date,
         time = time,
-        box = run_properties$box,    # TODO: calculated box from MAT file not external FOO.mat filename
+        box = run_properties$box,
         rat_name = run_properties$rat_name,
         rat_ID = run_properties$rat_ID,
         weight = analysis$weight,
@@ -1672,6 +1672,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     analysis$prepend_name <- FALSE
     analysis$computed_file_name <- Build_Filename()
     Check_Assigned_Filename()
+    Check_Assigned_Box()
     writeLines("Filename checks complete.")
     if (use_shiny) shiny::showNotification(glue("Filename checks complete."))
 
