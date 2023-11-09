@@ -55,11 +55,23 @@ Assignments_Writer <- function() {
   wb = createWorkbook()
   modifyBaseFont(wb, fontSize = 12, fontName = "Calibri")
   addWorksheet(wb, sheetName = "Files Summary")
+  
+  Find_Stim_Location <- function(Assigned_Filename) {
+    # Searches the expected (hardcoded) stim file location to find a perfect name match
+    locations = list.files("Z:/Stim Files", pattern = paste0(Assigned_Filename, ".mat$"), recursive = TRUE, full.names = TRUE)
+    
+    if(length(locations) == 1) return(locations)
+    if(length(locations) == 0) return("No match")
+    if(length(locations) > 1) return("Multiple matches")
+  }
+  
   data_table = rat_archive %>% filter(is.na(end_date)) %>%
     arrange(Box) %>%
-    mutate(Changed = ifelse(Assigned_Filename == Old_Assigned_Filename, "", "*")) %>%
-    select(Rat_name, Box, Assigned_Filename, Changed, Assigned_Experiment) %>%
-    rename(Experiment = Assigned_Experiment)
+    # Note that this rowwise adds a small but notable slowdown; for speed up, don't dynamically searching each time
+    rowwise() %>%
+    mutate(Changed = ifelse(Assigned_Filename == Old_Assigned_Filename, "", "*"),
+           stim_location = Find_Stim_Location(Assigned_Filename)) %>%
+    select(Rat_name, Box, Assigned_Filename, Changed, stim_location) 
   writeDataTable(wb, 1, x = data_table, startRow = 1, colNames = TRUE, rowNames = FALSE, bandedRows = TRUE, tableStyle = "TableStyleMedium2", na.string = "")
   
   # formatting - widths
