@@ -151,30 +151,31 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           filename = file_name_override
         }
 
-        # check for precess of BOX.ID setting to allow backwards compatability
+        # check for presence of BOX.ID setting to allow backwards compatibility
         in_file = purrr::pluck(current_mat_file, "log") %>% dimnames %>% .[[1]] %>%  is.element("BOX.ID") %>% any()
-        
+
         if(in_file) {
-        # Get BOX from run file settings
-        box_id = purrr::pluck(current_mat_file, "log") %>% .["BOX.ID",,] %>% flatten_chr() %>%
-          #remove BOX label
-          str_remove(pattern = "BOX#[0]+") %>%
-          # covert to a numeric
-          as.numeric()
+          # Get BOX from run file settings
+          r = purrr::pluck(current_mat_file, "log") %>% .["BOX.ID",,] %>% flatten_chr() %>%
+            #remove BOX label
+            str_remove(pattern = "BOX#[0]+") %>%
+            # covert to a numeric
+            as.numeric()
+          if(rlang::is_empty(r)) stop("ERROR: reported box id is not a number.")
         } else {
-        # Get BOX from file name
-        # greedy group: (.*) to strip off as much as possible
-        # then the main capture group which contains
-        # lookbehind for a _BOX#: (?<=_BOX#)
-        # capture of the box number: [:digit:]+
-        # lookahead for the extension: (?=.mat)
-        r = stringr::str_match_all(filename, pattern="(.*)((?<=_BOX#)[:digit:]+(?=.mat))") %>%
-          unlist(recursive = TRUE) %>%
-          tail (n = 1) %>%
-          as.numeric()
+          # Get BOX from file name
+          # greedy group: (.*) to strip off as much as possible
+          # then the main capture group which contains
+          # lookbehind for a _BOX#: (?<=_BOX#)
+          # capture of the box number: [:digit:]+
+          # lookahead for the extension: (?=.mat)
+          box_id = stringr::str_match_all(filename, pattern="(.*)((?<=_BOX#)[:digit:]+(?=.mat))") %>%
+            unlist(recursive = TRUE) %>%
+            tail (n = 1) %>%
+            as.numeric()
+          if(rlang::is_empty(r)) stop("ERROR: system filename improper: ", filename)
         }
-        
-        if(rlang::is_empty(r)) stop("ERROR: system filename improper: ", filename)
+
         return(r)
       }
 
@@ -659,7 +660,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       dplyr::filter(`Inten (dB)` != -100) %>% # Remove No-Go from range
       dplyr::group_by(`Freq (kHz)`, `Delay (s)`, `Type`, `Repeat_number`) %>%
       dplyr::summarise(dB = unique(`Inten (dB)`), .groups = 'drop') # Get each unique dB
-    
+
     if(run_properties$stim_type == "Tone") {run_properties$stim_type <<- "tone"}
 
     if (run_properties$stim_type == "BBN" | run_properties$stim_type == "tone" | run_properties$stim_type == "gap") run_properties <<- append(run_properties, list(summary = Get_File_Summary_BBN_Tone()))
