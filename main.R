@@ -1054,7 +1054,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       rat_archive %>%
       dplyr::filter(Rat_ID == id) %>%
       dplyr::select(Box) %>%
-      str_remove(pattern = "\d+\.")
+      str_remove(pattern = "[:digit:]+\\.")
 
     if (assigned_box != run_properties$box) {
       warn = paste0("ACTION REQUIRED: Was rat run in the wrong box?\n",
