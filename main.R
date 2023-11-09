@@ -1056,7 +1056,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       dplyr::select(Box) %>%
       str_remove(pattern = "\d+\.")
 
-    if (assigned_box != run_properties$box)
+    if (assigned_box != run_properties$box) {
       warn = paste0("ACTION REQUIRED: Was rat run in the wrong box?\n",
                     "ERROR: Box for run -- ", run_properties$box, " -- does not match\n",
                     "Rat's Assigned box -- ", assigned_box, "")
