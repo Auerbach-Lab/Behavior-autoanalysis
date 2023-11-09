@@ -150,7 +150,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         } else {
           filename = file_name_override
         }
-        
+
         # check for precess of BOX.ID setting to allow backwards compatability
         in_file = purrr::pluck(current_mat_file, "log") %>% dimnames %>% .[[1]] %>%  is.element("BOX.ID") %>% any()
         
@@ -659,6 +659,8 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       dplyr::filter(`Inten (dB)` != -100) %>% # Remove No-Go from range
       dplyr::group_by(`Freq (kHz)`, `Delay (s)`, `Type`, `Repeat_number`) %>%
       dplyr::summarise(dB = unique(`Inten (dB)`), .groups = 'drop') # Get each unique dB
+    
+    if(run_properties$stim_type == "Tone") {run_properties$stim_type <<- "tone"}
 
     if (run_properties$stim_type == "BBN" | run_properties$stim_type == "tone" | run_properties$stim_type == "gap") run_properties <<- append(run_properties, list(summary = Get_File_Summary_BBN_Tone()))
     else if (run_properties$stim_type == "train") run_properties <<- append(run_properties, list(summary = Get_File_Summary_Oddball()))
