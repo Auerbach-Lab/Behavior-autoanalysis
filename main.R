@@ -169,7 +169,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           # lookbehind for a _BOX#: (?<=_BOX#)
           # capture of the box number: [:digit:]+
           # lookahead for the extension: (?=.mat)
-          box_id = stringr::str_match_all(filename, pattern="(.*)((?<=_BOX#)[:digit:]+(?=.mat))") %>%
+          r = stringr::str_match_all(filename, pattern="(.*)((?<=_BOX#)[:digit:]+(?=.mat))") %>%
             unlist(recursive = TRUE) %>%
             tail (n = 1) %>%
             as.numeric()
