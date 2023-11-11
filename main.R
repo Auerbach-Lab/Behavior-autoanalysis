@@ -193,29 +193,6 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         }
         return(r)
       }
-      
-      
-      Get_Stim_Notes <- function() {
-        # to make this not hard coded, I am dealing with an mixed data type so its ugly hack
-        para = current_mat_file$stim %>% .["para", , ] %>% .$para
-        
-        # now force set names as they should be so I can call them (still ugly hack)
-        para = setNames(para, dimnames(para)[[1]])
-
-        # This has the notes that need to be added to the run_properties
-        para$stim.note %>% 
-          # TODO: automatically pull any possible note
-          # break apart if there is more than one note
-          str_split(pattern = "; ") %>% 
-          #to handle multiple notes:
-          sapply(function(x) 
-            # remove the trailing ; from the last note
-            str_remove(string = x, pattern = ";") %>% 
-              # break each note into its named component and then its stored value
-              # I can not figure out how to call these to actually set so I may need to hard code the 
-              str_match(pattern = "(?<name>.+): (?<value>.+)"))
-      
-      }
 
       run_properties = trial_collection$para[,,1]
 
@@ -301,11 +278,43 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
         # Nose light operational?
         nose_light = run_properties$nose.light[[1]] %>% as.logical(),
+        
+
 
         stim_encoding_table = stim_encoding_table,
 
         creation_time = creation_time
       )
+      
+      #dynamically add stim notes here not as a sub-table
+      Get_Stim_Notes <- function() {
+        # to make this not hard coded, I am dealing with an mixed data type so its ugly hack
+        para = current_mat_file$stim %>% .["para", , ] %>% .$para
+        
+        # now force set names as they should be so I can call them (still ugly hack)
+        para = setNames(para, dimnames(para)[[1]])
+        
+        # This has the notes that need to be added to the run_properties
+        stim_note = 
+          para$stim.note %>% 
+          # TODO: automatically pull any possible note
+          # break apart if there is more than one note
+          str_split(pattern = "; ") %>% 
+          #to handle multiple notes:
+          # remove the trailing ; from the last note
+          sapply(function(x) str_remove(string = x, pattern = ";")) %>% 
+          # break each note into its named component and then its stored value
+          sapply(function(x) str_extract(string = x, pattern = "(?<name>.+): (?<value>.+)", group = c(1:2))) %>% 
+          # force for next step
+          as.data.frame() %>%
+          # create a named list by column
+          apply(2, function(df) setNames(df["value"], paste0(df["name"])) %>% as.list) %>% flatten
+        
+        return(stim_note)
+      }
+      
+      # dynamically append any stim_notes to r
+      if(length(Get_Stim_Notes()) > 0) r = r %>% append(Get_Stim_Notes())
 
       filename_TR = stringr::str_extract(r$stim_filename,"_TR[:digit:]+ms") %>% str_extract("[:digit:]+") %>% as.numeric()
       if (!is.na(filename_TR)) if (filename_TR != r$trigger_sensitivity) {
@@ -1873,4 +1882,3 @@ InitializeMain()
 
 # for shiny, initialization is the only thing that needs doing. For manual use, uncomment the following line:
 # r = Process_File(file.choose(), name, weight, observations, exclude_trials, ignore_name_check = TRUE)
-
