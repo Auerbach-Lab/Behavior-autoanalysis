@@ -941,6 +941,12 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)` %>% unique(), "dB")
         catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
 
+        # check for gap_depth as an internal setting - old files do NOT have this, so its needed for backwards compatablility
+        has_depth_setting = if(! is.null(run_properties$gap_depth)) TRUE else FALSE
+        
+        # check for modifications
+        has_modified_BG = if(! is.null(run_properties$BG_freq)) TRUE else FALSE
+        
         has_duration_range = filter(run_properties$stim_encoding_table, Type != 0) %>% unique() %>% nrow() > 1
         if (has_duration_range) {
           duration = run_properties$stim_encoding_table %>%
@@ -957,7 +963,11 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
         # Note there is not BG test here because there is expected to always be background in a Gap Detection file.
 
-        computed_file_name = paste0("gap_", go_dB, "_", duration, "ms_")
+        computed_file_name = "gap_"
+        if (has_modified_BG) computed_file_name = paste0(computed_file_name, run_properties$BG_freq, "_")
+        computed_file_name = paste0(computed_file_name, go_dB, "_")
+        if (has_depth_setting) computed_file_name = paste0(computed_file_name, run_properties$gap_depth, "_")
+        computed_file_name = paste0(computed_file_name, duration, "ms_")
         if (catch_number != 3) computed_file_name = paste0(computed_file_name, catch_number, "catch_")
         computed_file_name = paste0(computed_file_name, run_properties$lockout, "s")
         if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
