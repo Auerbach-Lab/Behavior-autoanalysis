@@ -10,8 +10,13 @@ what_to_graph = "dprime"
 date_to_graph = if_else(date_to_graph == "today", str_remove_all(Sys.Date(), "-"), date_to_graph)
 
 Grapher <- function(rat_to_graph) {
+  rat_IDs = rat_archive %>%
+    # limit to active rats
+    filter(is.na(end_date) & start_date < str_remove_all(Sys.Date(), "-")) %>%
+    filter(Rat_name %in% rat_to_graph)
+  
   data = run_archive %>%
-    filter(rat_name %in% rat_to_graph) %>%
+    filter(rat_ID %in% rat_IDs) %>%
     unnest_wider(assignment) %>%
     unnest_wider(stats) %>%
     unnest(all_of(what_to_graph)) %>%
