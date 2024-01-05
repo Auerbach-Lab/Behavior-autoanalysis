@@ -298,7 +298,7 @@ Workbook_Writer <- function() {
         }
 
         # Gap Detection Rxn/TH PreHL
-        if (phase_current == "Gap Detection" & task_current %in% c("Rxn", "TH") & pre_HL) {
+        if (phase_current == "Gap Detection" & task_current %in% c("Rxn", "TH", "Depth") & pre_HL) {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "Gap Detection") %>%
@@ -1045,7 +1045,10 @@ Workbook_Writer <- function() {
 InitializeWriter()
 
 # Find runs not entered today
-rats_not_entered_today = rat_archive %>% filter(is.na(end_date) & start_date <= str_remove_all(Sys.Date(), "-")) %>%
+rats_not_entered_today = rat_archive %>% 
+  # only list active rats
+  filter(is.na(end_date) & start_date <= str_remove_all(Sys.Date(), "-")) %>%
+  # remove rats with runs in the run archive for today
   filter(! Rat_name %in% c(run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>% .$rat_name %>% as.list)) %>%
   arrange(Box)
 
@@ -1058,5 +1061,4 @@ if(nrow(rats_not_entered_today) == 0) { writeLines("All rats have data for today
 Workbook_Writer()
 rm(list = c("experiment_config_df", "run_today", "wb", "custom_rats"))
 # Validate and back-up archives
-# source(paste0(projects_folder, "admin tools\\check and backup.R"))
-
+source(paste0(projects_folder, "admin tools\\check and backup.R"))
