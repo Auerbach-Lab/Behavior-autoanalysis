@@ -4,37 +4,27 @@ Fmr_rats = c("BP1", "BP2", "BP3", "BP4", "BP5", "BP6", "LP1", "LP2", "LP3", "LP4
 
 # Single Rat History -------------------------------------------
 InitializeMain()
-run_archive %>% filter(rat_name %in% c("TP3")) %>% 
+run_archive %>% filter(rat_name %in% c("Green21")) %>% 
   unnest_wider(assignment) %>%
   unnest_wider(stats) %>%
-  mutate(hit_percent = hit_percent * 100, FA_percent = FA_percent * 100) %>%
+  mutate(hit_percent = round(hit_percent * 100, digits = 1), FA_percent = round(FA_percent * 100, digits = 1)) %>%
   select(date, rat_name, weight, trial_count, hit_percent, FA_percent, file_name, experiment, phase, task, detail, warnings_list) %>%
-  unnest_wider(warnings_list, names_sep = "_") %>%
-  arrange(desc(date))
-
+  # unnest_wider(warnings_list, names_sep = "_") %>%
+  arrange(desc(date)) %>%
+  print(n=20)
+  
 
 # Weight ------------------------------------------------------------------
 InitializeMain()
-run_archive %>% filter(rat_name %in% c("TP2")) %>% 
+run_archive %>% filter(rat_name %in% c("Yellow1")) %>% 
   arrange(desc(date)) %>%
   select(date, rat_name, weight) %>%
   print(n = 14)
 
 
-# Catch Trial dates -------------------------------------------------------
-run_archive %>% 
-  select(rat_name, rat_ID, date, file_name, assignment, invalid) %>%
-  unnest_wider(assignment) %>%
-  filter(experiment %in% c("Oddball") & task %in% c("Catch trials", "Probe trials") & invalid != TRUE & rat_ID > 101) %>% 
-  arrange(desc(date)) %>%
-  select(-comment, -detail, -assigned_file_name, -invalid) %>%
-  left_join(select(rat_archive, c(Rat_ID, Genotype)), by = c("rat_ID" = "Rat_ID")) %>%
-  fwrite(paste0("C:/Users/Noelle/Box/Behavior Lab/Shared/Ben/Catch_trials_data_exported_", Sys.Date(),".csv"), row.names = FALSE)
-
-
 # Thresholds --------------------------------------------------------------
 InitializeMain()
-run_archive %>% filter(rat_name %in% c("BP1")) %>% 
+run_archive %>% filter(rat_name %in% c("Red1")) %>% 
   select(date, rat_name, stats) %>% 
   unnest_wider(stats) %>% 
   unnest(threshold) %>% 
@@ -44,17 +34,17 @@ run_archive %>% filter(rat_name %in% c("BP1")) %>%
 
 # Runs entered for today --------------------------------------------------
 InitializeMain()
-run_archive %>% filter(date == str_remove_all(Sys.Date(), "-")) %>% 
+run_archive %>% filter(date == as.numeric(str_remove_all(Sys.Date(), "-"))) %>% 
   arrange(desc(time)) %>%
   unnest_wider(stats) %>% unnest_wider(assignment) %>%
   mutate(hit_percent = round(hit_percent * 100, digits = 1), FA_percent = round(FA_percent * 100, digits = 1)) %>%
   left_join(rat_archive %>% 
-              filter(is.na(end_date) & start_date <= str_remove_all(Sys.Date(), "-")) %>% 
+              filter(is.na(end_date) & start_date < str_remove_all(Sys.Date(), "-")) %>% 
               select(Rat_name, Box), 
             by = join_by(rat_name == Rat_name)) %>%
-  select(date, Box, rat_name, weight, weightProblem, rxnProblem, 
+  select(date, Box, rat_name, weight, weightProblem, rxnProblem, scientist,
          trial_count, hit_percent, FA_percent, 
-         file_name, experiment, phase, task, detail, scientist) %>%
+         file_name, experiment, phase, task, detail, analysis_type) %>%
   arrange(Box) %>%
   View
 
@@ -73,7 +63,7 @@ yesterday = run_archive %>% filter(date == str_remove_all(Sys.Date() - 1, "-")) 
   unnest_wider(stats) %>% unnest_wider(assignment) %>%
   mutate(hit_percent = round(hit_percent * 100, digits = 1), FA_percent = round(FA_percent * 100, digits = 1)) %>%
   left_join(rat_archive %>% 
-              filter(is.na(end_date) & start_date <= str_remove_all(Sys.Date(), "-")) %>% 
+              filter(is.na(end_date) & start_date < str_remove_all(Sys.Date(), "-")) %>% 
               select(Rat_name, Box), 
             by = join_by(rat_name == Rat_name)) %>%
   select(date, Box, rat_name, weight, weightProblem, rxnProblem, 
@@ -105,3 +95,23 @@ run_archive %>% dplyr::filter(rat_name == "LP3") %>% dplyr::arrange(date) %>%
             .groups = "drop") %>%
   arrange(task, frequency)
 
+
+# Catch Trial dates -------------------------------------------------------
+run_archive %>% 
+  select(rat_name, rat_ID, date, file_name, assignment, invalid) %>%
+  unnest_wider(assignment) %>%
+  filter(experiment %in% c("Oddball") & task %in% c("Catch trials", "Probe trials") & invalid != TRUE & rat_ID > 101) %>% 
+  arrange(desc(date)) %>%
+  select(-comment, -detail, -assigned_file_name, -invalid) %>%
+  left_join(select(rat_archive, c(Rat_ID, Genotype)), by = c("rat_ID" = "Rat_ID")) %>%
+  fwrite(paste0("C:/Users/Noelle/Box/Behavior Lab/Shared/Ben/Catch_trials_data_exported_", Sys.Date(),".csv"), row.names = FALSE)
+
+
+# Reaction times for a specific day ---------------------------------------
+run_archive %>% 
+  filter(rat_name %in% c("Green21") & date %in% c(20231129)) %>% 
+  unnest_wider(assignment) %>%
+  unnest_wider(stats) %>%
+  mutate(hit_percent = round(hit_percent * 100, digits = 1), FA_percent = round(FA_percent * 100, digits = 1)) %>% 
+  unnest(reaction) %>% 
+  View()
