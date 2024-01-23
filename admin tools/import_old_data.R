@@ -1,11 +1,11 @@
 # User Variables ----------------------------------------------------------
 
 # Date range for filtering
-min_date = "2022-04-01"
+min_date = "2022-01-01"
 max_date = "2023-03-01"
 
 # Experiment filtering
-experiment = "Fmr1 SD"
+experiment = "Oddball"
 
 # slashes must be either / or \\
 modern_matlab_file_location = "Z:/Daily Matlab files"
@@ -29,6 +29,7 @@ Load_old_file <- function(df) {
   # Determine project from the group we are in
   if (group == "Tsc2-LE") project = "Tsc2 Eker"
   else if (group == "Fmr1 SD") project = "Archive/Fmr1 SD"
+  else if (group == "Oddball Training") project = "Oddball"
   else project = group
   
   # find location of bad file
@@ -96,18 +97,18 @@ old_excel_archive = mutate(old_excel_archive,
 
 # filter to manageable date range
 missing_entries = filter(old_excel_archive, Date < max_date & Date >= min_date & Experiment == experiment) %>%
-  # these files error instead of loading
-  filter(rat_name != "Blue1" & Date != "2022-07-06") %>%
-  filter(rat_name != "Blue3" & Date != "2022-07-23") %>%
-  filter(rat_name != "Blue4" & Date != "2022-07-01") %>%
-  filter(rat_name != "Blue2" & Date != "2022-06-04") %>%
-  filter(rat_name != "Red2" & Date != "2021-12-21") %>%
-  # list of Nose Out times
-  filter(rat_name != "Teal1" & ! Date %in% c("2022-02-01", "2022-02-04", "2022-02-08")) %>%
-  filter(rat_name != "Teal5" & ! Date %in% c("2022-02-08")) %>%
-  filter(rat_name != "Teal6" & ! Date %in% c("2022-02-10")) %>%
-  # Bad mixed dB files (5 & 10 steps)
-  filter(rat_name != "Teal3" & Date != "2022-03-02") 
+  # # these files error instead of loading
+  filter(rat_name != "Blue1" & Date != "2022-07-06")
+  # filter(rat_name != "Blue3" & Date != "2022-07-23") %>%
+  # filter(rat_name != "Blue4" & Date != "2022-07-01") %>%
+  # filter(rat_name != "Blue2" & Date != "2022-06-04")
+  # filter(rat_name != "Red2" & Date != "2021-12-21") %>%
+  # # list of Nose Out times
+  # filter(rat_name != "Teal1" & ! Date %in% c("2022-02-01", "2022-02-04", "2022-02-08")) %>%
+  # filter(rat_name != "Teal5" & ! Date %in% c("2022-02-08")) %>%
+  # filter(rat_name != "Teal6" & ! Date %in% c("2022-02-10")) %>%
+  # # Bad mixed dB files (5 & 10 steps)
+  # filter(rat_name != "Teal3" & Date != "2022-03-02") 
 
 
 # Check if in database
