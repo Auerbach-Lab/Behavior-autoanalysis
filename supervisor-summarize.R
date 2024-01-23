@@ -440,6 +440,21 @@ Workbook_Writer <- function() {
         }
 
         # Oddball
+        if (experiment_current == "Oddball Training") {
+          count_df = rat_runs %>%
+            tidyr::unnest_wider(assignment) %>%
+            dplyr::filter(phase == phase_current & task == task_current & invalid != TRUE) %>%
+            mutate(frequency = str_extract(file_name, pattern = "^[:digit:]+")) %>%
+            group_by(task, detail, frequency) %>%
+            summarise(task = unique(task), frequency = unique(frequency), detail = unique(detail),
+                      date = tail(date, 1), n = n(),
+                      condition = NA,
+                      .groups = "drop") %>%
+            arrange(task, frequency) %>%
+            mutate(task = paste(task, frequency)) %>%
+            select(-frequency)
+        }
+        
         if (experiment_current == "Oddball") {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
@@ -560,7 +575,7 @@ Workbook_Writer <- function() {
           r = r %>% select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
 
         } else { # Experiment is none of Blank, Oddball, Gapdetection.
-          if (phase_current == "Octave" | detail_current == "Oddball") { # Oddball detail implies phase=Tones
+          if (phase_current == "Octave" | detail_current == "Oddball" | analysis_type == "Training - Oddball") { # Oddball detail implies phase=Tones
             r = r %>% unnest(reaction) %>%
               select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
           } else {
@@ -718,6 +733,21 @@ Workbook_Writer <- function() {
 
           r = left_join(r, x, by = c("task", "detail", "date", "time"))
 
+        } else if (analysis_type == "Training - Oddball") {
+          r = r %>%
+            select(-threshold) %>%
+            select(-FA_detailed)
+          
+          x = rat_runs %>%
+            tidyr::unnest_wider(assignment) %>%
+            filter(detail == detail_current) %>%
+            tidyr::unnest_wider(stats) %>%
+            unnest(dprime) %>%
+            select(task, detail, date, time, dprime)
+          
+          
+          r = left_join(r, x, by = c("task", "detail", "date", "time"))
+          
         } else if (phase_current == "Octave") {
           r = r %>% select(-threshold)
 
@@ -872,6 +902,10 @@ Workbook_Writer <- function() {
           r = cbind(r, c("              {Stim} Range", "32"))
         }
         else if (phase_current == "Tones" & detail_current == "Oddball") {
+          r = cbind(r, c("", "d'"))
+          r = cbind(r, NA)
+        }
+        else if (phase_current == "NG intro") {
           r = cbind(r, c("", "d'"))
           r = cbind(r, NA)
         }
@@ -1038,6 +1072,7 @@ Workbook_Writer <- function() {
   openXL(paste0(projects_folder, file_name))
   setwd(old_wd)
 }
+
 
 
 # Workflow -----------------------------------------------------------
