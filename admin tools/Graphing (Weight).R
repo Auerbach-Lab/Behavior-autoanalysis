@@ -62,7 +62,7 @@ Weight_Grapher <- function(rat_to_graph) {
 
 cat("Graphing...")
 rat_archive %>%
-  filter(is.na(end_date) & start_date <= str_remove_all(Sys.Date(), "-")) %>%
+  filter(is.na(end_date) & start_date < str_remove_all(Sys.Date(), "-")) %>%
   # select rats that have NOT been run today
   # filter(Assigned_Filename != "") %>%
   # filter(Assigned_Experiment  == "Tsc2-LE") %>%
