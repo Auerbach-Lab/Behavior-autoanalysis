@@ -9,8 +9,8 @@ columns_to_keep_unnested = c("date", "rat_name", "rat_ID",
                              "stim_type", "analysis_type", "complete_block_count", 
                              "trial_count", "hit_percent", "FA_percent")
 
-# This is only TH, FA_detailed, reaction and hit_detailed (once added)
-columns_to_keep_nested = c("FA_detailed", "reaction")
+# This is only TH, dprime, FA_detailed, reaction and hit_detailed (once added)
+columns_to_keep_nested = c("dprime", "reaction")
 
 experiments_to_keep = c("Oddball")
 
