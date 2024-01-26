@@ -16,7 +16,7 @@ experiments_to_keep = c("Oddball")
 
 save_location = "C:/Users/Noelle/Box/Behavior Lab/Shared/Walker/"
 
-save_file_name = "Oddball_data_exported"
+save_file_name = glue("{str_flatten(experiments_to_keep, collapse = '+')}_data_exported")
 
 # Load Data ---------------------------------------------------------------
 load(glue("{projects_folder}/run_archive.Rdata"), .GlobalEnv)
