@@ -1,4 +1,5 @@
-bad_rats = c("GP3")
+bad_rats = c("Bronze2")
+# "today" or a specific date in YYYYMMDD format
 bad_date = "today"
 # Restore assignment from the 'old' setting
 restore = TRUE
