@@ -81,8 +81,12 @@ stop("Halted for manual input")
 # merge dataframes - MUST BE DONE MANUALLY WITH THE NEW COLUMNS
 data_for_export = left_join(data1, data2, 
                             by = join_by(!!!columns_to_keep_unnested, # list of normal columns
-                                         # shared columns with different names
-                                         position == `Inten (dB)`))
+         # shared columns with different names
+         
+                                         # ## For Rxn & FA_detailed (Oddball) ----
+                                         # position == `Inten (dB)`)) 
+                                         ## For Reaction & dprime ----
+                                         dB == `Inten (dB)`, Freq == `Freq (kHz)`, Dur == `Dur (ms)`))
 
 
 # Create any new columns needed -------------------------------------------
