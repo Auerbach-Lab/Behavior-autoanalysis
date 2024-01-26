@@ -253,8 +253,8 @@ Workbook_Writer <- function() {
             dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Alone") %>%
             group_by(task, detail) %>%
             summarise(task = unique(task), detail = unique(detail),
-                      date = tail(date, 1), n = n(),
-                      condition = "baseline",
+                    date = tail(date, 1), n = n(),
+                    condition = "baseline",
                       .groups = "drop")
         }
 
@@ -266,8 +266,8 @@ Workbook_Writer <- function() {
             dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Mixed") %>%
             group_by(task, detail) %>%
             summarise(task = unique(task), detail = unique(detail),
-                      date = tail(date, 1), n = n(),
-                      condition = "baseline",
+                    date = tail(date, 1), n = n(),
+                    condition = "baseline",
                       .groups = "drop")
         }
 
@@ -279,8 +279,8 @@ Workbook_Writer <- function() {
             dplyr::filter(phase == "BBN" & detail == detail_current) %>%
             group_by(task, detail) %>%
             summarise(task = unique(task), detail = unique(detail),
-                      date = tail(date, 1), n = n(),
-                      condition = "baseline",
+                    date = tail(date, 1), n = n(),
+                    condition = "baseline",
                       .groups = "drop")
         }
 
@@ -292,8 +292,8 @@ Workbook_Writer <- function() {
             dplyr::filter(phase == "Gap Detection") %>%
             group_by(task, detail) %>%
             summarise(task = unique(task), detail = unique(detail),
-                      date = tail(date, 1), n = n(),
-                      condition = "baseline",
+                    date = tail(date, 1), n = n(),
+                    condition = "baseline",
                       .groups = "drop")
         }
 
@@ -622,8 +622,8 @@ Workbook_Writer <- function() {
             # take the average Rxn from the 55 and 65 and only keep dates that aren't already in df_Temp
             df_Rxn = r %>%
               dplyr::filter(task != "TH" & `Dur (ms)` == min_duration & `Inten (dB)` %in% c(55,65)) %>% # not equal TH
-              group_by(date) %>%
-              summarise(Rxn = mean(Rxn), `Inten (dB)` = mean(`Inten (dB)`), across(), .groups = "drop") %>%
+              reframe(Rxn = mean(Rxn), `Inten (dB)` = mean(`Inten (dB)`), across(),
+                      .by = date) %>%
               distinct() %>%
               filter(! date %in% df_Temp$date) %>%
               rbind(df_Temp)
