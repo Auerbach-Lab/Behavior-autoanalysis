@@ -470,31 +470,6 @@ Workbook_Writer <- function() {
             select(-frequency)
         }
 
-        #   # OLD
-        #   df_basecase = rat_runs %>%
-        #     tidyr::unnest_wider(assignment) %>%
-        #     dplyr::filter(phase == phase_current & task == "Base case") %>% # note that this is agnostic of the most recent detail and will return any recent base case streak
-        #     mutate(groupid = data.table::rleid(task, detail) ) %>%
-        #     filter(groupid == suppressWarnings(max(groupid))) %>%
-        #     summarise(task = unique(task), detail = unique(detail),
-        #               date = tail(date, 1), n = n(),
-        #               condition = NA,
-        #               .groups = "drop")
-        #
-        #   # df_task = count of today's task
-        #   if (task_current != "Base case") {
-        #     df_task = rat_runs %>%
-        #       tidyr::unnest_wider(assignment) %>%
-        #       dplyr::filter(phase == phase_current & task == task_current) %>%
-        #       summarise(task = unique(task), detail = unique(detail),
-        #                 date = tail(date, 1), n = n(),
-        #                 condition = NA,
-        #                 .groups = "drop")
-        #
-        #     # This ensures that the Base case is always at the top
-        #     count_df = rbind(df_basecase, df_task)
-        #   } else count_df = df_basecase
-        # }
 
         #format date correctly
         date = count_df$date
