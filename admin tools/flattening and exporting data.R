@@ -42,8 +42,6 @@ decoded_data = dataset %>%
 
 # Filter down to desired data ---------------------------------------------
 selected_data = decoded_data %>%
-  # Only keep relevant rats
-  filter(rat_ID %in% filter(rat_archive, str_detect(Genotype, pattern = "Tsc2_LE|Fmr1-LE"))$Rat_ID) %>%
   # Get essential columns in usable form; expands the dataframe
   unnest_wider(assignment) %>% 
   # if multiple types of experiments, this may cause issues if not pre-filtered
