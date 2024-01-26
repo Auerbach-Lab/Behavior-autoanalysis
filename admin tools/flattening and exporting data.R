@@ -62,8 +62,8 @@ dataframes_to_merge = c()
 for (i in columns_to_keep_nested) {
   count <- (count + 1)
   name = glue("data{count}")
-  original_columns = names(data)
-  tempdf = data %>% 
+  original_columns = names(selected_data)
+  tempdf = selected_data %>% 
             select(!!!columns_to_keep_unnested, i) %>%
                   unnest(i)
   new_columns = names(tempdf)
