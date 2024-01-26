@@ -13,7 +13,7 @@ line_to_modify = row_to_modify$rowid
 run_archive[line_to_modify,]$invalid #= "TRUE"
 
 # Assignment change -------------------------------------------------------
-run_archive[line_to_modify,] %>% select(date, rat_name, rat_ID, file_name, assignment) %>% unnest_wider(assignment) %>% select(-comment)
+run_archive[line_to_modify,] %>% select(date, time, rat_name, rat_ID, file_name, assignment) %>% unnest_wider(assignment) %>% select(date:detail)
 run_archive[line_to_modify,]$assignment[[1]]$phase #= "Tones"
 run_archive[line_to_modify,]$assignment[[1]]$task #= "Rxn"
 run_archive[line_to_modify,]$assignment[[1]]$detail #= "Mixed"
