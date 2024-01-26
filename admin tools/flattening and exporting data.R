@@ -4,7 +4,7 @@
 
 # Variables ---------------------------------------------------------------
 columns_to_keep_unnested = c("date", "rat_name", "rat_ID", "Sex", "Genotype",
-                         "file_name", "experiment", "phase", "task", "detail",
+                             "file_name", "experiment", "phase", "task", "detail",
                          "stim_type", "analysis_type", "complete_block_count", "FA_percent")
 
 # This is only TH, FA_detailed, reaction and hit_detailed (once added)
@@ -95,4 +95,4 @@ data_for_export = data_for_export %>%
 
 # Export ------------------------------------------------------------------
 data_for_export %>%
-  fwrite(glue("{save_location}{save_file_name}_", Sys.Date(),".csv"), row.names = FALSE)
+  fwrite(glue("{save_location}{save_file_name}_", str_remove_all(Sys.Date(), "-"),".csv"), row.names = FALSE)
