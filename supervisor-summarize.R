@@ -600,9 +600,9 @@ Workbook_Writer <- function() {
             # take the average Rxn from the 55 and 65 and only keep dates that aren't already in df_Temp
             df_Rxn = r %>%
               dplyr::filter(task != "TH" & `Dur (ms)` == min_duration & `Inten (dB)` %in% c(55,65)) %>% # not equal TH
-              reframe(Rxn = mean(Rxn), `Inten (dB)` = mean(`Inten (dB)`), across(),
+              mutate(Rxn = mean(Rxn), `Inten (dB)` = mean(`Inten (dB)`),
                      .by = date) %>%
-              distinct() %>%
+              distinct() %>% # remove duplicates b/c of multiple lines
               filter(! date %in% df_Temp$date) %>%
               rbind(df_Temp)
 
