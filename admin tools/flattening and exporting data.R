@@ -3,9 +3,11 @@
 # You must manually handle aligning the column names in Flatten since they vary by experiment 
 
 # Variables ---------------------------------------------------------------
-columns_to_keep_unnested = c("date", "rat_name", "rat_ID", "Sex", "Genotype",
+columns_to_keep_unnested = c("date", "rat_name", "rat_ID",
+                             "DOB", "Sex", "Genotype", "HL_date",
                              "file_name", "experiment", "phase", "task", "detail",
-                         "stim_type", "analysis_type", "complete_block_count", "FA_percent")
+                             "stim_type", "analysis_type", "complete_block_count", 
+                             "trial_count", "hit_percent", "FA_percent")
 
 # This is only TH, FA_detailed, reaction and hit_detailed (once added)
 columns_to_keep_nested = c("FA_detailed", "reaction")
