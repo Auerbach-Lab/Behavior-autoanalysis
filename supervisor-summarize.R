@@ -239,7 +239,7 @@ Workbook_Writer <- function() {
       writeData(wb, 1, x = rat_header_df, startRow = rowCurrent, colNames = FALSE, rowNames = FALSE)
     }
 
-    Write_Table <- function() {
+    Write_Table <- function(ratID) {
       Build_Counts <- function() {
         # if experiment_current != Oddball
         # get current date and compare to rat_archive 'HL induced' column's date to determine post-HL or not
@@ -485,7 +485,7 @@ Workbook_Writer <- function() {
 
 
 
-      Build_Table <- function() {
+      Build_Table <- function(ratID) {
         # Common Columns ----------------------------------------------------------
         columns = c("task", "detail", "date", "time", "file_name", "weight",
                     "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial",
@@ -506,8 +506,11 @@ Workbook_Writer <- function() {
           dplyr::select(all_of(columns)) %>%
           arrange(desc(date), .by_group = F)
 
-        weight_max = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
-
+        # Get max weight for rat (Need to consider both free-feed from rat_archive & all runs)
+        weight_max_run = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
+        weight_max_manual = dplyr::filter(rat_archive, Rat_ID == ratID)$Max_Weight
+        weight_max = max(weight_max_run, weight_max_manual)
+        
         # today's duration
         # if it's a single duration, we want the below dfs limited to runs that INCLUDE (not necc. perfectmatch) today's duration
         # if it's a multiple duration, we want the below dfs limited to runs that INCLUDE (not necc. perfectmatch) the minimum duration used today
@@ -598,7 +601,7 @@ Workbook_Writer <- function() {
             df_Rxn = r %>%
               dplyr::filter(task != "TH" & `Dur (ms)` == min_duration & `Inten (dB)` %in% c(55,65)) %>% # not equal TH
               reframe(Rxn = mean(Rxn), `Inten (dB)` = mean(`Inten (dB)`), across(),
-                      .by = date) %>%
+                     .by = date) %>%
               distinct() %>%
               filter(! date %in% df_Temp$date) %>%
               rbind(df_Temp)
@@ -913,7 +916,7 @@ Workbook_Writer <- function() {
       # Write Table Workflow ----------------------------------------------------
       row_table_start = rowCurrent + 1 #save for later
       addStyle(wb, 1, style[["table_header"]], rows = row_table_start, cols = 1:29, gridExpand = TRUE)
-      df_table = Build_Table()
+      df_table = Build_Table(ratID)
       df_key = Build_Table_Key()
       df_counts = Build_Counts()
 
@@ -1018,7 +1021,7 @@ Workbook_Writer <- function() {
       task_current <<- run_today$assignment[[1]]$task
       detail_current <<- run_today$assignment[[1]]$detail
       Write_Header()
-      Write_Table()
+      Write_Table(ratID)
       writeLines("Done.")
     }
   }
