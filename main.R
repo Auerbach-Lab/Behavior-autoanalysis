@@ -1534,7 +1534,10 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         warnings_list <<- append(warnings_list, warn)
         analysis$weight_change <<- 0
       } else {
-        max_weight = max(rat_weights$weight, na.rm = TRUE) #TODO add a column to rat_archive called e.g. override_weight to use instead of true max weight for chunky bois, or calculate max in past month or something else
+        max_weight_runs = max(rat_weights$weight, na.rm = TRUE) 
+        max_weight_manual = dplyr::filter(rat_archive, Rat_ID == run_properties$rat_ID)$Max_Weight
+        max_weight = max(max_weight_runs, max_weight_manual, na.rm = TRUE)
+        #TODO add a column to rat_archive called e.g. override_weight to use instead of true max weight for chunky bois, or calculate max in past month or something else
         analysis$weight_change <<- analysis$weight - old_weight  # negative if lost weight
         weight_change_percent = analysis$weight_change / old_weight # negative if lost weight
         weight_change_overall_percent = (analysis$weight - max_weight) / max_weight # negative if lost weight
