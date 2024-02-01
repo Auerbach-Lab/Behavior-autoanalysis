@@ -647,7 +647,8 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
       # For broadband files (training or otherwise)
       # DO NOT CHANGE THE TEXTUAL DESCRIPTIONS OR YOU WILL BREAK COMPARISONS LATER
-      if (has_one_dB) r = "Training - BBN"
+      if (has_one_dB & !has_multiple_durations) r = "Training - BBN"
+      else if (has_one_dB & has_multiple_durations) r = "Duration Testing"
       else if (has_multiple_durations) r = "BBN Mixed Duration"
       else r = "BBN (Standard)"
       return(r)
@@ -895,6 +896,26 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         # Warning States, i.e. not the expected default
         if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
         if (has_TR) computed_file_name = paste0(computed_file_name, "_", "TR", run_properties$trigger_sensitivity, "ms")
+      }
+      else if (analysis$type == "Duration Testing") {
+        go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB")
+        catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
+        delay = run_properties$delay %>% stringr::str_replace(" ", "-")
+        lockout = `if`(length(run_properties$lockout) > 0, run_properties$lockout, 0)
+        duration_range = paste0(min(run_properties$duration), "-",
+                                max(run_properties$duration), "")
+        
+        # Warning States, i.e. not the expected default
+        response_window = unique(run_properties$stim_encoding_table["Nose Out TL (s)"]) %>% as.numeric()
+        has_Response_window = response_window != 2
+        has_TR = run_properties$trigger_sensitivity != 200
+        
+        computed_file_name = paste0("BBN_", go_dB, "_", duration_range, "ms_", run_properties$lockout, "s")
+        
+        if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
+        if (has_TR) computed_file_name = paste0(computed_file_name, "_", "TR", run_properties$trigger_sensitivity, "ms")
+        
+        computed_file_name = unique(computed_file_name)
       }
       else
       {

@@ -26,6 +26,8 @@ user_settings = list(
   minimum_trials = list(
     "Training - Octave" = 264, #?
     "Octave" = 264, #?
+    
+    "Duration Testing" = 240,
 
     "Training - Tone" = 50, #?
     "Tone (Standard)" = 240,
