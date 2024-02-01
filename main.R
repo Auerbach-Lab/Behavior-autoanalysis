@@ -871,20 +871,30 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
         delay = run_properties$delay %>% stringr::str_replace(" ", "-")
         lockout = `if`(length(run_properties$lockout) > 0, run_properties$lockout, 0)
+        
+        # Warning States, i.e. not the expected default
+        response_window = unique(run_properties$stim_encoding_table["Nose Out TL (s)"]) %>% as.numeric()
+        has_Response_window = response_window != 2
 
         computed_file_name = paste0("BBN_", go_dB)
         if (length(catch_number) == 0) {
           computed_file_name = paste0(computed_file_name, delay, "s_0catch")
+          has_TR = run_properties$trigger_sensitivity != 100 #prior to no go introduction we want trials to be as sensitive as possible so only 100ms
           delay_in_filename <<- TRUE
         }
         else if (catch_number > 0) {
           computed_file_name = paste0(computed_file_name, catch_number, "catch_", lockout, "s")
+          has_TR = run_properties$trigger_sensitivity != 200
           delay_in_filename <<- FALSE
 
           if (catch_number >= 3) {
             analysis$minimum_trials <<- user_settings$minimum_trials$`BBN (Standard)`
           }
         }
+        
+        # Warning States, i.e. not the expected default
+        if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
+        if (has_TR) computed_file_name = paste0(computed_file_name, "_", "TR", run_properties$trigger_sensitivity, "ms")
       }
       else
       {
