@@ -891,9 +891,17 @@ Workbook_Writer <- function() {
         r = cbind(r, NA) #spacer
 
         if (phase_current == "BBN" | phase_current == "Gap Detection") {
+          if (task_current == "Duration Testing") {
+            r = cbind(r, c("", "kHz"))
+            r = cbind(r, c("", "dB"))
+            r = cbind(r, c("", "50ms"))
+            r = cbind(r, c("", "100ms"))
+            r = cbind(r, c("", "300ms"))
+          } else {
             r = cbind(r, c("", "TH"))
             r = cbind(r, c("", "{TH}"))
           }
+        }
         else if (phase_current == "Tones" & detail_current != "Oddball") {
           r = cbind(r, c("                       TH", "4"))
           r = cbind(r, c("                       TH", "8"))
