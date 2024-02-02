@@ -77,6 +77,7 @@ Generate_Graph <- function(rat_name, ratID) {
   current_detail = pluck(today_data, "assignment", 1, "detail")
   current_durations = pluck(today_data, "summary")[[Type = 1]]$duration[[1]]$`Dur (ms)` %>% unique %>% as.list()
   current_frequencies = pluck(today_data, "summary", 1, "Freq (kHz)") %>% unique %>% as.list()
+  current_intensities = pluck(today_data, "summary", 1, "Inten (dB)") %>% unique %>% as.list()
   today_graph_data = today_data %>% unnest_wider(stats) %>% unnest(dprime) %>% unnest(reaction) %>% unnest(FA_detailed, names_sep = "_")
   
   # minimize data to mess with
@@ -407,11 +408,71 @@ Generate_Graph <- function(rat_name, ratID) {
     # seems unnecessary and bad for day 1 of new stim
     else rxn_graph = Line_Grapher(rxn_graph)
     # Add axis labels
-    rxn_graph = rxn_graph + labs(x = "Intensity (dB)", y = "Reaction Time")
+    rxn_graph = rxn_graph + 
+      scale_x_continuous(breaks = seq(from = 1, to = 10, by = 1)) + 
+      labs(x = "Intensity (dB)", y = "Reaction Time")
     
     
     # Hit % graph  ##########
     # Need to add hit_detailed to do this
+    
+  }
+  
+  # Duration Testing ---------------------------------------------------------------------
+  if (str_detect(current_analysis_type, pattern = "Duration Testing")) {
+    # Check for multiple durations in today's data
+    has_multiple_frequencies = length(current_frequencies) > 1
+    has_multiple_intensities = length(current_intensities) > 1
+    
+    if(has_multiple_frequencies){
+      # Set today's data to 8kHz so only one of the multiple frequencies is graphed
+      today_graph_data =  today_graph_data %>% filter(Freq == 8 & `Freq (kHz)` == 8)
+    }
+    
+    ## Multiple Intensities ------
+    if (has_multiple_intensities) {
+      ## TODO----
+      # TEST
+      # Set today's data to 50 ms so only one of the multiple durations is graphed
+      today_graph_data =  today_graph_data %>% filter(Dur == 50 & `Dur (ms)` == 50)
+      
+      
+      ## dprime graph ##########
+      what_to_graph = "dprime"
+      x_column = "dB"; y_column = "dprime"
+      dprime_graph = graph_data %>%
+        unnest(all_of(what_to_graph)) %>%
+        ggplot(aes(x = dB, y = dprime)) %>%
+        Line_Grapher() +
+        labs(x = "Intensity (dB)", y = "d'")
+      
+      ## Reaction graph ##########
+      what_to_graph = "reaction"
+      x_column = "Inten (dB)"; y_column = "Rxn"
+      # Graph
+      rxn_graph = graph_data %>%
+        unnest(all_of(what_to_graph)) %>%
+        ggplot(aes(x = `Inten (dB)`, y = Rxn)) %>%
+        Line_Grapher() +
+        labs(x = "Intensity (dB)", y = "Reaction Time")
+    }
+    # Single Intensity ----------------
+    else {
+      ## dprime graph ##########
+      what_to_graph = "dprime"
+      x_column = "Dur (ms)"; y_column = "dprime"
+      dprime_graph = Blank_Grapher(ggplot(graph_data))
+      
+      ## Reaction graph ##########
+      what_to_graph = "reaction"
+      x_column = "Dur (ms)"; y_column = "Rxn"
+      # Graph
+      rxn_graph = graph_data %>%
+        unnest(what_to_graph) %>%
+        ggplot(aes(x = `Dur (ms)`, y = Rxn)) %>%
+        Range_Grapher +
+        labs(x = "Duration (ms)", y = "Reaction Time")
+    }
     
   }
   
