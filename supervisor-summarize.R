@@ -470,6 +470,19 @@ Workbook_Writer <- function() {
             select(-frequency)
         }
 
+        if (task_current == "Duration Testing") {
+          x = "test"
+          
+          count_df = rat_runs %>%
+            tidyr::unnest_wider(assignment) %>%
+            dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Alone") %>%
+            group_by(task, detail) %>%
+            summarise(task = unique(task), detail = unique(detail),
+                      date = tail(date, 1), n = n(),
+                      condition = "baseline",
+                      .groups = "drop")
+        }
+
 
         #format date correctly
         date = count_df$date
