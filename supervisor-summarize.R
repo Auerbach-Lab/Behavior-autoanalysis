@@ -556,6 +556,30 @@ Workbook_Writer <- function() {
           if (phase_current == "Octave" | detail_current == "Oddball" | analysis_type == "Training - Oddball") { # Oddball detail implies phase=Tones
             r = r %>% unnest(reaction) %>%
               select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
+            
+          } else if (analysis_type == "Duration Testing") {
+            r = r %>% unnest(reaction)
+
+            intensity_today = head(r, n = 1)$`Inten (dB)`
+            
+            # now non-thresholding days (task!=TH)
+            # if we have an matching intensity entry for a date, great
+            daily_rxn = r %>%
+              dplyr::filter(task != "TH" & `Inten (dB)` == intensity_today) %>% # not equal TH
+              group_by(date, time) %>%
+              do(filter(., `Dur (ms)` == min(`Dur (ms)`)) %>%
+                   summarise(Rxn = mean(Rxn)))
+            
+            rxn_by_duration = r %>%
+              dplyr::filter(task != "TH" & `Inten (dB)` == intensity_today) %>% # not equal TH
+              group_by(date, time, `Dur (ms)`) %>%
+              mutate(Reaction = mean(Rxn)) %>%
+              # drop the old Rxn column
+              select(-Rxn) %>%
+              spread(`Dur (ms)`, Reaction)
+            
+            r = left_join(rxn_by_duration, daily_rxn, by = join_by(date, time))
+            
           } else {
             # Experiment is none of Blank, Oddball, Gapdetection (therefore experiment is TTS, Fmr1-LE, or Tsc2-LE)
             # Phase is not Octave (therefore Phase is either Tones or BBN).
@@ -630,6 +654,13 @@ Workbook_Writer <- function() {
             group_by(task, detail) %>%
             relocate(Spacer1, .after = mean_attempts_per_trial) %>%
             select(-FA_detailed)
+        } else if (analysis_type %in% c("Duration Testing")) {
+          r = r %>%
+            select(-threshold, -FA_detailed) %>% unique() %>%
+            rename(Frequency = `Freq (kHz)`, dB = `Inten (dB)`) %>%
+            group_by(task, detail) %>%
+            relocate(Spacer1, .after = mean_attempts_per_trial) %>%
+            relocate(warnings_list, comments, .after = last_col())
         } else if (phase_current %in% c("Gap Detection")) {
           r = r %>% unnest(threshold) %>% select(-Freq, -dB, -Dur) %>%
             group_by(task, detail) %>%
@@ -860,9 +891,9 @@ Workbook_Writer <- function() {
         r = cbind(r, NA) #spacer
 
         if (phase_current == "BBN" | phase_current == "Gap Detection") {
-          r = cbind(r, c("", "TH"))
-          r = cbind(r, c("", "{TH}"))
-        }
+            r = cbind(r, c("", "TH"))
+            r = cbind(r, c("", "{TH}"))
+          }
         else if (phase_current == "Tones" & detail_current != "Oddball") {
           r = cbind(r, c("                       TH", "4"))
           r = cbind(r, c("                       TH", "8"))
