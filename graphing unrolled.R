@@ -225,7 +225,7 @@ Generate_Graph <- function(rat_name, ratID) {
         TH = graph_data %>% filter(complete_block_count > 1) %>%
           transmute(temp = map_dbl(threshold, ~ filter(., Dur == 50)$TH)) %>%
           .$temp %>% mean(na.rm = TRUE)
-      } else unnest(graph_data, threshold)$TH %>% mean(na.rm = TRUE)
+      } else TH = unnest(graph_data, threshold)$TH %>% mean(na.rm = TRUE)
     }
     
     
@@ -283,7 +283,7 @@ Generate_Graph <- function(rat_name, ratID) {
         TH = graph_data %>% filter(complete_block_count > 1) %>%
           transmute(temp = map_dbl(threshold, ~ filter(., Dur == 50)$TH)) %>%
           .$temp %>% mean(na.rm = TRUE)
-      } else unnest(graph_data, threshold)$TH %>% mean(na.rm = TRUE)
+      } else TH = unnest(graph_data, threshold)$TH %>% mean(na.rm = TRUE)
     }
     
     
