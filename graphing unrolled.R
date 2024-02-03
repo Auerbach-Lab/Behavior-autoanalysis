@@ -12,6 +12,9 @@ Generate_Graph <- function(rat_name, ratID) {
   # Functions ---------------------------------------------------------------
   
   Range_Grapher <- function(plot) {
+    graph_label = case_when(what_to_graph == "dprime" ~ "Sensitivity (d')",
+                            .default = what_to_graph)
+    
     # Range Graph for points
     plot +
       stat_summary(aes(color = "Average"),
@@ -23,7 +26,7 @@ Generate_Graph <- function(rat_name, ratID) {
       { if(current_task == "Training") {annotate(x = pluck(today_graph_data, paste0(what_to_graph, "$", x_column)),
                                                  y = pluck(today_graph_data, paste0(what_to_graph, "$", y_column)),
                                                  label = "Training", geom = "text", hjust = -0.5)} } +
-      ggtitle(glue("{rat_name} {str_to_title(what_to_graph)} Range Check")) +
+      ggtitle(glue("{rat_name} {str_to_title(graph_label)} Range Check")) +
       scale_color_manual(values = c("Today" = "mediumslateblue", "Average" = "thistle"), name = "") +
       scale_fill_manual(values = c("Today" = "mediumslateblue", "Average" = "thistle"), name = "", guide = "none") +
       coord_cartesian(clip = "off") +
@@ -32,6 +35,9 @@ Generate_Graph <- function(rat_name, ratID) {
   }
   
   Line_Grapher <- function(plot) {
+    graph_label = case_when(what_to_graph == "dprime" ~ "Sensitivity (d')",
+                            .default = what_to_graph)
+    
     # Line Graph for Curves
     plot +
       stat_summary(aes(color = "Average"),
@@ -41,9 +47,10 @@ Generate_Graph <- function(rat_name, ratID) {
                    geom = "ribbon", linewidth = 2, fill = "thistle", show.legend = FALSE) +
       { if (exists("TH")) geom_vline(xintercept = TH, linetype = "dashed") } +
       { if (exists("TH")) annotate(x = TH, y = Inf, label = "Threshold", geom = "text", vjust = -0.5) } +
+      { if (what_to_graph == "dprime") geom_hline(yintercept = 1.5, linetype = "dashed", color = "Blue") } +
       geom_line(data = today_graph_data, aes(color = "Today"), linewidth = 1.5) +
       geom_point(data = today_graph_data, shape=21, color="black", fill = "mediumslateblue", size = 5) +
-      ggtitle(glue("{rat_name} {str_to_title(what_to_graph)} Curve Check")) +
+      ggtitle(glue("{rat_name} {str_to_title(graph_label)} Curve Check")) +
       scale_color_manual(values = c("Today" = "mediumslateblue", "Average" = "thistle"), name = "") +
       scale_x_continuous(breaks = seq(from = -20, to = 100, by = 20)) +
       coord_cartesian(clip = "off") +
@@ -52,10 +59,13 @@ Generate_Graph <- function(rat_name, ratID) {
   }
   
   Blank_Grapher <- function(plot) {
+    graph_label = case_when(what_to_graph == "dprime" ~ "Sensitivity (d')",
+                            .default = what_to_graph)
+    
     plot +
       xlim(0, 100) +
       ylim(0, 100) +
-      ggtitle(glue("{rat_name} {str_to_title(what_to_graph)} does not exist")) +
+      ggtitle(glue("{rat_name} {str_to_title(graph_label)} does not exist")) +
       theme_ipsum_es() +
       theme(legend.position = "bottom")
   }
@@ -159,7 +169,9 @@ Generate_Graph <- function(rat_name, ratID) {
         Line_Grapher
     }
     # Add axis labels
-    dprime_graph = dprime_graph + labs(x = "Gap Duration", y = "d'")
+    dprime_graph = dprime_graph + 
+      scale_x_continuous(breaks = seq(from = 0, to = 500, by = 50)) + 
+      labs(x = "Gap Duration", y = "Sensitivity (d')")
     
     # Reaction graph ##########
     what_to_graph = "reaction"
@@ -174,7 +186,9 @@ Generate_Graph <- function(rat_name, ratID) {
     # seems unnecessary and bad for day 1 of new stim
     else rxn_graph = Line_Grapher(rxn_graph)
     # Add axis labels
-    rxn_graph = rxn_graph + labs(x = "Gap Duration", y = "Reaction Time")
+    rxn_graph = rxn_graph + 
+      scale_x_continuous(breaks = seq(from = 0, to = 500, by = 50)) + 
+      labs(x = "Gap Duration", y = "Reaction Time (s)")
     
     # Hit % graph  ##########
     # Need to add hit_detailed to do this
@@ -227,7 +241,7 @@ Generate_Graph <- function(rat_name, ratID) {
         Line_Grapher
     }
     # Add axis labels
-    dprime_graph = dprime_graph + labs(x = "Intensity (dB)", y = "d'")
+    dprime_graph = dprime_graph + labs(x = "Intensity (dB)", y = "Sensitivity (d')")
     
     # Reaction graph ##########
     what_to_graph = "reaction"
@@ -242,7 +256,7 @@ Generate_Graph <- function(rat_name, ratID) {
     # seems unnecessary and bad for day 1 of new stim
     else rxn_graph = Line_Grapher(rxn_graph)
     # Add axis labels
-    rxn_graph = rxn_graph + labs(x = "Intensity (dB)", y = "Reaction Time")
+    rxn_graph = rxn_graph + labs(x = "Intensity (dB)", y = "Reaction Time (s)")
     
     
     # Hit % graph  ##########
@@ -285,7 +299,7 @@ Generate_Graph <- function(rat_name, ratID) {
         Line_Grapher
     }
     # Add axis labels
-    dprime_graph = dprime_graph + labs(x = "Intensity (dB)", y = "d'")
+    dprime_graph = dprime_graph + labs(x = "Intensity (dB)", y = "Sensitivity (d')")
     
     # Reaction graph ##########
     what_to_graph = "reaction"
@@ -300,7 +314,7 @@ Generate_Graph <- function(rat_name, ratID) {
     # seems unnecessary and bad for day 1 of new stim
     else rxn_graph = Line_Grapher(rxn_graph)
     # Add axis labels
-    rxn_graph = rxn_graph + labs(x = "Intensity (dB)", y = "Reaction Time")
+    rxn_graph = rxn_graph + labs(x = "Intensity (dB)", y = "Reaction Time (s)")
     
     
     # Hit % graph  ##########
@@ -345,7 +359,7 @@ Generate_Graph <- function(rat_name, ratID) {
         Line_Grapher
     }
     # Add axis labels
-    dprime_graph = dprime_graph + labs(x = "Frequency (kHz)", y = "d'")
+    dprime_graph = dprime_graph + labs(x = "Frequency (kHz)", y = "Sensitivity (d')")
     
     # Reaction graph ##########
     what_to_graph = "reaction"
@@ -356,7 +370,7 @@ Generate_Graph <- function(rat_name, ratID) {
       ggplot(aes(x = `Inten (dB)`, y = Rxn))  %>%
       Range_Grapher
     # Add axis labels
-    rxn_graph = rxn_graph + labs(x = "Intensity (dB)", y = "Reaction Time")
+    rxn_graph = rxn_graph + labs(x = "Intensity (dB)", y = "Reaction Time (s)")
     
     
     # FA % graph  ##########
@@ -392,7 +406,7 @@ Generate_Graph <- function(rat_name, ratID) {
     # Add axis labels
     dprime_graph = dprime_graph + 
       scale_x_continuous(breaks = seq(from = 1, to = 10, by = 1))
-    labs(x = "Intensity (dB)", y = "d'")
+    labs(x = "Intensity (dB)", y = "Sensitivity (d')")
     
     
     # Reaction graph ##########
@@ -410,7 +424,7 @@ Generate_Graph <- function(rat_name, ratID) {
     # Add axis labels
     rxn_graph = rxn_graph + 
       scale_x_continuous(breaks = seq(from = 1, to = 10, by = 1)) + 
-      labs(x = "Intensity (dB)", y = "Reaction Time")
+      labs(x = "Intensity (dB)", y = "Reaction Time (s)")
     
     
     # Hit % graph  ##########
@@ -444,7 +458,7 @@ Generate_Graph <- function(rat_name, ratID) {
         unnest(all_of(what_to_graph)) %>%
         ggplot(aes(x = dB, y = dprime)) %>%
         Line_Grapher() +
-        labs(x = "Intensity (dB)", y = "d'")
+        labs(x = "Intensity (dB)", y = "Sensitivity (d')")
       
       ## Reaction graph ##########
       what_to_graph = "reaction"
@@ -454,7 +468,7 @@ Generate_Graph <- function(rat_name, ratID) {
         unnest(all_of(what_to_graph)) %>%
         ggplot(aes(x = `Inten (dB)`, y = Rxn)) %>%
         Line_Grapher() +
-        labs(x = "Intensity (dB)", y = "Reaction Time")
+        labs(x = "Intensity (dB)", y = "Reaction Time (s)")
     }
     # Single Intensity ----------------
     else {
@@ -471,7 +485,7 @@ Generate_Graph <- function(rat_name, ratID) {
         unnest(what_to_graph) %>%
         ggplot(aes(x = `Dur (ms)`, y = Rxn)) %>%
         Range_Grapher +
-        labs(x = "Duration (ms)", y = "Reaction Time")
+        labs(x = "Duration (ms)", y = "Reaction Time (s)")
     }
     
   }
