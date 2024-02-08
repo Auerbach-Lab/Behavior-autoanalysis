@@ -15,7 +15,7 @@ if (is.null(Rat_ID)) {
   rat = rat_archive %>% 
     filter(is.na(end_date) & start_date < str_remove_all(Sys.Date(), "-")) %>%
     filter(Rat_name == Rat_Name) %>%
-    select(Rat_name, Rat_ID, Box, Genotype, Sex, Old_Assigned_Experiment) %>%
+    select(all_of(Rat_name, Rat_ID, Box, Genotype, Sex, Old_Assigned_Experiment)) %>%
     print
   
   Rat_ID = rat$Rat_ID
