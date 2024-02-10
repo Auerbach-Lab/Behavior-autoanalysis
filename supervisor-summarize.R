@@ -471,7 +471,7 @@ Workbook_Writer <- function() {
         }
 
         # Pre-Hearing loss Duration testing counts
-        if (task_current == "Duration Testing") {
+        if (task_current == "Duration Testing" & pre_HL) {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(task != "Training" & pre_HL) %>%
