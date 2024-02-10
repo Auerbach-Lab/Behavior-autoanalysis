@@ -481,6 +481,31 @@ Workbook_Writer <- function() {
                       .by = c(task, detail)) %>%
             arrange(desc(date))
         }
+        
+        
+        # Catch all
+        if (! exists("count_df")) {
+          df = rat_runs %>%
+            tidyr::unnest_wider(assignment) %>%
+            arrange(desc(date))
+          
+          current_phase = head(df, n = 1)$phase
+            
+          count_df = bind_rows(
+            filter(df, phase == current_phase) %>%
+              reframe(task = unique(task), detail = unique(detail),
+                      date = tail(date, 1), n = n(),
+                      condition = NA,
+                      .by = c(task, detail)) %>%
+              arrange(desc(date)),
+            filter(df, phase != current_phase) %>%
+              reframe(task = unique(task), detail = str_flatten_comma(unique(detail)),
+                      date = tail(date, 1), n = n(),
+                      condition = NA,
+                      .by = c(task)) %>%
+              arrange(desc(date))
+          )
+        }
 
 
         #format date correctly
@@ -536,11 +561,18 @@ Workbook_Writer <- function() {
 
         # Needed to deal with the initial training
         analysis_type = r %>% arrange(desc(date)) %>% head(1) %>% .$analysis_type
+        
+        # Over-ride check - If today's data is Piloting data don't process normally
+        is_pilot_data = r %>% arrange(desc(date)) %>% head(1) %>% .$task == "Piloting"
 
         # Task-specific RXN column ------------------------------------------------
-        if (experiment_current == "" | is.na(experiment_current)) {
-          # I don't currently know which will match but neither should be true
-          r = r
+        if (experiment_current == "" | is.na(experiment_current) | is_pilot_data) {
+          # I don't currently know which will match but neither should be true between blank and NA
+          # Since we don't know what to expect for the reactions its meaningless so keep it to just the summary data
+          r = r %>%
+            unnest(reaction) %>%
+            group_by(date) %>%
+            mutate(Rxn = mean(Rxn))
         } else if (experiment_current == "Oddball") {
           r = r %>% mutate(reaction1 = reaction) %>%
             unnest(reaction) %>%
@@ -658,7 +690,9 @@ Workbook_Writer <- function() {
           mutate(Spacer1 = NA)
 
         # Phase-specific Columns --------------------------------------------------------
-        if (analysis_type %in% c("Training - Gap")) {
+        # start with over-ride catches
+        # i.e. I don't care what the system thinks if its a Pilot study it probably violates expectations
+        if (is_pilot_data | analysis_type %in% c("Training - Gap")) {
           # Training has no TH
           r = r %>%
             # unnesting reaction has caused an amplification of rows - this is to remove that
@@ -953,6 +987,9 @@ Workbook_Writer <- function() {
           r = cbind(r, c("       False Alarm %", "Late"))
           r = cbind(r, NA)
         }
+        else if (phase_current == "" | is.na(phase_current) | task_current == "Piloting") {
+          r = r
+        } 
         else {
           stop("ERROR: unrecognized phase: ", phase_current)
         }
