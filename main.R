@@ -777,7 +777,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB_")
         catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
         delay = run_properties$delay %>% stringr::str_replace(" ", "-")
-        lockout = `if`(length(run_properties$lockout) > 0, run_properties$lockout, 0)
+        lockout = ifelse(length(run_properties$lockout) > 0, run_properties$lockout, 0)
 
         computed_file_name = paste0(go_kHz, go_dB)
         if (length(catch_number) == 0) {
@@ -853,9 +853,10 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         if (catch_number != 3) computed_file_name = paste0(computed_file_name, "_c", catch_number)
       }
 
+      catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
       response_window = unique(run_properties$stim_encoding_table["Nose Out TL (s)"]) %>% as.numeric()
       has_Response_window = response_window != 2
-      has_TR = ifelse(analysis$type == "Training - Tone" & catch_number == 0, 
+      has_TR = ifelse(analysis$type == "Training - Tone" & is_empty(catch_number), 
                       run_properties$trigger_sensitivity != 100, 
                       run_properties$trigger_sensitivity != 200)
       has_BG = run_properties$background_type != "None"
@@ -873,7 +874,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB_")
         catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
         delay = run_properties$delay %>% stringr::str_replace(" ", "-")
-        lockout = `if`(length(run_properties$lockout) > 0, run_properties$lockout, 0)
+        lockout = ifelse(length(run_properties$lockout) > 0, run_properties$lockout, 0)
         
         # Warning States, i.e. not the expected default
         response_window = unique(run_properties$stim_encoding_table["Nose Out TL (s)"]) %>% as.numeric()
@@ -903,7 +904,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB")
         catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
         delay = run_properties$delay %>% stringr::str_replace(" ", "-")
-        lockout = `if`(length(run_properties$lockout) > 0, run_properties$lockout, 0)
+        lockout = ifelse(length(run_properties$lockout) > 0, run_properties$lockout, 0)
         duration_range = paste0(min(run_properties$duration), "-",
                                 max(run_properties$duration), "")
         
@@ -953,7 +954,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
         duration = unique(filter(run_properties$stim_encoding_table, Type == 1)$`Dur (ms)`) %>% as.numeric()
         delay = run_properties$delay %>% stringr::str_replace(" ", "-")
-        lockout = `if`(length(run_properties$lockout) > 0, run_properties$lockout, 0)
+        lockout = ifelse(length(run_properties$lockout) > 0, run_properties$lockout, 0)
 
         computed_file_name = paste0("gap_", go_dB)
         if (length(catch_number) == 0) {
