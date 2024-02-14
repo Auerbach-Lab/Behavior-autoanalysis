@@ -912,13 +912,17 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         response_window = unique(run_properties$stim_encoding_table["Nose Out TL (s)"]) %>% as.numeric()
         has_Response_window = response_window != 2
         has_TR = run_properties$trigger_sensitivity != 200
+        has_BG = run_properties$background_type != "None"
         
         computed_file_name = paste0("BBN_", go_dB, "_", duration_range, "ms_", run_properties$lockout, "s")
         
+        BG = if (has_BG) paste0(stringr::str_remove(pattern = ".mat", string = run_properties$background_file), "_", run_properties$background_dB, "dB")
+        
         if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
         if (has_TR) computed_file_name = paste0(computed_file_name, "_", "TR", run_properties$trigger_sensitivity, "ms")
+        if (has_BG) computed_file_name = paste0(computed_file_name, "_", BG)
         
-        computed_file_name = unique(computed_file_name)
+         computed_file_name = unique(computed_file_name)
       }
       else
       {
