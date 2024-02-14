@@ -642,7 +642,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
     ID_BBN <- function() {
       r = NULL
-      has_one_dB = run_properties$summary$dB_min == run_properties$summary$dB_max
+      has_one_dB = unique(run_properties$summary$dB_min) == unique(run_properties$summary$dB_max)
       has_multiple_durations = length(unique(run_properties$stim_encoding_table$`Dur (ms)`)) > 1
 
       # For broadband files (training or otherwise)
