@@ -52,7 +52,7 @@ Generate_Graph <- function(rat_name, ratID) {
       geom_point(data = today_graph_data, shape=21, color="black", fill = "mediumslateblue", size = 5) +
       ggtitle(glue("{rat_name} {str_to_title(graph_label)} Curve Check")) +
       scale_color_manual(values = c("Today" = "mediumslateblue", "Average" = "thistle"), name = "") +
-      scale_x_continuous(breaks = seq(from = -20, to = 100, by = 20)) +
+      scale_x_continuous(breaks = seq(from = -20, to = 100, by = 10)) +
       coord_cartesian(clip = "off") +
       theme_ipsum_es() +
       theme(legend.position = "bottom")
@@ -436,57 +436,41 @@ Generate_Graph <- function(rat_name, ratID) {
   if (str_detect(current_analysis_type, pattern = "Duration Testing")) {
     # Check for multiple durations in today's data
     has_multiple_frequencies = length(current_frequencies) > 1
-    has_multiple_intensities = length(current_intensities) > 1
     
     if(has_multiple_frequencies){
       # Set today's data to 8kHz so only one of the multiple frequencies is graphed
       today_graph_data =  today_graph_data %>% filter(Freq == 8 & `Freq (kHz)` == 8)
     }
     
-    ## Multiple Intensities ------
-    if (has_multiple_intensities) {
-      ## TODO----
-      # TEST
-      # Set today's data to 50 ms so only one of the multiple durations is graphed
-      today_graph_data =  today_graph_data %>% filter(Dur == 50 & `Dur (ms)` == 50)
-      
-      
-      ## dprime graph ##########
-      what_to_graph = "dprime"
-      x_column = "dB"; y_column = "dprime"
+    ## dprime graph ##########
+    what_to_graph = "dprime"
+    x_column = "Dur (ms)"; y_column = "dprime"
+    if (current_phase == "Edge Detection") {
+      ## Edge Detection ----------------
+      # Graph
       dprime_graph = graph_data %>%
         unnest(all_of(what_to_graph)) %>%
-        ggplot(aes(x = dB, y = dprime)) %>%
-        Line_Grapher() +
-        labs(x = "Intensity (dB)", y = "Sensitivity (d')")
-      
-      ## Reaction graph ##########
-      what_to_graph = "reaction"
-      x_column = "Inten (dB)"; y_column = "Rxn"
-      # Graph
-      rxn_graph = graph_data %>%
-        unnest(all_of(what_to_graph)) %>%
-        ggplot(aes(x = `Inten (dB)`, y = Rxn)) %>%
-        Line_Grapher() +
-        labs(x = "Intensity (dB)", y = "Reaction Time (s)")
-    }
-    # Single Intensity ----------------
-    else {
-      ## dprime graph ##########
-      what_to_graph = "dprime"
-      x_column = "Dur (ms)"; y_column = "dprime"
+        ggplot(aes(x = Dur, y = dprime)) %>%
+        Line_Grapher +
+        labs(x = "Dur (ms)", y = "Sensitivity (d')") +
+        scale_x_continuous(breaks = c(seq(from = 0, to = 300, by = 50), seq(from = 400, to = 2000, by = 200))) 
+    } else {
+      ## Single Intensity ----------------
       dprime_graph = Blank_Grapher(ggplot(graph_data))
-      
-      ## Reaction graph ##########
-      what_to_graph = "reaction"
-      x_column = "Dur (ms)"; y_column = "Rxn"
-      # Graph
-      rxn_graph = graph_data %>%
-        unnest(what_to_graph) %>%
-        ggplot(aes(x = `Dur (ms)`, y = Rxn)) %>%
-        Range_Grapher +
-        labs(x = "Duration (ms)", y = "Reaction Time (s)")
     }
+    
+    
+    
+    ## Reaction graph ##########
+    what_to_graph = "reaction"
+    x_column = "Dur (ms)"; y_column = "Rxn"
+    # Graph
+    rxn_graph = graph_data %>%
+      unnest(what_to_graph) %>%
+      ggplot(aes(x = `Dur (ms)`, y = Rxn)) %>%
+      Line_Grapher +
+      scale_x_continuous(breaks = c(seq(from = 0, to = 300, by = 50), seq(from = 400, to = 2000, by = 200)))  + 
+      labs(x = "Duration (ms)", y = "Reaction Time (s)")
     
   }
   
@@ -494,73 +478,3 @@ Generate_Graph <- function(rat_name, ratID) {
   
   return(tibble_row(dprime_graph = dprime_graph, rxn_graph = rxn_graph))
 }
-
-
-# Workflow ----------------------------------------------------------------
-# ratID = NULL
-
-# BBN
-################
-# # BBN Training
-# rat_name = "TP6"; set_date = 20221017
-# # BBN Single Duration
-# rat_name = "Orange11"; set_date = 20230225
-# # BBN Mixed Duration
-# rat_name = "Purple3"; ratID = 213; set_date = 20230302
-
-# Tones
-################
-# # Tones Training
-# rat_name = "RP1"; set_date = 20221004
-# # Tones Single Frequency
-# rat_name = "RP1"; set_date = 20230224
-# # Tones Mixed Frequency
-# rat_name = "Orange4"; set_date = 20221029
-# # Tones Mixed Frequency with BG
-# rat_name = "Orange5"; set_date = 20221022
-
-# Octave
-################
-# Octave Rxn time can not be standard as it has one intensity. Should be Freq vs. Rxn and then only on discrimination days
-# on Training days, the graph needs to be against a range instead of a Line
-# for dprime this requires unlisting reaction to get the Freq
-
-# # Octave training
-# rat_name = "GP1"; set_date = 20230306
-# # Octave Discrimination
-# TODO: untested because no runs in run_archives yet
-
-# Oddball
-################
-# No dprime graph for Oddball
-
-# # Tone, training, oddball
-# rat_name = "GP5"; set_date = 20230303
-# # Oddball Training (on trains)
-# rat_name = "RP3"; set_date = 20230302
-# # Oddball
-# rat_name = "Blue4"; set_date = 20230209
-# # Oddball with BG
-# TODO: untested because no runs in run_archives yet
-# # Oddball with Catch
-# rat_name = "Blue1"; set_date = 20220630
-
-# Gap Detection
-################
-# # Gap Training
-# rat_name = "Teal1"; ratID = 257; set_date = 20230303
-# # Gap Rxn
-# rat_name = "Red4"; ratID = 254; set_date = 20230303
-# # Gap TH
-# rat_name = "Red2"; ratID = 252; set_date = 20230222 # narrow TH window
-# rat_name = "Red4"; ratID = 254; set_date = 20230301 # larger TH window
-
-# if(is_null(ratID)) ratID = rat_archive %>% filter(Rat_name == rat_name) %>% .$Rat_ID
-
-# For testing purposes set_date is the date for graphing i.e. 'today'
-
-
-# Generate_Graph(rat_name = rat_name, ratID = ratID)
-
-# rm(list = c("ratID", "rat_name", "set_date"))
-
