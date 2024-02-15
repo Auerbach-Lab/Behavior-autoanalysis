@@ -1412,7 +1412,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     trial_count_nogo = trial_data %>% dplyr::filter(Trial_type == 0) %>% dplyr::count() %>% as.numeric()
     hit_percent = hits / trial_count_go
     # if Oddball experiment, FAs is out of total trials since they can always FA
-    if (str_detect(analysis$type, pattern = "$Oddball")) FA_percent = FAs / trial_count
+    if (str_detect(analysis$type, pattern = "^Oddball")) FA_percent = FAs / trial_count
     else if (trial_count_nogo > 0) FA_percent = FAs / trial_count_nogo
     else FA_percent = NA
     mean_attempts_per_trial = dplyr::summarise_at(trial_data, vars(Attempts_to_complete), mean, na.rm = TRUE)$Attempts_to_complete
