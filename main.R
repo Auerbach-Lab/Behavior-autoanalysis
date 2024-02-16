@@ -642,7 +642,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
     ID_BBN <- function() {
       r = NULL
-      has_one_dB = unique(run_properties$summary$dB_min) == unique(run_properties$summary$dB_max)
+      has_one_dB = all(unique(run_properties$summary$dB_min) == unique(run_properties$summary$dB_max)) #all test checks for one dB in both go and no go
       has_multiple_durations = length(unique(run_properties$stim_encoding_table$`Dur (ms)`)) > 1
 
       # For broadband files (training or otherwise)
@@ -656,7 +656,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
     ID_Gap <- function() {
       r = NULL
-      has_one_dB = unique(run_properties$summary$dB_min) == unique(run_properties$summary$dB_max)
+      has_one_dB = all(unique(run_properties$summary$dB_min) == unique(run_properties$summary$dB_max)) #all test checks for one dB in both go and no go
       has_multiple_durations = length(unique(filter(run_properties$stim_encoding_table, Type == 1)$`Dur (ms)`)) > 1
 
       # For gap detection files (training or otherwise)
@@ -902,11 +902,11 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       }
       else
       {
-        has_one_dB = unique(run_properties$summary$dB_min) == unique(run_properties$summary$dB_max)
+        has_one_dB = all(unique(run_properties$summary$dB_min) == unique(run_properties$summary$dB_max)) #all test checks for one dB in both go and no go
         has_duration_range = nrow(unique(run_properties$duration)) > 1
         
         if(has_one_dB) {
-          go_dB_range = paste0(unique(run_properties$summary$dB_min), "dB")
+          go_dB_range = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_min %>% unique(), "dB")
         } else {
           go_dB_range = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_min %>% unique(), "-",
                                run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_max %>% unique(), "dB")
