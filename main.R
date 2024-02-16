@@ -648,7 +648,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       # For broadband files (training or otherwise)
       # DO NOT CHANGE THE TEXTUAL DESCRIPTIONS OR YOU WILL BREAK COMPARISONS LATER
       if (has_one_dB & !has_multiple_durations) r = "Training - BBN"
-      else if (has_one_dB & has_multiple_durations) r = "Duration Testing"
+      # else if (has_one_dB & has_multiple_durations) r = "Duration Testing"
       else if (has_multiple_durations) r = "BBN Mixed Duration"
       else r = "BBN (Standard)"
       return(r)
@@ -900,36 +900,18 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
         if (has_TR) computed_file_name = paste0(computed_file_name, "_", "TR", run_properties$trigger_sensitivity, "ms")
       }
-      else if (analysis$type == "Duration Testing") {
-        go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB")
-        catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
-        delay = run_properties$delay %>% stringr::str_replace(" ", "-")
-        lockout = ifelse(length(run_properties$lockout) > 0, run_properties$lockout, 0)
-        duration_range = paste0(min(run_properties$duration), "-",
-                                max(run_properties$duration), "")
-        
-        # Warning States, i.e. not the expected default
-        response_window = unique(run_properties$stim_encoding_table["Nose Out TL (s)"]) %>% as.numeric()
-        has_Response_window = response_window != 2
-        has_TR = run_properties$trigger_sensitivity != 200
-        has_BG = run_properties$background_type != "None"
-        
-        computed_file_name = paste0("BBN_", go_dB, "_", duration_range, "ms_", run_properties$lockout, "s")
-        
-        BG = if (has_BG) paste0(stringr::str_remove(pattern = ".mat", string = run_properties$background_file), "_", run_properties$background_dB, "dB")
-        
-        if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
-        if (has_TR) computed_file_name = paste0(computed_file_name, "_", "TR", run_properties$trigger_sensitivity, "ms")
-        if (has_BG) computed_file_name = paste0(computed_file_name, "_", BG)
-        
-         computed_file_name = unique(computed_file_name)
-      }
       else
       {
-        go_dB_range = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_min %>% unique(), "-",
-                             run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_max %>% unique(), "dB")
-
+        has_one_dB = unique(run_properties$summary$dB_min) == unique(run_properties$summary$dB_max)
         has_duration_range = nrow(unique(run_properties$duration)) > 1
+        
+        if(has_one_dB) {
+          go_dB_range = paste0(unique(run_properties$summary$dB_min), "dB")
+        } else {
+          go_dB_range = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_min %>% unique(), "-",
+                               run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_max %>% unique(), "dB")
+        }
+
         if (has_duration_range) {
           duration = paste0(min(run_properties$duration), "-",
                             max(run_properties$duration), "")
