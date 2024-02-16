@@ -9,7 +9,7 @@ source(paste0(projects_folder, "/admin tools/clean archives.R"))
 # Function ---------------------------------------------------------------_
 clean_wrapper <- function(entry, date) {
   clean_archives(entry, date)
-
+  
   # Restore assignment
   if(restore) {
     rat_archive[rat_archive$Rat_name == df$rat_name,]$Assigned_Filename <- rat_archive[rat_archive$Rat_name == df$rat_name,]$Old_Assigned_Filename
@@ -20,9 +20,10 @@ clean_wrapper <- function(entry, date) {
     write.csv(rat_archive, paste0(projects_folder, "rat_archive.csv"), row.names = FALSE)
     writeLines("\tAssignment restored")
   } else {writeLines("\tRat assignment untouched")}
-
+  
   writeLines("Done.")
   InitializeMain()
+  return(glue("Deleted entry {entry}"))
 }
 
 
@@ -49,9 +50,9 @@ switch(menu(c("Yes", "No"),
                          "previous assignment ", if_else(restore, "WILL", "will NOT"), " be restored"),
             graphics = FALSE),
        # 1 (Yes): Write file
-        lapply(Bad_entries %>% .$UUID, clean_wrapper),
+       lapply(Bad_entries %>% .$UUID, clean_wrapper),
        # 2 (No): Abort
-        writeLines("Stopped. Entries remain."))
+       writeLines("Stopped. Entries remain."))
 
 InitializeMain()
 # check they are gone
