@@ -936,25 +936,42 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
     Gap_Filename <- function() {
       if (analysis$type == "Training - Gap") {
-        go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB_")
+        go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB")
         catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
         duration = unique(filter(run_properties$stim_encoding_table, Type == 1)$`Dur (ms)`) %>% as.numeric()
         delay = run_properties$delay %>% stringr::str_replace(" ", "-")
         lockout = ifelse(length(run_properties$lockout) > 0, run_properties$lockout, 0)
+        
+        # check for gap_depth as an internal setting - old files do NOT have this, so its needed for backwards compatibility
+        has_depth_setting = if(! is.null(run_properties$gap_depth)) TRUE else FALSE
+        
+        # check for modifications
+        has_modified_BG = if(! is.null(run_properties$BG_freq)) TRUE else FALSE
 
-        computed_file_name = paste0("gap_", go_dB)
+        computed_file_name = "gap_"
+        if (has_modified_BG) computed_file_name = paste0(computed_file_name, run_properties$BG_freq, "_")
+        computed_file_name = paste0(computed_file_name, go_dB, "_")
+        if (has_depth_setting) computed_file_name = paste0(computed_file_name, run_properties$gap_depth, "_")
+        computed_file_name = paste0(computed_file_name, duration, "ms_")
         if (length(catch_number) == 0) {
-          computed_file_name = paste0(computed_file_name, duration, "ms_", delay, "s_0catch")
+          computed_file_name = paste0(computed_file_name, delay, "s_0catch")
           delay_in_filename <<- TRUE
         }
         else if (catch_number > 0) {
-          computed_file_name = paste0(computed_file_name, duration, "ms_", catch_number, "catch_", lockout, "s")
+          computed_file_name = paste0(computed_file_name, catch_number, "catch_", lockout, "s")
           delay_in_filename <<- FALSE
 
           if (catch_number >= 3) {
             analysis$minimum_trials <<- user_settings$minimum_trials$`Gap (Standard)`
           }
         }
+        
+        response_window = unique(run_properties$stim_encoding_table["Nose Out TL (s)"]) %>% as.numeric()
+        has_Response_window = response_window != 2
+        has_TR = run_properties$trigger_sensitivity != 200
+        
+        if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
+        if (has_TR) computed_file_name = paste0(computed_file_name, "_", "TR", run_properties$trigger_sensitivity, "ms")
       }
       else
       {
