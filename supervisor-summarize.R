@@ -558,6 +558,8 @@ Workbook_Writer <- function() {
         
         # Needed for gap detection
         current_frequency = r %>% arrange(desc(date)) %>% head(1) %>% pluck("reaction", 1, "Inten (dB)")
+        # Needed to ID Duration Testing files
+        is_single_frequency = length(unique(current_frequency)) == 1
         
         # Needed to deal with the initial training
         analysis_type = r %>% arrange(desc(date)) %>% head(1) %>% .$analysis_type
@@ -603,7 +605,7 @@ Workbook_Writer <- function() {
             r = r %>% unnest(reaction) %>%
               select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
             
-          } else if (analysis_type == "Duration Testing") {
+          } else if (analysis_type == "BBN Mixed Duration" & is_single_frequency) {
             r = r %>% unnest(reaction)
             
             intensity_today = head(r, n = 1)$`Inten (dB)`
@@ -940,6 +942,8 @@ Workbook_Writer <- function() {
         
         if (phase_current == "BBN" | phase_current == "Gap Detection") {
           if (task_current == "Duration Testing") {
+            r = cbind(r, c("", "TH"))
+            r = cbind(r, c("", "{TH}"))
             r = cbind(r, c("", "kHz"))
             r = cbind(r, c("", "dB"))
             r = cbind(r, c("", "50ms"))
