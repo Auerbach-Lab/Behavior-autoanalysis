@@ -792,8 +792,9 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
             analysis$minimum_trials <<- user_settings$minimum_trials$`Tone (Single)`
 
           } else {
-            computed_file_name = paste0(computed_file_name, catch_number, "catch_", lockout, "s")
-            delay_in_filename <<- FALSE
+            if(delay == "1-4") computed_file_name = paste0(computed_file_name, catch_number, "catch_", lockout, "s")
+            else computed_file_name = paste0(computed_file_name, delay, "s_", catch_number, "catch_", lockout, "s")
+            # delay_in_filename <<- FALSE
 
             if (catch_number >= 3) {
               analysis$minimum_trials <<- user_settings$minimum_trials$`Tone (Single)`
