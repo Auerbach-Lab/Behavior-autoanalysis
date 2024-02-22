@@ -1,7 +1,7 @@
 fixer <- function(tableRow, newValue_phase, newValue_task, newValue_detail, newValue_invalid) {
   
   df = run_archive[tableRow,] %>% 
-    select(date, time, rat_name, rat_ID, assignment, invalid) %>% unnest_wider(assignment)
+    select(date, time, rat_name, rat_ID, file_name, assignment, invalid) %>% unnest_wider(assignment)
   
   # set value to change
   if(!is.na(newValue_phase)) run_archive[tableRow,]$assignment[[1]]$phase = newValue_phase
@@ -12,7 +12,7 @@ fixer <- function(tableRow, newValue_phase, newValue_task, newValue_detail, newV
     change_invalid = TRUE} else {change_invalid = FALSE}
   
   df = bind_rows(df, run_archive[tableRow,] %>% 
-                   select(date, time, rat_name, rat_ID, assignment, invalid) %>% unnest_wider(assignment))
+                   select(date, time, rat_name, rat_ID, file_name, assignment, invalid) %>% unnest_wider(assignment))
   
   print(df)
   
