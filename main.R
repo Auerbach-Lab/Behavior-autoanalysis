@@ -765,13 +765,20 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB_")
         nogo_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$`Inten (dB)`, "dB_")
         catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number)
-
+        delay = run_properties$delay %>% stringr::str_replace(" ", "-")
+        
         computed_file_name = paste0(go_kHz, go_dB, nogo_kHz, nogo_dB, run_properties$duration, "ms_", run_properties$lockout, "s")
+        
+        if (delay != "1-4") {
+          computed_file_name = paste0(computed_file_name, "_", delay, "s")
+          assigned_file = filter(rat_archive, Rat_ID == run_properties$rat_ID)$Assigned_Filename
+          expected_delay <<- str_extract(assigned_file, "(?<=dB_)[:digit:]+?.*[:digit:]+?(?=s_)") %>% str_replace("-", " ")
+        }
+        
         if (catch_number != 3) computed_file_name = paste0(computed_file_name, "_c", catch_number)
-
+        
         analysis$minimum_trials <<- user_settings$minimum_trials$`Training - Oddball`
       }
-
       else if (analysis$type == "Training - Tone") {
         go_kHz = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)`, "kHz_")
         go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB_")
