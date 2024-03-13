@@ -200,14 +200,19 @@ Generate_Graph <- function(rat_name, ratID) {
   if (str_detect(current_analysis_type, pattern = "BBN")) {
     # Check for multiple durations in today's data
     has_multiple_durations = length(current_durations) > 1
+    has_single_intensity = length(current_intensities) > 1
     
-    if(has_multiple_durations){
+    if(has_multiple_durations & current_phase != "Edge Detection"){
       # Set today's data to 50 ms so only one of the multiple durations is graphed
       today_graph_data =  today_graph_data %>% filter(Dur == 50 & `Dur (ms)` == 50)
       
       # Select only Mixed duration files for comparison, unless today is the 1st
       # day of Mixed durations (i.e. there is only 1 row which is today)
       filtered_graph_data = filter(graph_data, detail == current_detail)
+      if(nrow(filtered_graph_data) > 1) graph_data = filtered_graph_data
+    } else if (has_multiple_durations & current_phase == "Edge Detection") {
+      filtered_graph_data = filter(graph_data, str_detect(file_name,
+                                                          pattern = glue("_{min(unlist(current_durations))}-{max(unlist(current_durations))}ms_")))
       if(nrow(filtered_graph_data) > 1) graph_data = filtered_graph_data
     } else {
       # Select only current duration files for comparison, unless today is the
@@ -232,32 +237,57 @@ Generate_Graph <- function(rat_name, ratID) {
     ## dprime graph ##########
     what_to_graph = "dprime"
     x_column = "dB"; y_column = "dprime"
-    if (current_analysis_type == "Training - BBN") dprime_graph = Blank_Grapher(ggplot(graph_data))
-    else {
+    if (current_analysis_type == "Training - BBN") dprime_graph = Blank_Grapher(ggplot(graph_data)) + labs(x = "Intensity (dB)", y = "Sensitivity (d')")
+    else if (current_detail == "Single intensity") {
+      ## Edge Detection ----------------
+      # Graph
+      dprime_graph = graph_data %>%
+        unnest(all_of(what_to_graph)) %>%
+        ggplot(aes(x = Dur, y = dprime)) %>%
+        Line_Grapher +
+        labs(x = "Dur (ms)", y = "Sensitivity (d')") +
+        scale_x_continuous(breaks = c(seq(from = 0, to = 300, by = 50), seq(from = 400, to = 2000, by = 200))) 
+    } else {
       # Graph
       dprime_graph = graph_data %>%
         unnest(all_of(what_to_graph)) %>%
         ggplot(aes(x = dB, y = dprime)) %>%
-        Line_Grapher
+        Line_Grapher +
+        labs(x = "Intensity (dB)", y = "Sensitivity (d')")
     }
     # Add axis labels
-    dprime_graph = dprime_graph + labs(x = "Intensity (dB)", y = "Sensitivity (d')")
+    # dprime_graph = dprime_graph + labs(x = "Intensity (dB)", y = "Sensitivity (d')")
     
     # Reaction graph ##########
     what_to_graph = "reaction"
+    if (current_detail == "Single intensity") {
+      ## Edge Detection ----------------
+      # Graph
+      x_column = "Dur (ms)"; y_column = "Rxn"
+      # Graph
+      rxn_graph = graph_data %>%
+        unnest(what_to_graph) %>%
+        ggplot(aes(x = `Dur (ms)`, y = Rxn)) %>%
+        Line_Grapher +
+        scale_x_continuous(breaks = c(seq(from = 0, to = 300, by = 50), seq(from = 400, to = 2000, by = 200)))  + 
+        labs(x = "Duration (ms)", y = "Reaction Time (s)")
+    } else {
     x_column = "Inten (dB)"; y_column = "Rxn"
+    
+    if (current_analysis_type == "Training - BBN") {
+      rxn_graph =  graph_data %>%
+        unnest(all_of(what_to_graph)) %>%
+        ggplot(aes(x = `Inten (dB)`, y = Rxn)) %>%
+        Range_Grapher + 
+        labs(x = "Intensity (dB)", y = "Reaction Time (s)")
+    } else {
     # Graph
     rxn_graph = graph_data %>%
       unnest(all_of(what_to_graph)) %>%
-      ggplot(aes(x = `Inten (dB)`, y = Rxn))
-    
-    if (current_analysis_type == "Training - BBN") rxn_graph = Range_Grapher(rxn_graph)
-    # you can remove non-relevant data by filtering rxn_graph$data but this
-    # seems unnecessary and bad for day 1 of new stim
-    else rxn_graph = Line_Grapher(rxn_graph)
-    # Add axis labels
-    rxn_graph = rxn_graph + labs(x = "Intensity (dB)", y = "Reaction Time (s)")
-    
+      ggplot(aes(x = `Inten (dB)`, y = Rxn)) %>%
+      Line_Grapher +
+      labs(x = "Intensity (dB)", y = "Reaction Time (s)")
+    }}
     
     # Hit % graph  ##########
     # Need to add hit_detailed to do this
