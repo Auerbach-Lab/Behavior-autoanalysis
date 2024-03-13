@@ -22,8 +22,8 @@ columns_to_keep_nested = c("dprime", "reaction")
 # Do not include records before the following date
 # Date format should be: YYYYMMDD
 # for all records, set to NULL
-start_date_of_desired_records = 20230210
-end_date_of_desired_records = 20230210
+start_date_of_desired_records = NULL
+end_date_of_desired_records = NULL
 
 
 save_location = "C:/Users/Noelle/Box/Behavior Lab/Shared/Walker/"
@@ -35,6 +35,10 @@ load(glue("{projects_folder}/run_archive.Rdata"), .GlobalEnv)
 
 rat_decoder = fread(glue("{projects_folder}/rat_archive.csv"),
                     select = c("Rat_ID", "DOB", "Sex", "Genotype", "HL_date"))
+
+
+# Clear old data if exists ------------------------------------------------
+rm(dataset, decoded_data, selected_data, data_for_export, data1, data2)
 
 
 # Remove bad data ---------------------------------------------------------
