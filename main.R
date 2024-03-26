@@ -535,8 +535,10 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         dplyr::summarise(dB_min = min(dB),
                          dB_max = max(dB),
                          dB_step_size = dB - lag(dB, default = first(dB)),
-                         duration = list(run_properties$duration),
-                         .groups = 'keep')
+                         temp = unique(Type),
+                         duration = list(filter(run_properties$stim_encoding_table, Type == temp)$`Dur (ms)` %>% unique %>% as.data.frame()),
+                         .groups = 'keep') %>%
+        select(-temp)
       # still grouped following this step, which is needed to remove the 1st row of each table that has a 0 step_size that is wrong for files with actual step_sizes
 
       if (!identical(run_properties$summary$dB_min, run_properties$summary$dB_max)) {
@@ -729,21 +731,27 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
                               run_properties$summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)` %>% max(), "kHz")
         go_dB_range = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_min %>% unique(), "-",
                              run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_max %>% unique(), "dB")
+        go_duration_range = paste0(filter(run_properties$summary, Type == 1)$duration[[1]] %>% min, "-",
+                                   filter(run_properties$summary, Type == 1)$duration[[1]] %>% max, "")
 
-        computed_file_name = paste0(go_kHz_range, "_", go_dB_range, "_", run_properties$duration, "ms_", run_properties$lockout, "s")
+        computed_file_name = paste0(go_kHz_range, "_", go_dB_range, "_", go_duration_range, "ms_", run_properties$lockout, "s")
       }
 
       else if (analysis$type == "Tone (Single)") {
         go_kHz = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)`, "kHz")
         go_dB_range = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_min %>% unique(), "-",
                              run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_max %>% unique(), "dB")
+        go_duration_range = paste0(filter(run_properties$summary, Type == 1)$duration[[1]] %>% min, "-",
+                                   filter(run_properties$summary, Type == 1)$duration[[1]] %>% max, "")
 
-        computed_file_name = paste0(go_kHz, "_", go_dB_range, "_", run_properties$duration, "ms_", run_properties$lockout, "s")
+        computed_file_name = paste0(go_kHz, "_", go_dB_range, "_", go_duration_range, "ms_", run_properties$lockout, "s")
       }
 
       else if (analysis$type == "Tone (Thresholding)") {
         go_kHz_range = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)` %>% min(), "-",
                               run_properties$summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)` %>% max(), "kHz")
+        go_duration_range = paste0(filter(run_properties$summary, Type == 1)$duration[[1]] %>% min, "-",
+                                   filter(run_properties$summary, Type == 1)$duration[[1]] %>% max, "")
         dB_step_size = unique(run_properties$summary$dB_step_size) %>% as.numeric()
         if (dB_step_size == 5) {
           go_dB_range = "MIX5stepdB"
@@ -755,7 +763,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         }
         else stop("ABORT: Tone (Thresholding): Unrecognized dB_step_size (", dB_step_size,"). Aborting.")
         rat_ID = stringr::str_split(run_properties$stim_filename, "_") %>% unlist() %>% .[1]
-        computed_file_name = paste0(rat_ID, "_", go_kHz_range, "_", go_dB_range, "_", run_properties$duration, "ms_", run_properties$lockout, "s")
+        computed_file_name = paste0(rat_ID, "_", go_kHz_range, "_", go_dB_range, "_", go_duration_range, "ms_", run_properties$lockout, "s")
       }
       else if (analysis$type == "Training - Oddball")
       {
@@ -925,8 +933,8 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         }
 
         if (has_duration_range) {
-          duration = paste0(min(run_properties$duration), "-",
-                            max(run_properties$duration), "")
+          duration = paste0(filter(run_properties$summary, Type == 1)$duration[[1]] %>% min, "-",
+                            filter(run_properties$summary, Type == 1)$duration[[1]] %>% max, "")
         } else {
           duration = run_properties$duration
         }
