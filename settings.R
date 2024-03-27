@@ -39,6 +39,9 @@ user_settings = list(
     "Training - Gap" = 50,
     "Gap (Standard)" = 240,
     "Gap Mixed Duration" = 330,
+    
+    "Training - AM" = 50,
+    "AM (Standard)" = 240,
 
     "Training - Oddball" = 240,
     "Oddball (Standard)" = 300,
