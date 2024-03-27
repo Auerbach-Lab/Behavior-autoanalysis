@@ -553,6 +553,22 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         warning(paste0(warn, "\n"))
         warnings_list <<- append(warnings_list, warn)
       }
+
+      return(run_properties$summary)
+    }
+    
+    Get_File_Summary_Simple <- function() {
+      # Make basic summary data table with same columns as Tone/BBN summary table
+      run_properties$summary = file_frequency_ranges %>%
+        dplyr::group_by(`Freq (kHz)`, `Delay (s)`, `Type`) %>%
+        dplyr::summarise(dB_min = min(dB),
+                         dB_max = max(dB),
+                         temp = unique(Type),
+                         dB_step_size = NA_real_, #to be type double
+                         duration = list(filter(run_properties$stim_encoding_table, Type == temp)$`Dur (ms)` %>% unique %>% as.data.frame()),
+                         .groups = 'keep') %>%
+        select(-temp)
+      
       return(run_properties$summary)
     }
 
@@ -665,7 +681,22 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       # DO NOT CHANGE THE TEXTUAL DESCRIPTIONS OR YOU WILL BREAK COMPARISONS LATER
       if (has_one_dB & !has_multiple_durations) r = "Training - Gap"
       else if (has_one_dB & has_multiple_durations) r = "Gap (Standard)"
-      else (stop("ABORT: Unknown tonal file type."))
+      else (stop("ABORT: Unknown gap file type."))
+      return(r)
+    }
+    
+    ID_AM <- function() {
+      r = NULL
+      has_one_Freq = length(unique(run_properties$summary$`Freq (kHz)`)) == 1
+      # Note that its the dB slot but actually represents %
+      has_one_dB = all(unique(run_properties$summary$dB_min) == unique(run_properties$summary$dB_max)) #all test checks for one dB in both go and no go
+      
+      # For amplitude modulation detection files (training or otherwise)
+      # DO NOT CHANGE THE TEXTUAL DESCRIPTIONS OR YOU WILL BREAK COMPARISONS LATER
+      if (has_one_dB & has_one_Freq) r = "Training - AM"
+      else if (! has_one_dB) r = "AM (Standard)"
+      else (stop("ABORT: Unknown amplitude modulation (AM) file type."))
+      
       return(r)
     }
 
@@ -698,7 +729,8 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
 
     if(run_properties$stim_type == "Tone") {run_properties$stim_type <<- "tone"}
 
-    if (run_properties$stim_type == "BBN" | run_properties$stim_type == "tone" | run_properties$stim_type == "gap") run_properties <<- append(run_properties, list(summary = Get_File_Summary_BBN_Tone()))
+    if (run_properties$stim_type %in% c("BBN", "tone", "gap")) run_properties <<- append(run_properties, list(summary = Get_File_Summary_BBN_Tone()))
+    else if (run_properties$stim_type %in% c("AM")) run_properties <<- append(run_properties, list(summary = Get_File_Summary_Simple()))
     else if (run_properties$stim_type == "train") run_properties <<- append(run_properties, list(summary = Get_File_Summary_Oddball()))
     else stop(paste0("ABORT: Unknown stim type: ", run_properties$stim_type))
 
@@ -706,6 +738,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     if (run_properties$stim_type == "tone") r = ID_Tonal()
     if (run_properties$stim_type == "BBN") r = ID_BBN()
     if (run_properties$stim_type == "gap") r = ID_Gap()
+    if (run_properties$stim_type == "AM") r = ID_AM()
     if (run_properties$stim_type == "train") r = ID_Oddball()
 
     if (is.null("r")) stop("ABORT: Unknown file type. Can not proceed with analysis")
