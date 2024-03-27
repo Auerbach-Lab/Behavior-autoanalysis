@@ -561,8 +561,8 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         dplyr::group_by(`Freq (kHz)`, `Delay (s)`, `Type`) %>%
         dplyr::summarise(dB_min = min(dB),
                          dB_max = max(dB),
-                         temp = unique(Type),
                          dB_step_size = NA_real_, #to be type double
+                         temp = unique(Type),
                          duration = list(filter(run_properties$stim_encoding_table, Type == temp)$`Dur (ms)` %>% unique %>% as.data.frame()),
                          .groups = 'keep') %>%
         select(-temp)
