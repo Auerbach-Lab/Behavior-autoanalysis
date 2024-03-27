@@ -694,7 +694,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
     file_frequency_ranges = run_properties$stim_encoding_table %>%
       dplyr::filter(`Inten (dB)` != -100) %>% # Remove No-Go from range
       dplyr::group_by(`Freq (kHz)`, `Delay (s)`, `Type`, `Repeat_number`) %>%
-      dplyr::summarise(dB = unique(`Inten (dB)`), .groups = 'drop') # Get each unique dB
+      dplyr::reframe(dB = unique(`Inten (dB)`)) 
 
     if(run_properties$stim_type == "Tone") {run_properties$stim_type <<- "tone"}
 
