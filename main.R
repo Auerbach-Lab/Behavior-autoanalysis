@@ -536,7 +536,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
                          dB_max = max(dB),
                          dB_step_size = dB - lag(dB, default = first(dB)),
                          temp = unique(Type),
-                         duration = list(filter(run_properties$stim_encoding_table, Type == temp)$`Dur (ms)` %>% unique),
+                         duration = list(filter(run_properties$stim_encoding_table, Type == temp)$`Dur (ms)` %>% unique %>% as.data.frame()),
                          .groups = 'keep') %>%
         select(-temp)
       # still grouped following this step, which is needed to remove the 1st row of each table that has a 0 step_size that is wrong for files with actual step_sizes
@@ -565,7 +565,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
                          dB_max = max(dB),
                          temp = unique(Type),
                          dB_step_size = NA_real_, #to be type double
-                         duration = list(filter(run_properties$stim_encoding_table, Type == temp)$`Dur (ms)` %>% unique),
+                         duration = list(filter(run_properties$stim_encoding_table, Type == temp)$`Dur (ms)` %>% unique %>% as.data.frame()),
                          .groups = 'keep') %>%
         select(-temp)
       
