@@ -1,15 +1,15 @@
-bad_rats = c("Bronze2")
+bad_rats = c("Blue6")
 # "today" or a specific date in YYYYMMDD format
-bad_date = "today"
+bad_date = 20240513
 # Restore assignment from the 'old' setting
-restore = TRUE
+restore = FALSE
 
 source(paste0(projects_folder, "/admin tools/clean archives.R"))
 
 # Function ---------------------------------------------------------------_
 clean_wrapper <- function(entry, date) {
   clean_archives(entry, date)
-  
+
   # Restore assignment
   if(restore) {
     rat_archive[rat_archive$Rat_name == df$rat_name,]$Assigned_Filename <- rat_archive[rat_archive$Rat_name == df$rat_name,]$Old_Assigned_Filename
@@ -20,7 +20,7 @@ clean_wrapper <- function(entry, date) {
     write.csv(rat_archive, paste0(projects_folder, "rat_archive.csv"), row.names = FALSE)
     writeLines("\tAssignment restored")
   } else {writeLines("\tRat assignment untouched")}
-  
+
   writeLines("Done.")
   InitializeMain()
   return(glue("Deleted entry {entry}"))
@@ -32,7 +32,7 @@ clean_wrapper <- function(entry, date) {
 InitializeMain()
 
 # Test or check files to be removed
-bad_date = if_else(bad_date == "today", str_remove_all(Sys.Date(), "-"), bad_date)
+bad_date = ifelse(bad_date == "today", str_remove_all(Sys.Date(), "-"), bad_date)
 Bad_entries = run_archive %>% filter(date == bad_date & rat_name %in% bad_rats)
 
 # Clean NA file
@@ -50,9 +50,9 @@ switch(menu(c("Yes", "No"),
                          "previous assignment ", if_else(restore, "WILL", "will NOT"), " be restored"),
             graphics = FALSE),
        # 1 (Yes): Write file
-       lapply(Bad_entries %>% .$UUID, clean_wrapper),
+        lapply(Bad_entries %>% .$UUID, clean_wrapper),
        # 2 (No): Abort
-       writeLines("Stopped. Entries remain."))
+        writeLines("Stopped. Entries remain."))
 
 InitializeMain()
 # check they are gone
