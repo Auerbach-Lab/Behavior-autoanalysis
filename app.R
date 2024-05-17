@@ -34,7 +34,7 @@ ui <- fluidPage(
            ),
     ),
     div(id = "form2",
-        column(width = 10,
+                column(width = 10,
                fluidRow(
                  column(width = 5,
                         fileInput("matfile", "Select .mat file:", buttonLabel = "Browse...", accept = c(".mat"), width = "600px"),
@@ -44,7 +44,7 @@ ui <- fluidPage(
                  ),
                  column(width = 5,
                         withLoader(tableOutput("warnings"), type = "html", loader = "dnaspin", proxy.height = "100px"),
-                 ),
+               ),
                ),
                textOutput("requirements"),
                conditionalPanel(
@@ -126,6 +126,13 @@ ui <- fluidPage(
                ),
         ),
     ),
+    div(id = "form3",
+                 column(width = 2,
+                        actionButton("btnClose", span("Exit", id = "CloseAnalyze", class = ""), 
+                                     icon = icon("xmark"),
+                                     class = "btn btn-danger", style = "margin-top: 5px;", width = "75px"),
+                 )
+             )
   ),
   
   # file input reset
@@ -322,6 +329,13 @@ server <- function(input, output, session) {
       shinyjs::disable("exclude_trials")
       shinyjs::disable("matfile")
     }
+  })
+  
+  observeEvent(input$btnClose, {
+    v$pushedClose = TRUE
+    v$readyClose = TRUE
+    
+    stopApp(returnValue = 'Pied Piper closed by user interface. Hit \\Run App\\ to re-open.')
   })
   
   output$show <- reactive({
