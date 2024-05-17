@@ -7,6 +7,8 @@ Box_file_location = "C:/Users/Noelle/Box/Behavior Lab/Projects (Behavior)"
 
 # Functions ---------------------------------------------------------------
 Load_old_file <- function(df) {
+  # print(df)
+  
   bad_date = df["date"]
   group = df["experiment"]
   rat = df["rat_name"]
@@ -19,8 +21,9 @@ Load_old_file <- function(df) {
   
   
   # Determine project from the group we are in
-  if (group == "Tsc2-LE") project = "Tsc2 Eker"
-  else if (group == "Fmr1 SD") project = "Archive/Fmr1 SD"
+  if (group == "Tsc2-LE" & bad_date < 20230104) project = "Tsc2 Eker"
+  else if (group == "Fmr1 SD" & bad_date < 20230104) project = "Archive/Fmr1 SD"
+  else if (group == "Oddball Training" & bad_date < 20230104) project = "Oddball"
   else project = group
   
   # find location of bad file
@@ -73,11 +76,9 @@ Load_old_file <- function(df) {
   
   if(length(files_checked) > 0) {
     cat(" attempting to load...\n")
-    source(paste0(projects_folder, "main.R"))
     lapply(files_checked, Process_File, old_file = TRUE, ignore_name_check = TRUE, exclude_trials = omit, 
            scientist = scientist, weightProblem = weightProblem, rxnProblem = rxnProblem)
-  } else cat(glue("no data found. Can NOT autoload run for
-                          {UUID}"))
+  } else cat(glue("no data found. Can NOT autoload run for {rat} on {bad_date}"), "\n")
 }
 
 Check_if_already_added <- function(df) {
@@ -89,15 +90,17 @@ Check_if_already_added <- function(df) {
 
 # Workflow ----------------------------------------------------------------
 InitializeMain()
+source(paste0(projects_folder, "main.R"))
 
 # Append repaired entry to old_excel_archive ------------------------------
 # load old_excel_archive
 load(paste0(projects_folder, "old_excel_archive.Rdata"))
-deleted_entries = fread(paste0(projects_folder, "deleted_entries.csv"))
+deleted_entries = fread(paste0(projects_folder, "deleted_entries.csv"), fill = TRUE)
 
 # check if run currently found in system
 deleted_entries_check = 
   deleted_entries %>%
+  unique %>%
   # create new column of UUID from the current run_archive
   bind_cols(apply(deleted_entries, 1, Check_if_already_added) %>%
               as_tibble_col(column_name = "UUIDnew")) %>%
@@ -105,15 +108,15 @@ deleted_entries_check =
   mutate(UUIDnew = if_else(UUIDnew == "character(0)", NA_character_, paste(UUIDnew)))
 
 # get entries that need to put into the system
-missing_entries = filter(deleted_entries_check, is.na(UUIDnew)) %>% select(-comment)
+missing_entries = filter(deleted_entries_check, is.na(UUIDnew))
 
 # append these runs to the old excel
 old_excel_archive = 
-  bind_rows(old_excel_archive %>%   
-              # add missing columns
-              mutate(omit_list = NA, scientist = NA_character_, weightProblem = NA_character_, rxnProblem = NA_character_),
+  bind_rows(# old_excel_archive %>%
+              # # add missing columns
+              #mutate(omit_list = NA, scientist = NA_character_, weightProblem = NA_character_, rxnProblem = NA_character_),
             missing_entries %>%
-              select(date, assigned_file_name, weight, comments, experiment, phase, task, detail, rat_name,
+              select(date, assigned_file_name, weight, comments, experiment, phase, task, detail, comment, rat_name, rat_ID,
                      scientist, weightProblem, rxnProblem, omit_list) %>%
               # fix date to a date object
               mutate(Date = lubridate::ymd(date), Invalid = "") %>% select(-date) %>%
@@ -128,6 +131,7 @@ if (nrow(missing_entries) == 0) {
 } else {
   writeLines(paste0("\nLoading ", nrow(missing_entries), " files."))
   # try to get files and then run through main
+  # apply(missing_entries, 1, print)
   apply(missing_entries, 1, Load_old_file)
   
   # check that everything loaded
