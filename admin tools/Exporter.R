@@ -6,7 +6,7 @@
 
 # You can only select one experiment to keep because each has different
 # statistics and so can't be easily combined
-experiments_to_keep = "Oddball"
+experiments_to_keep = "Fmr1 SD"
 
 # What columns you want included in the final output
 # NOT: TH, dprime, FA_detailed, reaction and hit_detailed (once added)
@@ -14,7 +14,7 @@ columns_to_keep_unnested = c("date", "rat_name", "rat_ID",
                              "DOB", "Sex", "Genotype", "HL_date",
                              "file_name", "experiment", "phase", "task", "detail",
                              "stim_type", "analysis_type", "complete_block_count", 
-                             "trial_count", "hit_percent", "FA_percent")
+                             "trial_count", "hit_percent", "FA_percent", "UUID")
 
 # This is only TH, dprime, FA_detailed, reaction and hit_detailed (once added)
 columns_to_keep_nested = c("dprime", "reaction")
@@ -99,15 +99,19 @@ for (i in columns_to_keep_nested) {
 writeLines("\nManually align the new columns so that the final data table can be finished\n\n")
 stop("Halted for manual input")
 
-# merge dataframes - MUST BE DONE MANUALLY WITH THE NEW COLUMNS
+## Manual start: Merge dataframes ------ 
+# MUST BE DONE MANUALLY WITH THE NEW COLUMNS in the console if not already clearly specified below
 data_for_export = left_join(data1, data2, 
                             by = join_by(!!!columns_to_keep_unnested, # list of normal columns
                                          # shared columns with different names
                                          
-                                         # ## For Rxn & FA_detailed (Oddball) ----
-                                         # position == `Inten (dB)`)) 
-                                         ## For Reaction & dprime ----
-                                         dB == `Inten (dB)`, Freq == `Freq (kHz)`, Dur == `Dur (ms)`))
+                                         ### For Rxn & FA_detailed (Oddball) ----
+                                         # position == `Inten (dB)`)
+                                         
+                                         ### For Reaction & dprime ----
+                                         dB == `Inten (dB)`, Freq == `Freq (kHz)`, Dur == `Dur (ms)`)
+                            
+                            )
 
 
 # Create any new columns needed -------------------------------------------
@@ -123,3 +127,13 @@ data_for_export = data_for_export %>%
 # Export ------------------------------------------------------------------
 data_for_export %>%
   fwrite(glue("{save_location}{save_file_name}_", str_remove_all(Sys.Date(), "-"),".csv"), row.names = FALSE)
+
+
+# OPTIONAL Trial Exporter -------------------------------------------------
+
+trial_archive = fread(paste0(projects_folder, experiments_to_keep, "_archive.csv.gz"))
+trial_archive_for_export = filter(trial_archive, UUID %in% unique(data_for_export$UUID))
+
+## Export ----------
+trial_archive_for_export %>%
+  fwrite(glue("{save_location}{save_file_name}_trials_", str_remove_all(Sys.Date(), "-"),".csv"), row.names = FALSE)
