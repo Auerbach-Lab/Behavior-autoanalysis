@@ -2,10 +2,10 @@
 
 # Date range for filtering
 min_date = "2022-01-01"
-max_date = "2023-03-01"
+max_date = "2022-12-01"
 
 # Experiment filtering
-experiment = "Oddball"
+experiment = "Fmr1 SD"
 
 # slashes must be either / or \\
 modern_matlab_file_location = "Z:/Daily Matlab files"
@@ -75,8 +75,7 @@ Load_old_file <- function(df) {
     source(paste0(projects_folder, "main.R"))
     lapply(files_checked, Process_File, old_file = TRUE, ignore_name_check = TRUE, exclude_trials = omit, 
            scientist = scientist, weightProblem = weightProblem, rxnProblem = rxnProblem)
-  } else cat(glue("no data found. Can NOT autoload run for
-                          {rat} on {bad_date}"))
+  } else cat(paste("no data found. Can NOT autoload run for",  rat, "on", bad_date, "\n"))
 }
 
 Check_if_new <- function(df) {
@@ -98,7 +97,13 @@ old_excel_archive = mutate(old_excel_archive,
 # filter to manageable date range
 missing_entries = filter(old_excel_archive, Date < max_date & Date >= min_date & Experiment == experiment) %>%
   # # these files error instead of loading
-  filter(rat_name != "Blue1" & Date != "2022-07-06")
+  # filter(! (rat_name == "Purple2" & Date == "2022-07-06")) %>%
+  # filter(! (rat_name == "Purple1" & Date == "2022-07-06"))
+  filter(Date != "2022-07-06")
+# Doesn't work need to use the above format for specificity
+  # filter(rat_name != "Teal1" & Date != "2022-02-01")
+  # filter(rat_name != "Teal6" & Date != "2022-02-10") %>%
+  # filter(rat_name != "Teal5" & Date != "2022-02-08")
   # filter(rat_name != "Blue3" & Date != "2022-07-23") %>%
   # filter(rat_name != "Blue4" & Date != "2022-07-01") %>%
   # filter(rat_name != "Blue2" & Date != "2022-06-04")
@@ -116,7 +121,8 @@ missing_entries =
   missing_entries %>%
   bind_cols(apply(missing_entries, 1, Check_if_new) %>%
               as_tibble_col(column_name = "new")) %>%
-  filter(new == TRUE)
+  filter(new == TRUE) %>%
+  filter(Phase == "Octave")
 
 
 if (nrow(missing_entries) == 0) {
