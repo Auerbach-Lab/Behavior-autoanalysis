@@ -526,7 +526,8 @@ Workbook_Writer <- function() {
         # Common Columns ----------------------------------------------------------
         columns = c("task", "detail", "date", "time", "file_name", "weight",
                     "trial_count", "hit_percent", "FA_percent", "mean_attempts_per_trial",
-                    "threshold", "reaction", "FA_detailed", "warnings_list", "comments", "analysis_type")
+                    "threshold", "reaction", "FA_detailed", "warnings_list", "comments", "analysis_type",
+                    "rxnProblem", "weightProblem")
         
         r = rat_runs %>%
           dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
@@ -541,7 +542,10 @@ Workbook_Writer <- function() {
           tidyr::unnest_wider(stats) %>%
           tidyr::unnest_wider(summary) %>%
           dplyr::select(all_of(columns)) %>%
-          arrange(desc(date), .by_group = F)
+          arrange(desc(date), .by_group = F) %>%
+          # Merge comments (run observations) with rxnProblem (comments on the run)
+          mutate(comments = paste0("Performance: ", rxnProblem, " | Obersvations: ", comments," | Weight: ", weightProblem)) %>%
+          select(-rxnProblem, -weightProblem)
         
         # Get max weight for rat (Need to consider both free-feed from rat_archive & all runs)
         weight_max_run = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
@@ -927,6 +931,7 @@ Workbook_Writer <- function() {
         r = bind_rows(averages, r) %>%
           select(all_of(columns)) %>%
           mutate(weight = (weight - weight_max)/weight_max)
+        #TODO address that there a weightProblems here. consider * at end of % or something
         
         if(length(r) < 29) r[, (length(r) + 1):29] = NA # add columns to reach 29
         
