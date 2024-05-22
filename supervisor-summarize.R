@@ -603,7 +603,7 @@ Workbook_Writer <- function() {
           r = r %>% select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
           
         } else { # Experiment is none of Blank, Oddball, Gap detection.
-          if (phase_current == "Octave" | detail_current == "Oddball" | analysis_type == "Training - Oddball") { # Oddball detail implies phase=Tones
+          if (phase_current == "Octave" | detail_current == "Oddball" | analysis_type == "Training - Oddball" | experiment_current == "Oddball Training") { # Oddball detail implies phase=Tones
             r = r %>% unnest(reaction) %>%
               select(-`Freq (kHz)`, -`Dur (ms)`, -`Inten (dB)`)
             
@@ -723,10 +723,22 @@ Workbook_Writer <- function() {
             unique
         } else if (analysis_type %in% c("Training - BBN", "Training - Tone")) {
           # Training has no TH
-          r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>% select(-Freq, -Dur) %>%
+          r = r %>% select(-any_of(c("Freq", "Dur", "threshold"))) %>%
             group_by(task, detail) %>%
             relocate(Spacer1, .after = mean_attempts_per_trial) %>%
             select(-FA_detailed)
+          
+          x = rat_runs %>%
+            dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
+            dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
+            tidyr::unnest_wider(assignment) %>%
+            tidyr::unnest_wider(stats) %>%
+            unnest(dprime) %>%
+            select(task, detail, date, time, dprime)
+          
+          r = left_join(r, x, by = c("task", "detail", "date", "time")) %>%
+            relocate(warnings_list, comments, .after = last_col())
+          
         } else if (phase_current == "BBN") {
           r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>% select(-Freq, -Dur) %>%
             group_by(task, detail) %>%
@@ -945,8 +957,6 @@ Workbook_Writer <- function() {
         
         if (phase_current == "BBN" | phase_current == "Gap Detection") {
           if (task_current == "Duration Testing") {
-            r = cbind(r, c("", "TH"))
-            r = cbind(r, c("", "{TH}"))
             r = cbind(r, c("", "kHz"))
             r = cbind(r, c("", "dB"))
             r = cbind(r, c("", "50ms"))
@@ -957,7 +967,7 @@ Workbook_Writer <- function() {
             r = cbind(r, c("", "{TH}"))
           }
         }
-        else if (phase_current == "Tones" & detail_current != "Oddball") {
+        else if (phase_current == "Tones" & ! detail_current %in% c("Oddball", "None")) {
           r = cbind(r, c("                       TH", "4"))
           r = cbind(r, c("                       TH", "8"))
           r = cbind(r, c("                       TH", "16"))
@@ -973,7 +983,7 @@ Workbook_Writer <- function() {
           r = cbind(r, c("              {Stim} Range", "16"))
           r = cbind(r, c("              {Stim} Range", "32"))
         }
-        else if (phase_current == "Tones" & detail_current == "Oddball") {
+        else if (phase_current == "Tones" & detail_current %in% c("Oddball", "None")) {
           r = cbind(r, c("", "d'"))
           r = cbind(r, NA)
         }
