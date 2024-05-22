@@ -459,15 +459,15 @@ Workbook_Writer <- function() {
           count_df = rat_runs %>%
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == phase_current & task == task_current & invalid != TRUE) %>%
-            mutate(frequency = str_extract(file_name, pattern = "^[:digit:]+")) %>%
-            group_by(task, detail, frequency) %>%
-            summarise(task = unique(task), frequency = unique(frequency), detail = unique(detail),
-                      date = tail(date, 1), n = n(),
-                      condition = NA,
-                      .groups = "drop") %>%
-            arrange(task, frequency) %>%
-            mutate(task = paste(task, frequency)) %>%
-            select(-frequency)
+            mutate(go = str_extract(file_name, pattern = "^[:digit:]+") %>% as.numeric(), # Get go frequency by extracting 1st (^) number ([:digit:]+) from file_name
+                   no_go = str_extract(file_name, pattern = "(?<=_)(BBN|[:digit:]+kHz)(?=_)")) %>% # Get No go frequency by extracting either BBN or the 2nd kHz ([:digit:]+) from file_name
+            reframe(date = tail(date, 1), n = n(), # get count
+                    .by = c(task, detail, go, no_go)) %>% # for each task and detail
+            arrange(task, go) %>%
+            mutate(task = case_when(phase_current == "Tone-BBN" ~ paste(task, go),
+                                    phase_current == "Tone-Tone" ~ glue("{task} {go}-{no_go}"),
+                                    .default = glue("unknown phase: {task} {go}-{no_go}"))) %>%
+            select(-go, -no_go)
         }
         
         # Pre-Hearing loss Duration testing counts
