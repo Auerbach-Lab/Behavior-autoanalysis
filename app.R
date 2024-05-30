@@ -52,7 +52,7 @@ ui <- fluidPage(
                  h3(textOutput("displaycomment")),
                ),
                conditionalPanel(
-                 condition = "output.fatal_error == 'TRUE'",
+                  condition = "output.fatal_error == 'TRUE'",
                  actionButton("btnReset", label = "Reset Form", class = "btn btn-danger", width = "250px"),
                ),
                fluidRow(
@@ -335,7 +335,7 @@ server <- function(input, output, session) {
     v$pushedClose = TRUE
     v$readyClose = TRUE
     
-    stopApp(returnValue = 'Pied Piper closed by user interface. Hit \\Run App\\ to re-open.')
+    stopApp(returnValue = 'Pied Piper closed by user interface. Hit \"Run App\" to re-open.')
   })
   
   output$show <- reactive({
