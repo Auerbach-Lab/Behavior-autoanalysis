@@ -2,7 +2,7 @@ source(paste0(projects_folder, "graphing unrolled.R"))
 
 # Variables ---------------------------------------------------------------
 
-Rat_Name = "Blue 2"
+Rat_Name = "Orange1"
 # Enter if you know otherwise set to NULL
 Rat_ID = NULL
 
