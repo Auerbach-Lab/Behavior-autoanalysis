@@ -171,7 +171,7 @@ Generate_Graph <- function(rat_name, ratID) {
     # Add axis labels
     dprime_graph = dprime_graph + 
       scale_x_continuous(breaks = seq(from = 0, to = 500, by = 50)) + 
-      labs(x = "Gap Duration", y = "Sensitivity (d')")
+      labs(x = "Length of the Gap (ms)", y = "Sensitivity (d')")
     
     # Reaction graph ##########
     what_to_graph = "reaction"
@@ -188,7 +188,7 @@ Generate_Graph <- function(rat_name, ratID) {
     # Add axis labels
     rxn_graph = rxn_graph + 
       scale_x_continuous(breaks = seq(from = 0, to = 500, by = 50)) + 
-      labs(x = "Gap Duration", y = "Reaction Time (s)")
+      labs(x = "Length of the Gap (ms)", y = "Reaction Time (s)")
     
     # Hit % graph  ##########
     # Need to add hit_detailed to do this
@@ -245,7 +245,7 @@ Generate_Graph <- function(rat_name, ratID) {
         unnest(all_of(what_to_graph)) %>%
         ggplot(aes(x = Dur, y = dprime)) %>%
         Line_Grapher +
-        labs(x = "Dur (ms)", y = "Sensitivity (d')") +
+        labs(x = "Length of the Gap (ms)", y = "Sensitivity (d')") +
         scale_x_continuous(breaks = c(seq(from = 0, to = 300, by = 50), seq(from = 400, to = 2000, by = 200))) 
     } else {
       # Graph
@@ -270,24 +270,24 @@ Generate_Graph <- function(rat_name, ratID) {
         ggplot(aes(x = `Dur (ms)`, y = Rxn)) %>%
         Line_Grapher +
         scale_x_continuous(breaks = c(seq(from = 0, to = 300, by = 50), seq(from = 400, to = 2000, by = 200)))  + 
-        labs(x = "Duration (ms)", y = "Reaction Time (s)")
+        labs(x = "Length of the Gap (ms)", y = "Reaction Time (s)")
     } else {
-      x_column = "Inten (dB)"; y_column = "Rxn"
-      
-      if (current_analysis_type == "Training - BBN") {
-        rxn_graph =  graph_data %>%
-          unnest(all_of(what_to_graph)) %>%
-          ggplot(aes(x = `Inten (dB)`, y = Rxn)) %>%
-          Range_Grapher + 
-          labs(x = "Intensity (dB)", y = "Reaction Time (s)")
-      } else {
-        # Graph
-        rxn_graph = graph_data %>%
-          unnest(all_of(what_to_graph)) %>%
-          ggplot(aes(x = `Inten (dB)`, y = Rxn)) %>%
-          Line_Grapher +
-          labs(x = "Intensity (dB)", y = "Reaction Time (s)")
-      }}
+    x_column = "Inten (dB)"; y_column = "Rxn"
+    
+    if (current_analysis_type == "Training - BBN") {
+      rxn_graph =  graph_data %>%
+        unnest(all_of(what_to_graph)) %>%
+        ggplot(aes(x = `Inten (dB)`, y = Rxn)) %>%
+        Range_Grapher + 
+        labs(x = "Intensity (dB)", y = "Reaction Time (s)")
+    } else {
+    # Graph
+    rxn_graph = graph_data %>%
+      unnest(all_of(what_to_graph)) %>%
+      ggplot(aes(x = `Inten (dB)`, y = Rxn)) %>%
+      Line_Grapher +
+      labs(x = "Intensity (dB)", y = "Reaction Time (s)")
+    }}
     
     # Hit % graph  ##########
     # Need to add hit_detailed to do this
@@ -389,18 +389,18 @@ Generate_Graph <- function(rat_name, ratID) {
         Line_Grapher
     }
     # Add axis labels
-    dprime_graph = dprime_graph + labs(x = "Frequency (kHz)", y = "Sensitivity (d')")
+    dprime_graph = dprime_graph + labs(x = "Octave step / Frequency (kHz)", y = "Sensitivity (d')")
     
     # Reaction graph ##########
     what_to_graph = "reaction"
-    x_column = "Inten (dB)"; y_column = "Rxn"
+    x_column = "FA_detailed_Freq (kHz)"; y_column = "Rxn"
     # Graph
     rxn_graph = graph_data %>%
       unnest(what_to_graph) %>%
-      ggplot(aes(x = `Inten (dB)`, y = Rxn))  %>%
+      ggplot(aes(x = `FA_detailed_Freq (kHz)`, y = Rxn))  %>%
       Range_Grapher
     # Add axis labels
-    rxn_graph = rxn_graph + labs(x = "Intensity (dB)", y = "Reaction Time (s)")
+    rxn_graph = rxn_graph + labs(x = "Octave step / Frequency (kHz)", y = "Reaction Time (s)")
     
     
     # FA % graph  ##########
@@ -418,7 +418,7 @@ Generate_Graph <- function(rat_name, ratID) {
         Line_Grapher
     }
     # Add axis labels
-    hit_graph = hit_graph + labs(x = "Frequency (kHz)", y = "False Alarm %")
+    hit_graph = hit_graph + labs(x = "Octave step / Frequency (kHz)", y = "False Alarm %")
     
   }
   
@@ -436,7 +436,7 @@ Generate_Graph <- function(rat_name, ratID) {
     # Add axis labels
     dprime_graph = dprime_graph + 
       scale_x_continuous(breaks = seq(from = 1, to = 10, by = 1))
-    labs(x = "Intensity (dB)", y = "Sensitivity (d')")
+    labs(x = "Position of Different Sound", y = "Sensitivity (d')")
     
     
     # Reaction graph ##########
@@ -454,7 +454,7 @@ Generate_Graph <- function(rat_name, ratID) {
     # Add axis labels
     rxn_graph = rxn_graph + 
       scale_x_continuous(breaks = seq(from = 1, to = 10, by = 1)) + 
-      labs(x = "Intensity (dB)", y = "Reaction Time (s)")
+      labs(x = "Position of Different Sound", y = "Reaction Time (s)")
     
     
     # Hit % graph  ##########
