@@ -191,6 +191,9 @@ ui <- fluidPage(
 )
 
 server <- function(input, output, session) {
+  # increase maximum file size to greater than the largest file ever seen. Currently 5,122 KB.
+  options(shiny.maxRequestSize = 6 * 1024^2)
+  
   # Name validation
   rats = rat_archive$Rat_name %>% str_to_upper()
   name_clean <- reactive({
