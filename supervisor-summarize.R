@@ -2,7 +2,8 @@
 library(R.matlab); library(openxlsx); library(xml2); library(zip);
 
 # data manipulation
-library(tidyverse); library(dplyr); library(tidyr); library(rlang); library(stringr); library(purrr); library(data.table); library(glue)
+library(tidyverse); library(dplyr); library(tidyr); library(rlang); 
+library(stringr); library(purrr); library(data.table); library(glue)
 
 InitializeWriter <- function() {
   options(warn=1) # we want to display warnings as they occur, so that it's clear which file caused which warnings
@@ -698,6 +699,7 @@ Workbook_Writer <- function() {
         # Phase-specific Columns --------------------------------------------------------
         # start with over-ride catches
         # i.e. I don't care what the system thinks if its a Pilot study it probably violates expectations
+        ## Gap Detection ----
         if (is_pilot_data | analysis_type %in% c("Training - Gap")) {
           # Training has no TH
           r = r %>%
@@ -721,7 +723,7 @@ Workbook_Writer <- function() {
             relocate(Spacer1, .after = mean_attempts_per_trial) %>%
             select(-FA_detailed) %>%
             unique
-        } else if (analysis_type %in% c("Training - BBN", "Training - Tone")) {
+        } else if (analysis_type %in% c("Training - BBN", "Training - Tone")) { ## Training ----
           # Training has no TH
           r = r %>% select(-any_of(c("Freq", "Dur", "threshold"))) %>%
             group_by(task, detail) %>%
@@ -746,7 +748,7 @@ Workbook_Writer <- function() {
             relocate(THrange, .after = TH) %>%
             relocate(Spacer1, .after = mean_attempts_per_trial) %>%
             select(-FA_detailed)
-        } else if (phase_current == "Tones" & detail_current != "Oddball") {
+        } else if (phase_current == "Tones" & detail_current != "Oddball") { ## Tones -----
           
           r = r %>% unnest(threshold) %>%
             filter(Freq != 0 & Dur == min_duration) %>%
@@ -791,7 +793,7 @@ Workbook_Writer <- function() {
             relocate(`4`, `8`, `16`, `32`, .after = Spacer3)
           
           
-        } else if (phase_current == "Tones" & detail_current == "Oddball") {
+        } else if (phase_current == "Tones" & detail_current == "Oddball") { ## Oddball Training ----
           r = r %>% filter(detail == "Oddball") %>%
             select(-threshold) %>%
             select(-FA_detailed)
@@ -821,7 +823,7 @@ Workbook_Writer <- function() {
           
           r = left_join(r, x, by = c("task", "detail", "date", "time"))
           
-        } else if (phase_current == "Octave") {
+        } else if (phase_current == "Octave") { ## Octave detection ----
           r = r %>% select(-threshold)
           
           
@@ -878,7 +880,7 @@ Workbook_Writer <- function() {
             relocate(dprime, .after = Spacer1) %>%
             mutate(Spacer2 = NA) %>% relocate(Spacer2, .after = dprime)
           
-        } else if (experiment_current == "Oddball") {
+        } else if (experiment_current == "Oddball") {  ##  Oddball ----
           # handled as 2 separate tables to deal with edge case of missing all of a specific type of trial
           FA_table = r %>%
             select(-threshold) %>%
@@ -905,7 +907,7 @@ Workbook_Writer <- function() {
             pivot_wider(names_from = position, values_from = c(Rxn, FA_percent_detailed)) %>%
             mutate(Spacer2 = NA) %>% relocate(Spacer2, .after = Rxn_late)
           
-        } else if (experiment_current == "GD") {
+        } else if (experiment_current == "GD") { ## Gap Detection ----
           r = r %>%
             select(-FA_detailed) %>%
             unnest(threshold) %>%
@@ -915,6 +917,7 @@ Workbook_Writer <- function() {
             relocate(THrange, .after = TH)
         }
         
+        ## Final Prep -----
         averages = r %>%
           dplyr::group_by(task, detail) %>%
           dplyr::summarise_if(.predicate = is.numeric, .funs = mean, na.rm = TRUE) %>%
@@ -931,7 +934,8 @@ Workbook_Writer <- function() {
           # remove time column as its only for merges caused by multi-run days
           select(-time) %>%
           do(if (unique(.$task) %in% c("TH", "CNO 3mg/kg", "Discrimination")) head(., 10)
-             else head(., 5)) %>%
+             else if(unique(.$task) == task_current) head(., 5)
+             else head(., 3)) %>%
           arrange(match(task, order)) %>%
           dplyr::mutate(date = paste0(stringr::str_sub(date, 5, 6), "/", stringr::str_sub(date, 7, 8), "/", stringr::str_sub(date, 1, 4))) %>%
           mutate(date = as.character(date))
@@ -1159,7 +1163,6 @@ Workbook_Writer <- function() {
 }
 
 
-
 # Workflow -----------------------------------------------------------
 
 InitializeWriter()
@@ -1175,7 +1178,7 @@ rats_not_entered_today = rat_archive %>%
 if(nrow(rats_not_entered_today) == 0) { writeLines("All rats have data for today\n")
 } else {
   cat("\n\nRats with no runs in the system for today yet:\n\t")
-  cat(str_flatten_comma(rats_not_entered_today$Rat_name), "\n\n")
+  cat(str_glue_data(rats_not_entered_today, "{Rat_name} ({Box})") %>% str_flatten_comma(), "\n\n")
 }
 
 Workbook_Writer()
