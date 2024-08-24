@@ -569,6 +569,7 @@ Workbook_Writer <- function() {
         
         # Over-ride check - If today's data is Piloting data don't process normally
         is_pilot_data = r %>% arrange(desc(date)) %>% head(1) %>% .$task == "Piloting"
+        # is_pilot_data = phase_current == "Piloting"
         
         # Task-specific RXN column ------------------------------------------------
         if (experiment_current == "" | is.na(experiment_current) | is_pilot_data) {
@@ -1010,7 +1011,7 @@ Workbook_Writer <- function() {
           r = cbind(r, c("       False Alarm %", "Late"))
           r = cbind(r, NA)
         }
-        else if (phase_current == "" | is.na(phase_current) | task_current == "Piloting") {
+        else if (phase_current == "" | is.na(phase_current) | task_current == "Piloting" | phase_current == "Piloting") {
           r = r
         } 
         else {
