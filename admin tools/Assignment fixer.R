@@ -36,10 +36,18 @@ comment_fixer <- function(tableRow, commenter, additionalValue_weightProblem, ad
     select(date, time, rat_name, rat_ID, file_name, weightProblem, rxnProblem)
   
   # set value to change
-  if(!is.na(additionalValue_weightProblem)) run_archive[tableRow,]$weightProblem = 
-      glue("{run_archive[tableRow,]$weightProblem}, {commenter}: {additionalValue_weightProblem}")
-  if(!is.na(additionalValue_rxnProblem)) run_archive[tableRow,]$rxnProblem = 
-      glue("{run_archive[tableRow,]$rxnProblem}, {commenter}: {additionalValue_rxnProblem}")
+  if(!is.na(additionalValue_weightProblem)) {
+    if(run_archive[tableRow,]$weightProblem == "") new_weight = glue("{commenter}: {additionalValue_weightProblem}")
+    else new_weight = glue("{run_archive[tableRow,]$weightProblem}, {commenter}: {additionalValue_weightProblem}")
+    
+    run_archive[tableRow,]$weightProblem = new_weight
+  }
+  if(!is.na(additionalValue_rxnProblem)) {
+    if(run_archive[tableRow,]$rxnProblem == "") new_rxn = glue("{commenter}: {additionalValue_rxnProblem}")
+    else new_rxn = glue("{run_archive[tableRow,]$rxnProblem}, {commenter}: {additionalValue_rxnProblem}")
+    
+    run_archive[tableRow,]$rxnProblem = new_rxn
+  }
   
   df = bind_rows(df, run_archive[tableRow,] %>% 
                    select(date, time, rat_name, rat_ID, file_name, weightProblem, rxnProblem)) %>%
@@ -51,8 +59,8 @@ comment_fixer <- function(tableRow, commenter, additionalValue_weightProblem, ad
               title = "Save modified entry?"),
          # 1 (Yes): Write file
          {# Push modification -------------------------------------------------------
-           if(!is.na(additionalValue_weightProblem)) run_archive[tableRow,]$weightProblem <<- glue("{run_archive[tableRow,]$weightProblem}, {commenter}: {additionalValue_weightProblem}")
-           if(!is.na(additionalValue_rxnProblem)) run_archive[tableRow,]$rxnProblem <<- glue("{run_archive[tableRow,]$rxnProblem}, {commenter}: {additionalValue_rxnProblem}")
+           if(!is.na(additionalValue_weightProblem)) run_archive[tableRow,]$weightProblem <<- new_weight
+           if(!is.na(additionalValue_rxnProblem)) run_archive[tableRow,]$rxnProblem <<- new_rxn
            outcome = "Fixed"},
          # 2 (No): Abort
          {outcome = "No change"})
