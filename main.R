@@ -762,18 +762,18 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
                               run_properties$summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)` %>% max(), "kHz")
         go_dB_range = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_min %>% unique(), "-",
                              run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_max %>% unique(), "dB")
-
+        
         computed_file_name = paste0(go_kHz_range, "_", go_dB_range, "_", run_properties$duration, "ms_", run_properties$lockout, "s")
       }
-
+      
       else if (analysis$type == "Tone (Single)") {
         go_kHz = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)`, "kHz")
         go_dB_range = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_min %>% unique(), "-",
                              run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_max %>% unique(), "dB")
-
+        
         computed_file_name = paste0(go_kHz, "_", go_dB_range, "_", run_properties$duration, "ms_", run_properties$lockout, "s")
       }
-
+      
       else if (analysis$type == "Tone (Thresholding)") {
         go_kHz_range = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)` %>% min(), "-",
                               run_properties$summary %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)` %>% max(), "kHz")
@@ -819,7 +819,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
         delay = run_properties$delay %>% stringr::str_replace(" ", "-")
         lockout = ifelse(length(run_properties$lockout) > 0, run_properties$lockout, 0)
-
+        
         computed_file_name = paste0(go_kHz, go_dB)
         if (length(catch_number) == 0) {
           computed_file_name = paste0(computed_file_name, delay, "s_0catch")
@@ -831,7 +831,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
             computed_file_name = paste0(computed_file_name, run_properties$duration, "ms_", lockout, "s")
             delay_in_filename <<- FALSE
             analysis$minimum_trials <<- user_settings$minimum_trials$`Tone (Single)`
-
+            
           } else {
             if(delay == "1-4") computed_file_name = paste0(computed_file_name, catch_number, "catch_", lockout, "s")
             else {
@@ -841,14 +841,14 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
               if(!is.na(expected_delay_temp)) expected_delay <<- expected_delay_temp
             }
             # delay_in_filename <<- FALSE
-
+            
             if (catch_number >= 3) {
               analysis$minimum_trials <<- user_settings$minimum_trials$`Tone (Single)`
             }
           }
         }
       }
-
+      
       else if (analysis$type == "Octave")
       {
         go_kHz = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)`, "-")
@@ -856,10 +856,10 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         nogo_kHz2 = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% dplyr::arrange(Stim_ID) %>% tail(n = 2) %>% head(n = 1) %>% .$`Freq (kHz)` %>% round(digits = 1), "kHz_")
         go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`)
         nogo_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% dplyr::arrange(Stim_ID) %>% tail(n = 1) %>% .$`Inten (dB)`)
-
+        
         has_dB_range = go_dB != nogo_dB
         has_BG = run_properties$background_type != "None"
-
+        
         computed_file_name1 = paste0(go_kHz, nogo_kHz)
         computed_file_name2 = paste0(go_kHz, nogo_kHz2)
         if (has_dB_range) {
@@ -869,25 +869,25 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         computed_file_name1 = paste0(computed_file_name1, nogo_dB, "dB_", run_properties$duration, "ms_", run_properties$lockout, "s")
         computed_file_name2 = paste0(computed_file_name2, nogo_dB, "dB_", run_properties$duration, "ms_", run_properties$lockout, "s")
         # computed_file_name = list(computed_file_name, computed_file_name2) # list should be safe from the later pastes because they shouldn't fire
-
-
+        
+        
         # Test for 1/6 or the zoom in on 1/12. If it is 1/12 then there will be odd steps
         stim_in_octave = run_properties$stim_encoding_table %>% mutate(octave_fraction = log(as.numeric(str_extract(go_kHz, pattern = "[:digit:]+"))/`Freq (kHz)`)/log(2),
                                                                        octave_step = abs(round(octave_fraction * 12)),
                                                                        even = (octave_step %% 2) == 0)
         is_6th_of_octave = all(stim_in_octave$even == TRUE)
-
+        
         if(is_6th_of_octave) computed_file_name = computed_file_name1
         else computed_file_name = computed_file_name2
-
+        
         if (has_BG) {
           BG = paste0(stringr::str_remove(pattern = ".mat", string = run_properties$background_file), "_", run_properties$background_dB, "dB")
           computed_file_name = paste0(computed_file_name, "_", BG)
         }
-
+        
         return(computed_file_name)
       }
-
+      
       else if (analysis$type == "Training - Octave")
       {
         go_kHz = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Freq (kHz)`, "kHz_")
@@ -895,12 +895,13 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB_")
         nogo_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$`Inten (dB)`, "dB_")
         catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number)
-
+        
         computed_file_name = paste0(go_kHz, go_dB, nogo_kHz, nogo_dB, run_properties$duration, "ms_", run_properties$lockout, "s")
         if (catch_number != 3) computed_file_name = paste0(computed_file_name, "_c", catch_number)
       }
-
+      
       catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
+      not_3_catches = catch_number != 3
       response_window = unique(run_properties$stim_encoding_table["Nose Out TL (s)"]) %>% as.numeric()
       has_Response_window = response_window != 2
       has_TR = ifelse(analysis$type == "Training - Tone" & is_empty(catch_number), 
@@ -908,14 +909,15 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
                       run_properties$trigger_sensitivity != 200)
       has_BG = run_properties$background_type != "None"
       BG = if (has_BG) paste0(stringr::str_remove(pattern = ".mat", string = run_properties$background_file), "_", run_properties$background_dB, "dB")
-
+      
       if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
       if (has_TR) computed_file_name = paste0(computed_file_name, "_", "TR", run_properties$trigger_sensitivity, "ms")
+      if (not_3_catches) computed_file_name = paste0(computed_file_name, "_c", catch_number)
       if (has_BG) computed_file_name = paste0(computed_file_name, "_", BG)
-
+      
       return(computed_file_name)
     }
-
+    
     BBN_Filename <- function() {
       if (analysis$type == "Training - BBN") {
         go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB_")
@@ -926,7 +928,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         # Warning States, i.e. not the expected default
         response_window = unique(run_properties$stim_encoding_table["Nose Out TL (s)"]) %>% as.numeric()
         has_Response_window = response_window != 2
-
+        
         computed_file_name = paste0("BBN_", go_dB)
         if (length(catch_number) == 0) {
           computed_file_name = paste0(computed_file_name, delay, "s_0catch")
@@ -947,7 +949,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           }
           
           has_TR = run_properties$trigger_sensitivity != 200
-
+          
           if (catch_number >= 3) {
             analysis$minimum_trials <<- user_settings$minimum_trials$`BBN (Standard)`
           }
@@ -968,24 +970,27 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           go_dB_range = paste0(run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_min %>% unique(), "-",
                                run_properties$summary %>% dplyr::filter(Type == 1) %>% .$dB_max %>% unique(), "dB")
         }
-
+        
         if (has_duration_range) {
           duration = paste0(min(run_properties$duration), "-",
                             max(run_properties$duration), "")
         } else {
           duration = run_properties$duration
         }
-
+        
         response_window = unique(run_properties$stim_encoding_table["Nose Out TL (s)"]) %>% as.numeric()
+        catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
+        not_3_catches = catch_number != 3
         has_Response_window = response_window != 2
         has_TR = run_properties$trigger_sensitivity != 200
         has_BG = run_properties$background_type != "None"
-
+        
         BG = if (has_BG) paste0(stringr::str_remove(pattern = ".mat", string = run_properties$background_file), "_", run_properties$background_dB, "dB")
-
+        
         computed_file_name = paste0("BBN_", go_dB_range, "_", duration, "ms_", run_properties$lockout, "s")
         if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
         if (has_TR) computed_file_name = paste0(computed_file_name, "_", "TR", run_properties$trigger_sensitivity, "ms")
+        if (not_3_catches) computed_file_name = paste0(computed_file_name, "_c", catch_number)
         if (has_BG) computed_file_name = paste0(computed_file_name, "_", BG)
       }
       return(computed_file_name)
