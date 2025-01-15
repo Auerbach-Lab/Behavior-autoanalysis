@@ -811,8 +811,6 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           if(!is.na(expected_delay_temp)) expected_delay <<- expected_delay_temp
         }
         
-        if (catch_number != 3) computed_file_name = paste0(computed_file_name, "_c", catch_number)
-        
         analysis$minimum_trials <<- user_settings$minimum_trials$`Training - Oddball`
       }
       else if (analysis$type == "Training - Tone") {
