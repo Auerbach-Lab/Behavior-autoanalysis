@@ -805,7 +805,9 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         if (delay != "1-4") {
           computed_file_name = paste0(computed_file_name, "_", delay, "s")
           assigned_file = filter(rat_archive, Rat_ID == run_properties$rat_ID)$Assigned_Filename
-          if(assigned_file != "") expected_delay_temp = str_extract(assigned_file, "(?<=dB_)[:digit:]+?.*[:digit:]+?(?=s_)") %>% str_replace("-", " ")
+          if(assigned_file != "") {
+            expected_delay_temp = str_extract(assigned_file, "(?<=dB_)([:digit:]|[:punct:])+?-([:digit:]|[:punct:])+") %>% 
+              str_replace("-", " ")}
           if(!is.na(expected_delay_temp)) expected_delay <<- expected_delay_temp
         }
         
@@ -837,7 +839,10 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
             else {
               computed_file_name = paste0(computed_file_name, delay, "s_", catch_number, "catch_", lockout, "s")
               assigned_file = filter(rat_archive, Rat_ID == run_properties$rat_ID)$Assigned_Filename
-              if(assigned_file != "") expected_delay_temp = str_extract(assigned_file, "(?<=dB_)[:digit:]+?.*[:digit:]+?(?=s_)") %>% str_replace("-", " ")
+              if(assigned_file != "") {
+                expected_delay_temp = str_extract(assigned_file, "(?<=dB_)([:digit:]|[:punct:])+?-([:digit:]|[:punct:])+") %>% 
+                  str_replace("-", " ")}
+              else {expected_delay_temp = "0.5 1.5"}
               if(!is.na(expected_delay_temp)) expected_delay <<- expected_delay_temp
             }
             # delay_in_filename <<- FALSE
@@ -943,7 +948,9 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
           else {
             computed_file_name = paste0(computed_file_name, delay, "s_", catch_number, "catch_", lockout, "s")
             assigned_file = filter(rat_archive, Rat_ID == run_properties$rat_ID)$Assigned_Filename
-            if(assigned_file != "") expected_delay_temp = str_extract(assigned_file, "(?<=dB_)[:digit:]+?-[:digit:]+?(?=s_?+)") %>% str_replace("-", " ")
+            if(assigned_file != "") {
+              expected_delay_temp = str_extract(assigned_file, "(?<=dB_)([:digit:]|[:punct:])+?-([:digit:]|[:punct:])+") %>% 
+                str_replace("-", " ")}
             else {expected_delay_temp = "0.5 1.5"}
             if(!is.na(expected_delay_temp)) expected_delay <<- expected_delay_temp
           }
