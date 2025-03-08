@@ -992,7 +992,12 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         
         BG = if (has_BG) paste0(stringr::str_remove(pattern = ".mat", string = run_properties$background_file), "_", run_properties$background_dB, "dB")
         
-        computed_file_name = paste0("BBN_", go_dB_range, "_", duration, "ms_", run_properties$lockout, "s")
+        # check for modifications
+        has_modified_BG = if(! is.null(run_properties$BG_freq)) TRUE else FALSE
+        
+        computed_file_name = "BBN_"
+        if (has_modified_BG) computed_file_name = paste0(computed_file_name, run_properties$BG_freq, "_")
+        computed_file_name = paste0(computed_file_name, go_dB_range, "_", duration, "ms_", run_properties$lockout, "s")
         if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
         if (has_TR) computed_file_name = paste0(computed_file_name, "_", "TR", run_properties$trigger_sensitivity, "ms")
         if (not_3_catches) computed_file_name = paste0(computed_file_name, "_c", catch_number)
