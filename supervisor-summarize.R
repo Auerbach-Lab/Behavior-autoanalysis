@@ -534,10 +534,11 @@ Workbook_Writer <- function() {
           mutate(comments = paste0("Performance: ", rxnProblem, " | Obersvations: ", comments," | Weight: ", weightProblem)) %>%
           select(-rxnProblem, -weightProblem)
         
+        
         # Get max weight for rat (Need to consider both free-feed from rat_archive & all runs)
-        weight_max_run = max(rat_runs$weight) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
+        weight_max_run = max(rat_runs$weight, na.rm = TRUE) # Rat_runs not r because we want all history, not just days corresponding to this experiment/phase
         weight_max_manual = dplyr::filter(rat_archive, Rat_ID == ratID)$Max_Weight
-        weight_max = max(weight_max_run, weight_max_manual)
+        weight_max = max(weight_max_run, weight_max_manual, na.rm = TRUE)
         
         # today's duration
         # if it's a single duration, we want the below dfs limited to runs that INCLUDE (not necc. perfectmatch) today's duration
@@ -831,7 +832,7 @@ Workbook_Writer <- function() {
               df_discrimination %>%
               group_by(date) %>%
               # copy the max d' to every value because its the only one we want outputted at the end
-              do(mutate(.,dprime = max(dprime))) %>%
+              do(mutate(.,dprime = max(dprime, na.rm = TRUE))) %>%
               # calculate fraction of the octave by pulling the go frequency from the file_name (only source we have at this point)
               mutate(octave_fraction = log(as.numeric(str_extract(file_name, pattern = "[:digit:]+?(?=-.+?kHz)"))/`Freq (kHz)`)/log(2),
                      Oct = abs(round(octave_fraction * 12))) %>%
