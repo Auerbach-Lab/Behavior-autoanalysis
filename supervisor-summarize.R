@@ -12,11 +12,11 @@ InitializeWriter <- function() {
   
   experiment_config_df <<- read.csv(paste0(projects_folder, "experiment_details.csv"), na.strings = "N/A")
   experiment_config_df <<- Filter(function(x)!all(is.na(x)), experiment_config_df) # remove NA columns
-  
+   
   rat_archive <<- fread(paste0(projects_folder, "rat_archive.csv"), na.strings = c("N/A","NA"))
   load(paste0(projects_folder, "run_archive.Rdata"), .GlobalEnv)
 }
-
+   
 Workbook_Writer <- function() {
   Define_Styles <- function() {
     r = list(
@@ -253,10 +253,9 @@ Workbook_Writer <- function() {
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Alone") %>%
             group_by(task, detail) %>%
-            summarise(task = unique(task), detail = unique(detail),
+            reframe(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
-                      condition = "baseline",
-                      .groups = "drop")
+                      condition = "baseline")
         }
         
         # BBN Rxn/TH PreHL Mixed
@@ -266,10 +265,9 @@ Workbook_Writer <- function() {
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "BBN" & task %in% c("Rxn", "TH") & detail == "Mixed") %>%
             group_by(task, detail) %>%
-            summarise(task = unique(task), detail = unique(detail),
+            reframe(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
-                      condition = "baseline",
-                      .groups = "drop")
+                      condition = "baseline")
         }
         
         # BBN Training/Reset PreHL
@@ -279,10 +277,9 @@ Workbook_Writer <- function() {
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "BBN" & detail == detail_current) %>%
             group_by(task, detail) %>%
-            summarise(task = unique(task), detail = unique(detail),
+            reframe(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
-                      condition = "baseline",
-                      .groups = "drop")
+                      condition = "baseline")
         }
         
         
@@ -292,10 +289,9 @@ Workbook_Writer <- function() {
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "Gap Detection") %>%
             group_by(task, detail) %>%
-            summarise(task = unique(task), detail = unique(detail),
+            reframe(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
-                      condition = "baseline",
-                      .groups = "drop")
+                      condition = "baseline")
         }
         
         # Gap Detection Rxn/TH PreHL
@@ -305,10 +301,9 @@ Workbook_Writer <- function() {
             dplyr::filter(phase == "Gap Detection") %>%
             filter(! task %in% c("Training", "Reset")) %>%
             group_by(task, detail) %>%
-            summarise(task = unique(task), detail = unique(detail),
+            reframe(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
-                      condition = "baseline",
-                      .groups = "drop")
+                      condition = "baseline")
         }
         
         
@@ -318,10 +313,9 @@ Workbook_Writer <- function() {
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "Tones" & task %in% c("Rxn", "TH")) %>%
             group_by(task, detail) %>%
-            summarise(task = unique(task), detail = unique(detail),
+            reframe(task = unique(task), detail = unique(detail),
                       date = tail(date, 1), n = n(),
-                      condition = "baseline",
-                      .groups = "drop") %>%
+                      condition = "baseline") %>%
             dplyr::arrange(dplyr::desc(detail), task)
         }
         
@@ -332,10 +326,9 @@ Workbook_Writer <- function() {
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "Tones") %>% # keeping all tasks
             group_by(task, detail) %>%
-            summarise(task = unique(task), detail = NA,
+            reframe(task = unique(task), detail = NA,
                       date = tail(date, 1), n = n(),
-                      condition = "baseline",
-                      .groups = "drop")
+                      condition = "baseline")
         }
         
         # BBN/Tones Rxn/TH PostHL
@@ -358,20 +351,18 @@ Workbook_Writer <- function() {
             dplyr::filter((task == "TH" & condition == "baseline" & detail == detail_current & duration == duration_current)
                           | (condition == "post-HL" & detail == detail_current)) %>%
             group_by(task, detail, condition) %>%
-            summarise(task = paste("BBN", unique(task)), detail = unique(detail),
+            reframe(task = paste("BBN", unique(task)), detail = unique(detail),
                       date = tail(date, 1), n = n(),
-                      condition = unique(condition),
-                      .groups = "drop") %>%
+                      condition = unique(condition)) %>%
             dplyr::arrange(condition, task)
           
           Tones_counts = df %>%
             dplyr::filter(phase == "Tones") %>%
             dplyr::filter(task %in% c("Rxn", "TH")) %>%
             group_by(task, detail, condition) %>%
-            summarise(task = paste("Tones", unique(task)), detail = unique(detail),
+            reframe(task = paste("Tones", unique(task)), detail = unique(detail),
                       date = tail(date, 1), n = n(),
-                      condition = unique(condition),
-                      .groups = "drop") %>%
+                      condition = unique(condition)) %>%
             dplyr::arrange(condition, task)
           
           count_df = rbind(BBN_counts, Tones_counts) %>%
@@ -385,10 +376,9 @@ Workbook_Writer <- function() {
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "BBN" & date <= HL_date) %>%
             group_by(task, detail) %>%
-            summarise(task = unique(task), detail = NA,
+            reframe(task = unique(task), detail = NA,
                       date = tail(date, 1), n = n(),
-                      condition = "post-HL",
-                      .groups = "drop")
+                      condition = "post-HL")
         }
         
         # Tones Training/Reset PostHL
@@ -398,10 +388,9 @@ Workbook_Writer <- function() {
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(phase == "Tones") %>% # keeping all tasks
             group_by(task, detail) %>%
-            summarise(task = unique(task), detail = NA,
+            reframe(task = unique(task), detail = NA,
                       date = tail(date, 1), n = n(),
-                      condition = "post-HL",
-                      .groups = "drop")
+                      condition = "post-HL")
         }
         
         # Octave
@@ -411,19 +400,17 @@ Workbook_Writer <- function() {
               tidyr::unnest_wider(assignment) %>%
               dplyr::filter(phase == "Octave") %>% # keeping all tasks
               group_by(task, detail) %>%
-              summarise(task = unique(task), detail = unique(detail),
+              reframe(task = unique(task), detail = unique(detail),
                         date = tail(date, 1), n = n(),
-                        condition = "baseline",
-                        .groups = "drop")
+                        condition = "baseline")
           } else {
             count_df = rat_runs %>%
               tidyr::unnest_wider(assignment) %>%
               dplyr::filter(phase == "Octave" & date >= HL_date) %>% # keeping all tasks
               group_by(task, detail) %>%
-              summarise(task = unique(task), detail = unique(detail),
+              reframe(task = unique(task), detail = unique(detail),
                         date = tail(date, 1), n = n(),
-                        condition = "post-HL",
-                        .groups = "drop")
+                        condition = "post-HL")
           }
         }
         
@@ -434,10 +421,9 @@ Workbook_Writer <- function() {
             tidyr::unnest_wider(assignment) %>%
             dplyr::filter(detail == "Oddball") %>% # keeping all tasks
             group_by(task, detail) %>%
-            summarise(task = unique(task), detail = detail_current,
+            reframe(task = unique(task), detail = detail_current,
                       date = tail(date, 1), n = n(),
-                      condition = "baseline",
-                      .groups = "drop")
+                      condition = "baseline")
         }
         
         # Oddball
@@ -447,10 +433,9 @@ Workbook_Writer <- function() {
             dplyr::filter(phase == phase_current & task == task_current & invalid != TRUE) %>%
             mutate(frequency = str_extract(file_name, pattern = "^[:digit:]+")) %>%
             group_by(task, detail, frequency) %>%
-            summarise(task = unique(task), frequency = unique(frequency), detail = unique(detail),
+            reframe(task = unique(task), frequency = unique(frequency), detail = unique(detail),
                       date = tail(date, 1), n = n(),
-                      condition = NA,
-                      .groups = "drop") %>%
+                      condition = NA) %>%
             arrange(task, frequency) %>%
             mutate(task = paste(task, frequency)) %>%
             select(-frequency)
@@ -533,6 +518,7 @@ Workbook_Writer <- function() {
         r = rat_runs %>%
           dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
           dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
+          
           # highlight file names that are invalid with stars on both sides or wrong file with star at the end
           mutate(file_name = case_when(invalid == TRUE ~ glue("* {file_name} *"),
                                        str_detect(paste(warnings_list), pattern = "wrong file") ~ glue("{file_name} *"),
@@ -730,7 +716,7 @@ Workbook_Writer <- function() {
             group_by(task, detail) %>%
             relocate(Spacer1, .after = mean_attempts_per_trial) %>%
             select(-FA_detailed)
-          
+
           x = rat_runs %>%
             dplyr::filter(map_lgl(assignment, ~ .x$experiment == experiment_current)) %>%
             dplyr::filter(map_lgl(assignment, ~ .x$phase == phase_current)) %>%
@@ -741,7 +727,7 @@ Workbook_Writer <- function() {
           
           r = left_join(r, x, by = c("task", "detail", "date", "time")) %>%
             relocate(warnings_list, comments, .after = last_col())
-          
+
         } else if (phase_current == "BBN") {
           r = r %>% unnest(threshold) %>% filter(Dur == min_duration) %>% select(-Freq, -Dur) %>%
             group_by(task, detail) %>%
@@ -750,7 +736,7 @@ Workbook_Writer <- function() {
             relocate(Spacer1, .after = mean_attempts_per_trial) %>%
             select(-FA_detailed)
         } else if (phase_current == "Tones" & detail_current != "Oddball") { ## Tones -----
-          
+
           r = r %>% unnest(threshold) %>%
             filter(Freq != 0 & Dur == min_duration) %>%
             group_by(task, detail, Freq) %>%
@@ -1167,7 +1153,7 @@ Workbook_Writer <- function() {
 # Workflow -----------------------------------------------------------
 
 InitializeWriter()
-
+ 
 # Find runs not entered today
 rats_not_entered_today = rat_archive %>% 
   # only list active rats
@@ -1186,3 +1172,4 @@ Workbook_Writer()
 rm(list = c("experiment_config_df", "run_today", "wb", "custom_rats"))
 # Validate and back-up archives
 source(paste0(projects_folder, "admin tools\\check and backup.R"))
+
