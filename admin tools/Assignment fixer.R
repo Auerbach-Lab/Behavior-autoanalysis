@@ -1,3 +1,7 @@
+
+# Notes -------------------------------------------------------------------
+# Shares code with Comment fixer. Any bugs will be in both scripts.
+
 assignment_fixer <- function(tableRow, newValue_phase, newValue_task, newValue_detail, newValue_invalid) {
   
   df = run_archive[tableRow,] %>% 
@@ -31,42 +35,6 @@ assignment_fixer <- function(tableRow, newValue_phase, newValue_task, newValue_d
          {outcome = "No change"})
 }
 
-comment_fixer <- function(tableRow, commenter, additionalValue_weightProblem, additionalValue_rxnProblem) {
-  df = run_archive[tableRow,] %>% 
-    select(date, time, rat_name, rat_ID, file_name, weightProblem, rxnProblem)
-  
-  # set value to change
-  if(!is.na(additionalValue_weightProblem)) {
-    if(run_archive[tableRow,]$weightProblem == "") new_weight = glue("{commenter}: {additionalValue_weightProblem}")
-    else new_weight = glue("{run_archive[tableRow,]$weightProblem}, {commenter}: {additionalValue_weightProblem}")
-    
-    run_archive[tableRow,]$weightProblem = new_weight
-  }
-  if(!is.na(additionalValue_rxnProblem)) {
-    if(run_archive[tableRow,]$rxnProblem == "") new_rxn = glue("{commenter}: {additionalValue_rxnProblem}")
-    else new_rxn = glue("{run_archive[tableRow,]$rxnProblem}, {commenter}: {additionalValue_rxnProblem}")
-    
-    run_archive[tableRow,]$rxnProblem = new_rxn
-  }
-  
-  df = bind_rows(df, run_archive[tableRow,] %>% 
-                   select(date, time, rat_name, rat_ID, file_name, weightProblem, rxnProblem)) %>%
-    dplyr::select(-any_of("comment"))
-  
-  print(df)
-  
-  switch(menu(c("Yes", "Do NOT change the entry"), graphics = TRUE,
-              title = "Save modified entry?"),
-         # 1 (Yes): Write file
-         {# Push modification -------------------------------------------------------
-           if(!is.na(additionalValue_weightProblem)) run_archive[tableRow,]$weightProblem <<- new_weight
-           if(!is.na(additionalValue_rxnProblem)) run_archive[tableRow,]$rxnProblem <<- new_rxn
-           outcome = "Fixed"},
-         # 2 (No): Abort
-         {outcome = "No change"})
-  
-}
-
 InitializeMain()
 
 
@@ -77,24 +45,20 @@ run_archive %>% rowid_to_column %>%
   # left_join(invalid_list %>% select(rat_name, date, Invalid), 
   #           by = join_by(date, rat_name)) %>%
   # filter(! is.na(Invalid)) %>%
-  filter(date >= 20240528) %>% # filter to a specific date
-  filter(rat_name %in% c("Green1")) %>% # pick specific rats
-  # filter(str_detect(file_name, pattern = "_BG_PKN_0dB$")) %>% # pick specific files
+  filter(date %in% c(20250417)) %>%         # filter to a specific date
+  # filter(box %in% c(5, 6, 7, 8)) %>%      # Pick based on Box the rat runs in
+  # filter(time < 120000) %>%               # select a specific time they ran before
+  # filter(rat_name %in% c("Purple3")) %>%  # pick specific rats
+  # filter(str_detect(file_name, pattern = "4-32kHz")) %>%    # pick based on file names that contain a string
   
-  .$rowid %>% #get rows in the run_archive table
-  
-  
+  .$rowid %>%       # get rows in the run_archive table, stop here to check the runs to be changed.
+
   ## Assignment fixer =====
   # Apply Assignment fix to all entries selected above
   # lapply(fixer, newValue_phase = NA, newValue_task = NA, newValue_detail = NA, newValue_invalid = "")
   lapply(assignment_fixer, newValue_phase = NA, 
          newValue_task = NA, newValue_detail = NA, 
          newValue_invalid = "TRUE")
-
-  ## Comment fixer =====
-  # # Apply Comment fix to all entries selected above
-  # # lapply(fixer, newValue_phase = NA, newValue_task = NA, newValue_detail = NA, newValue_invalid = "")
-  # lapply(comment_fixer, commenter = "NJ", additionalValue_weightProblem = "System ate original comment. Fed 1 extra pellet because at -15%", additionalValue_rxnProblem = NA)
 
 # Save modification -------------------------------------------------------
 save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
