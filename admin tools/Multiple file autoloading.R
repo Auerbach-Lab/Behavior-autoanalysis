@@ -1,6 +1,6 @@
 # User Variables ----------------------------------------------------------
 
-dates = c(20241204)
+dates = c(20250429)
 
 # slashes must be either / or \\
 modern_matlab_file_location = "Z:/Daily Matlab files"
@@ -71,4 +71,4 @@ if(nrow(files_to_enter) > 0) {
   writeLines(glue("Loading {nrow(files_to_enter)} files...\n"))
   apply(files_to_enter, 1, Loading_files)
 } else cat(glue("No extra files found. Can NOT autoload runs on {dates}"), "\n")
-  
+writeLines("Done\n")
