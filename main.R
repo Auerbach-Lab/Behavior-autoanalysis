@@ -916,7 +916,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       
       if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
       if (has_TR) computed_file_name = paste0(computed_file_name, "_", "TR", run_properties$trigger_sensitivity, "ms")
-      if (not_3_catches & analysis$type != "Tone (Standard)") computed_file_name = paste0(computed_file_name, "_c", catch_number)
+      if (not_3_catches & analysis$type != "Training - Tone") computed_file_name = paste0(computed_file_name, "_c", catch_number)
       if (has_BG) computed_file_name = paste0(computed_file_name, "_", BG)
       
       return(computed_file_name)
