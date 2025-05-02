@@ -905,6 +905,10 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       
       catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
       not_3_catches = catch_number != 3
+      not_12_catches = catch_number != 12
+      # For Training, catch count has been added in need already, For 4-32kHz we expect 12 catches and so don't add it there either
+      no_c = (analysis$type == "Training - Tone") || (!not_12_catches & analysis$type == "Tone (Standard)") 
+      
       if(is_empty(not_3_catches)) not_3_catches = TRUE    # fix to deal with empty catch number because that row does not exist
       response_window = unique(run_properties$stim_encoding_table["Nose Out TL (s)"]) %>% as.numeric()
       has_Response_window = response_window != 2
@@ -916,7 +920,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       
       if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
       if (has_TR) computed_file_name = paste0(computed_file_name, "_", "TR", run_properties$trigger_sensitivity, "ms")
-      if (not_3_catches & analysis$type != "Training - Tone") computed_file_name = paste0(computed_file_name, "_c", catch_number)
+      if (! no_c) computed_file_name = paste0(computed_file_name, "_c", catch_number)
       if (has_BG) computed_file_name = paste0(computed_file_name, "_", BG)
       
       return(computed_file_name)
