@@ -907,7 +907,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       not_3_catches = catch_number != 3
       not_12_catches = catch_number != 12
       # For Training, catch count has been added in need already, For 4-32kHz we expect 12 catches and so don't add it there either
-      no_c = (analysis$type == "Training - Tone") || (!not_12_catches & analysis$type == "Tone (Standard)") 
+      no_c = (analysis$type == "Training - Tone") || (!not_12_catches & analysis$type == "Tone (Standard)") || (!not_3_catches)
       
       if(is_empty(not_3_catches)) not_3_catches = TRUE    # fix to deal with empty catch number because that row does not exist
       response_window = unique(run_properties$stim_encoding_table["Nose Out TL (s)"]) %>% as.numeric()
