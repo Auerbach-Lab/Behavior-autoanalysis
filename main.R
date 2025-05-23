@@ -1619,8 +1619,12 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
       warning(paste0(warn, "\n"))
       warnings_list <<- append(warnings_list, warn)
     }
-
-    if (analysis$stats$hit_percent < user_settings$minimum_hit_percent) {
+    
+    if(is.na(analysis$stats$hit_percent)) {
+      warn = paste0("No go trials likely due to low trial count")
+      warning(paste0(warn, "\n"))
+      warnings_list <<- append(warnings_list, warn)
+    } else if (analysis$stats$hit_percent < user_settings$minimum_hit_percent) {
       warn = paste0("Low hit rate: ", round(analysis$stats$hit_percent * 100, digits = 1), "%")
       warning(paste0(warn, "\n"))
       warnings_list <<- append(warnings_list, warn)
