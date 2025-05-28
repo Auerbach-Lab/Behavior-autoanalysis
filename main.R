@@ -818,6 +818,7 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         go_dB = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 1) %>% .$`Inten (dB)`, "dB_")
         catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
         delay = run_properties$delay %>% stringr::str_replace(" ", "-")
+        duration = run_properties$duration %>% as.numeric()
         lockout = ifelse(length(run_properties$lockout) > 0, run_properties$lockout, 0)
         
         computed_file_name = paste0(go_kHz, go_dB)
@@ -833,7 +834,10 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
             analysis$minimum_trials <<- user_settings$minimum_trials$`Tone (Single)`
             
           } else {
-            if(delay == "1-4") computed_file_name = paste0(computed_file_name, catch_number, "catch_", lockout, "s")
+            if(delay == "1-4") {
+              if(duration == 300) computed_file_name = paste0(computed_file_name, catch_number, "catch_", lockout, "s")
+              else computed_file_name = paste0(computed_file_name, duration, "ms_", lockout, "s")
+            }
             else {
               computed_file_name = paste0(computed_file_name, delay, "s_", catch_number, "catch_", lockout, "s")
               assigned_file = filter(rat_archive, Rat_ID == run_properties$rat_ID)$Assigned_Filename
