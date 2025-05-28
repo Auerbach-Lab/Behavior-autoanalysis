@@ -833,7 +833,10 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
             analysis$minimum_trials <<- user_settings$minimum_trials$`Tone (Single)`
             
           } else {
-            if(delay == "1-4") computed_file_name = paste0(computed_file_name, catch_number, "catch_", lockout, "s")
+            if(delay == "1-4") {
+              if(duration == 300) computed_file_name = paste0(computed_file_name, catch_number, "catch_", lockout, "s")
+              else computed_file_name = paste0(computed_file_name, duration, "ms_", lockout, "s")
+            }
             else {
               computed_file_name = paste0(computed_file_name, delay, "s_", catch_number, "catch_", lockout, "s")
               assigned_file = filter(rat_archive, Rat_ID == run_properties$rat_ID)$Assigned_Filename
