@@ -1,6 +1,19 @@
 # Notes -------------------------------------------------------------------
 # Shares code with Assignment fixer. Any bugs will be in both scripts.
 
+# Select files to alter ---------------------------------------------------
+# use any of the filters that apply to select as specific a group as needed
+
+rows_to_change =
+  run_archive %>% rowid_to_column %>%
+  filter(date %in% c(20250605)) %>%         # filter to a specific date
+  # filter(box %in% c(5, 6, 7, 8)) %>%      # Pick based on Box the rat runs in
+  # filter(time < 120000) %>%               # select a specific time they ran before
+  filter(rat_name %in% c("Orange5")) #%>%    # pick specific rats
+# filter(str_detect(file_name, pattern = "4-32kHz")) %>%    # pick based on file names that contain a string
+
+
+# Functions ---------------------------------------------------------------
 comment_fixer <- function(tableRow, commenter, additionalValue_weightProblem, additionalValue_rxnProblem) {
   df = run_archive[tableRow,] %>% 
     select(date, time, rat_name, rat_ID, file_name, weightProblem, rxnProblem)
@@ -37,31 +50,34 @@ comment_fixer <- function(tableRow, commenter, additionalValue_weightProblem, ad
   
 }
 
+# Workflow ----------------------------------------------------------------
 InitializeMain()
 
-
-# Select files to alter ---------------------------------------------------
-# use any of the filters that apply to select as sepecific a group as needed
-
-run_archive %>% rowid_to_column %>%
-  filter(date %in% c(20250417)) %>%         # filter to a specific date
-  # filter(box %in% c(5, 6, 7, 8)) %>%      # Pick based on Box the rat runs in
-  # filter(time < 120000) %>%               # select a specific time they ran before
-  # filter(rat_name %in% c("Purple3")) %>%  # pick specific rats
-  # filter(str_detect(file_name, pattern = "4-32kHz")) %>%    # pick based on file names that contain a string
-  
+rows_to_change %>%
   .$rowid %>%       # get rows in the run_archive table, stop here to check the runs to be changed.
-  
-
   ## Comment fixer =====
   # Apply Comment fix to all entries selected above
   # Leave additionalValue_weightProblem or additionalValue_rxnProblem as NA to remain unchanged.
   lapply(comment_fixer, commenter = "NJ", 
-         additionalValue_weightProblem = "System ate original comment. Fed 1 extra pellet because at -15%", 
+         additionalValue_weightProblem = "Fed 2 extra male pellets later because weight at -14% and may be contributing to high FA%", 
          additionalValue_rxnProblem = NA)
 
 # Save modification -------------------------------------------------------
-save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
-print("Saved")
+rows_to_change %>%
+  select(date, rat_name, weightProblem, rxnProblem) %>%
+  print
+
+switch(select.list(c("Save", "Cancel"), graphics = TRUE,
+            title = "Save modified entry?"),
+       # 1 (Yes): Write file
+       "Save" = {
+         save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
+         print("Saved")
+         outcome = "Saved"},
+       # 2 (No): Abort
+       "Cancel" = {
+         print("No changes made to database.")
+         outcome = "No change"})
+
 # Validate and back-up archives
 source(paste0(projects_folder, "admin tools\\check and backup.R"))
