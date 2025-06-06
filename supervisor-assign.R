@@ -18,11 +18,16 @@ Workbook_Reader <- function() {
   assignments_df$Rat_ID = assignments_df$Rat_ID %>% stringr::str_sub(start = 2) %>% as.numeric() # trim off pound sign added for humans, coerce to numeric since that's what rat_archive uses
   #clean white spaces from names as they should never exist
   assignments_df = assignments_df %>% mutate(Assigned_Filename = stringr::str_replace_all(Assigned_Filename, " ", ""))
-  if (nrow(assignments_df) != user_settings$runs_per_day) {
-    warn = paste0("Only ", nrow(assignments_df), " assignments were found. (Expected ", user_settings$runs_per_day, ")")
+  
+  needed_assignments = rat_archive %>% filter(is.na(end_date) & start_date <= str_remove_all(Sys.Date(), "-")) %>% filter(Assigned_Filename == "") %>% nrow()
+  
+  
+  if (needed_assignments != 0 & nrow(assignments_df) != needed_assignments) {
+    warn = paste0("Only ", nrow(assignments_df), " assignments were found. (Expected ", needed_assignments, ")")
     writeLines(paste0(warn, "\n"))
   }
   assignments_mandatory_data = assignments_df %>% dplyr::select(-Persistent_Comment) # comments are allowed to be NA, but nothing else is
+  
   if (any(is.na(assignments_mandatory_data))) stop("ERROR: Mandatory values are NA. (Are there non-green cells in the supervisor spreadsheet?)")
   assignments_df$Persistent_Comment = assignments_df$Persistent_Comment %>%
     stringr::str_replace(pattern = "comment field", replacement = NA_character_) # match the (partial) placeholder text for the comment field, replace with NA
