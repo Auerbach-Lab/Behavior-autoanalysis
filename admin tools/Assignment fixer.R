@@ -61,7 +61,8 @@ rows_to_change %>%
          newValue_invalid = "")
 
 # Save modification -------------------------------------------------------
-rows_to_change %>%
+run_archive %>%
+  filter(UUID %in% rows_to_change$UUID) %>%
   select(date, rat_name, file_name, assignment, invalid) %>%
   unnest_wider(assignment) %>%
   select(date, rat_name, file_name, phase, task, detail, invalid) %>%

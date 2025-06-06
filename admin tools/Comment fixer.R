@@ -6,10 +6,10 @@
 
 rows_to_change =
   run_archive %>% rowid_to_column %>%
-  filter(date %in% c(20250605)) %>%         # filter to a specific date
+  filter(date %in% c(20250606)) %>%         # filter to a specific date
   # filter(box %in% c(5, 6, 7, 8)) %>%      # Pick based on Box the rat runs in
   # filter(time < 120000) %>%               # select a specific time they ran before
-  filter(rat_name %in% c("Orange5")) #%>%    # pick specific rats
+  filter(rat_name %in% c("Green6")) #%>%    # pick specific rats
 # filter(str_detect(file_name, pattern = "4-32kHz")) %>%    # pick based on file names that contain a string
 
 
@@ -59,11 +59,13 @@ rows_to_change %>%
   # Apply Comment fix to all entries selected above
   # Leave additionalValue_weightProblem or additionalValue_rxnProblem as NA to remain unchanged.
   lapply(comment_fixer, commenter = "NJ", 
-         additionalValue_weightProblem = "Fed 2 extra male pellets later because weight at -14% and may be contributing to high FA%", 
+         additionalValue_weightProblem = 
+           "Fed 1 extra male pellet and cheerios later because weight at -13% and dropping", 
          additionalValue_rxnProblem = NA)
 
 # Save modification -------------------------------------------------------
-rows_to_change %>%
+run_archive %>%
+  filter(UUID %in% rows_to_change$UUID) %>%
   select(date, rat_name, weightProblem, rxnProblem) %>%
   print
 
