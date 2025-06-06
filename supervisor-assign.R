@@ -72,7 +72,9 @@ Assignments_Writer <- function() {
 
     if(length(locations) == 1) return(locations)
     if(length(locations) == 0) return("No match")
-    if(length(locations) > 1) return("Multiple matches")
+    if(length(locations) > 1) {
+      print(glue("Multiple matches found for {Assigned_Filename} at:\n {locations}"))
+      return("Multiple matches")}
   }
   
   data_table = rat_archive %>% filter(is.na(end_date)) %>%
