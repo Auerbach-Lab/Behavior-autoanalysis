@@ -67,7 +67,7 @@ Assignments_Writer <- function() {
       return("No assignment")
     } else {
       # Searches the expected (hardcoded) stim file location to find a perfect name match
-      locations = list.files("Z:/Stim Files", pattern = paste0(Assigned_Filename, ".mat$"), recursive = TRUE, full.names = TRUE) 
+      locations = list.files("Z:/Stim Files", pattern = paste0("^", Assigned_Filename, ".mat$"), recursive = TRUE, full.names = TRUE) 
     }
 
     if(length(locations) == 1) return(locations)
