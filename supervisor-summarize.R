@@ -998,11 +998,13 @@ Workbook_Writer <- function() {
           r = cbind(r, c("       False Alarm %", "Late"))
           r = cbind(r, NA)
         }
-        else if (phase_current == "" | is.na(phase_current) | task_current == "Piloting" | phase_current == "Piloting") {
+        else if (phase_current == "" | is.na(phase_current) | task_current == "Piloting" |
+                 phase_current == "Piloting"  | phase_current == "Frequency Modulation" ) {
           r = r
         } 
         else {
-          stop("ERROR: unrecognized phase: ", phase_current)
+          r = r
+          warn(paste("ERROR: unrecognized phase:", phase_current))
         }
         
         r[, (length(r) + 1):27] = NA # add columns to reach 27
