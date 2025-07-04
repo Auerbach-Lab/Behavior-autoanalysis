@@ -936,6 +936,10 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
         catch_number = paste0(run_properties$stim_encoding_table %>% dplyr::filter(Type == 0) %>% .$Repeat_number) %>% as.numeric()
         delay = run_properties$delay %>% stringr::str_replace(" ", "-")
         lockout = ifelse(length(run_properties$lockout) > 0, run_properties$lockout, 0)
+        has_BG = run_properties$background_type != "None"
+        print(run_properties$background_type)
+        
+        BG = if (has_BG) paste0(stringr::str_remove(pattern = ".mat", string = run_properties$background_file), "_", run_properties$background_dB, "dB")
         
         # Warning States, i.e. not the expected default
         response_window = unique(run_properties$stim_encoding_table["Nose Out TL (s)"]) %>% as.numeric()
@@ -968,6 +972,8 @@ Process_File <- function(file_to_load, name, weight, observations, exclude_trial
             analysis$minimum_trials <<- user_settings$minimum_trials$`BBN (Standard)`
           }
         }
+        
+        if (has_BG) computed_file_name = paste0(computed_file_name, "_", BG)
         
         # Warning States, i.e. not the expected default
         if (has_Response_window) computed_file_name = paste0(computed_file_name, "_", response_window, "s")
