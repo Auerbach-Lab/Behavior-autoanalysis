@@ -72,13 +72,13 @@ switch(select.list(c("Save", "Cancel"), graphics = TRUE,
                    title = "Save modified entry?"),
        # 1 (Yes): Write file
        "Save" = {
+         print("Saving...")
          save(run_archive, file = paste0(projects_folder, "run_archive.Rdata"), ascii = TRUE, compress = FALSE)
          print("Saved")
+         # Validate and back-up archives
+         source(paste0(projects_folder, "admin tools\\check and backup.R"))
          outcome = "Saved"},
        # 2 (No): Abort
        "Cancel" = {
          print("No changes made to database.")
          outcome = "No change"})
-
-# Validate and back-up archives
-source(paste0(projects_folder, "admin tools\\check and backup.R"))
