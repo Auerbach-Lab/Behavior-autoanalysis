@@ -104,7 +104,7 @@ Assignments_Writer <- function() {
   tryCatch(
     saveWorkbook(wb, "assignments.xlsx", overwrite = TRUE),
     warning = function(warning) if (str_detect(as.character(warning), "Permission denied")) {
-      writeLines("ALERT: Assignments.xlsx already open so can't be updated.")
+      writeLines("ALERT: Assignments.xlsx already open so can't be updated. However, the assignments have been saved to rat_archive.csv")
     } else {
       warning(warning)
     }
