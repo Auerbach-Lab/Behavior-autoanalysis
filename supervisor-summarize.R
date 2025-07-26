@@ -17,7 +17,7 @@ InitializeWriter <- function() {
   load(paste0(projects_folder, "run_archive.Rdata"), .GlobalEnv)
 }
    
-Workbook_Writer <- function() {
+  Workbook_Writer <- function() {
   Define_Styles <- function() {
     r = list(
       rat_name = createStyle(fontSize = 22, textDecoration = "bold"),
@@ -544,7 +544,9 @@ Workbook_Writer <- function() {
         # if it's a single duration, we want the below dfs limited to runs that INCLUDE (not necc. perfectmatch) today's duration
         # if it's a multiple duration, we want the below dfs limited to runs that INCLUDE (not necc. perfectmatch) the minimum duration used today
         # suppress warnings to not complain on oddball, which have no duration
-        min_duration = pluck(run_today, "summary", 1, "duration", 1, "Dur (ms)") %>% min()
+        suppressWarnings({
+          min_duration = pluck(run_today, "summary", 1, "duration", 1, "Dur (ms)") %>% min()
+          })
         #min_duration = r %>% unnest(reaction) %>% .$`Dur (ms)` %>% unique() %>% min()
         #min_duration = r %>% unnest(reaction) %>% dplyr::filter(task == task_current & detail == detail_current) %>% .$`Dur (ms)` %>% unique() %>% min()
         
@@ -1172,7 +1174,9 @@ if(nrow(rats_not_entered_today) == 0) { writeLines("All rats have data for today
 }
 
 Workbook_Writer()
-rm(list = c("experiment_config_df", "run_today", "wb", "custom_rats"))
+suppressWarnings({
+  rm(list = c("experiment_config_df", "run_today", "wb", "custom_rats"))
+})
 # Validate and back-up archives
 source(paste0(projects_folder, "admin tools\\check and backup.R"))
 
