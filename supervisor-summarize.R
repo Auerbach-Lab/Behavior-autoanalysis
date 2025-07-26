@@ -671,7 +671,13 @@ InitializeWriter <- function() {
               filter(! date %in% df_Temp$date) %>%
               rbind(df_Temp)
             
-            r = rbind(df_TH_BBN, df_TH_tones, df_Rxn)
+            r_temp = rbind(df_TH_BBN, df_TH_tones, df_Rxn)
+            
+            if(nrow(r_temp) == 0) {
+              r = head(r, n = 1)
+            } else {
+              r = r_temp
+            }
             
             if (analysis_type %in% c("Training - Gap", "Training - BBN", "Training - Tone")) {
               r = r %>% rename(Dur = `Dur (ms)`, Freq = `Freq (kHz)`) %>% select(-`Inten (dB)`)
