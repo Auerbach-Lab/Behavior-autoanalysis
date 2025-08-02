@@ -96,6 +96,11 @@ for (i in columns_to_keep_nested) {
   dataframes_to_merge = c(dataframes_to_merge, name)
 }
 
+if(is.null(dataframes_to_merge)) {
+  data_for_export = selected_data
+  print(glue("Data in data_for_export\n\\     Skip \'Merge dataframes\' and jump to \'Create any new columns needed\'"))
+} 
+
 writeLines("\nManually align the new columns so that the final data table can be finished\n\n")
 stop("Halted for manual input")
 
@@ -105,11 +110,11 @@ data_for_export = left_join(data1, data2,
                             by = join_by(!!!columns_to_keep_unnested, # list of normal columns
                                          # shared columns with different names
                                          
-                                         ### For Rxn & FA_detailed (Oddball) ----
-                                         # position == `Inten (dB)`)
+                                         ## For Rxn & FA_detailed (Oddball) ----
+                                         position == `Inten (dB)`)
                                          
-                                         ### For Reaction & dprime ----
-                                         dB == `Inten (dB)`, Freq == `Freq (kHz)`, Dur == `Dur (ms)`)
+                                         ## For Reaction & dprime ----
+                                         # dB == `Inten (dB)`, Freq == `Freq (kHz)`, Dur == `Dur (ms)`)
                             
                             )
 
