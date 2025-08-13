@@ -21,15 +21,17 @@ rat_archive %>%
 
 run_archive %>% 
   # select specific rat by name (capital and space sensitive)
-    filter(rat_name %in% c("Green6")) %>% 
+    filter(rat_name %in% c("Orange2")) %>%
+    # filter(rat_ID == 774) %>%
   unnest_wider(assignment) %>% unnest_wider(stats) %>% # unpack data to show
   mutate(hit_percent = round(hit_percent * 100, digits = 1), FA_percent = round(FA_percent * 100, digits = 1)) %>% # convert and round percentages for easier reading 
   select(date, rat_name, weight, trial_count, hit_percent, FA_percent, 
-         file_name, experiment, phase, task, detail, warnings_list, weightProblem, rxnProblem) %>% # select which columns are displayed
+         file_name, invalid, experiment, phase, task, detail, warnings_list, weightProblem, rxnProblem) %>% # select which columns are displayed
   # If you want each warning separated rather than as a list un-comment the following line
     # unnest_wider(warnings_list, names_sep = "_") %>%
   arrange(desc(date)) %>% # sort by descending date order
-  print(n=20)             # show 20 entries in the command console
+  # print(n = 20)             # show 20 entries in the command console
+  View()
   
 
 # Individual Weight ----------------------------------------------------------
