@@ -71,6 +71,7 @@ runs_entered_today =
          trial_count, hit_percent, FA_percent, 
          file_name, experiment, phase, task, detail, analysis_type, comments) %>%
   arrange(Box)# sort by box order
+if (runs_entered_today$date %>% unique() %>% lubridate::ymd() != Sys.Date()) stop("Old data. Todays runs not updated or there are no runs entered.")
 View(runs_entered_today)
 
 
