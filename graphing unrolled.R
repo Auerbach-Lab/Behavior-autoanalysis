@@ -395,10 +395,17 @@ Generate_Graph <- function(rat_name, ratID) {
     what_to_graph = "reaction"
     x_column = "FA_detailed_Freq (kHz)"; y_column = "Rxn"
     # Graph
-    rxn_graph = graph_data %>%
-      unnest(what_to_graph) %>%
-      ggplot(aes(x = `FA_detailed_Freq (kHz)`, y = Rxn))  %>%
-      Range_Grapher
+    if (current_analysis_type == "Training - Octave") {
+      rxn_graph = graph_data %>%
+        unnest(what_to_graph) %>%
+        ggplot(aes(x = `Freq (kHz)`, y = Rxn))  %>%
+        Range_Grapher
+    } else {
+      rxn_graph = graph_data %>%
+        unnest(what_to_graph) %>%
+        ggplot(aes(x = `FA_detailed_Freq (kHz)`, y = Rxn))  %>%
+        Range_Grapher
+    }
     # Add axis labels
     rxn_graph = rxn_graph + labs(x = "Octave step / Frequency (kHz)", y = "Reaction Time (s)")
     
